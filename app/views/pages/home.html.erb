@@ -1,0 +1,94 @@
+<div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center w-full">
+<!-- Content Side -->
+<div class="flex flex-col gap-8 text-left">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
+<span class="material-symbols-outlined text-sm text-primary">verified</span>
+<span class="text-xs font-bold uppercase tracking-wider text-primary">Now with GPT-4 Vision</span>
+</div>
+<div class="space-y-6">
+<h1 class="text-5xl lg:text-7xl font-black leading-[1.1] tracking-tight text-slate-900 dark:text-white">
+                            Convert Smarter with <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-400">AI-Powered</span> Precision.
+                        </h1>
+<p class="text-lg lg:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                            Seamlessly convert, edit, and optimize your files with the power of ConvertPro. Experience 99.9% accuracy for even the most complex documents.
+                        </p>
+</div>
+<div class="flex flex-col sm:flex-row gap-4">
+<a href="<%= tools_path %>" class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl text-lg font-bold shadow-xl shadow-primary/30 flex items-center justify-center gap-2 group text-decoration-none transition-all">
+                            Start Converting
+                            <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+<a href="<%= pricing_path %>" class="bg-slate-200 dark:bg-slate-800/50 hover:bg-slate-300 dark:hover:bg-slate-700/50 text-slate-900 dark:text-white px-8 py-4 rounded-xl text-lg font-bold transition-all border border-slate-300 dark:border-slate-700/50 text-decoration-none text-center">
+                            Upgrade to Pro
+</a>
+</div>
+<div class="flex items-center gap-6 pt-4">
+<div class="flex -space-x-3">
+<div class="w-10 h-10 rounded-full border-2 border-background-dark bg-slate-700 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User avatar profile picture" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1288&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"/>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-background-dark bg-slate-700 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User avatar profile picture" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1361&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3Dhttps://images.unsplash.com/photo-1521119989659-a83eee488004?q=80&w=1323&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"/>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-background-dark bg-slate-700 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User avatar profile picture" src="https://images.unsplash.com/photo-1633202175819-cf44c2b3031a?q=80&w=1285&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"/>
+</div>
+</div>
+<div class="text-sm">
+<span class="font-bold dark:text-white">50k+ users</span>
+<span class="text-slate-500">trust us globally</span>
+</div>
+</div>
+</div>
+<!-- Visual Side -->
+<div class="relative h-[500px] lg:h-[600px] flex items-center justify-center w-full">
+<!-- Main Logo Glow -->
+<div class="absolute w-64 h-64 bg-primary/20 rounded-full blur-[60px] animate-pulse"></div>
+<!-- Central Abstract AI Logo -->
+<div class="relative z-20 w-40 h-40 glass-card rounded-3xl flex items-center justify-center glow-soft border-primary/30">
+<div class="w-24 h-24 bg-gradient-to-tr from-primary to-indigo-400 rounded-2xl flex items-center justify-center shadow-2xl">
+<span class="material-symbols-outlined text-white text-5xl">deployed_code</span>
+</div>
+</div>
+<!-- Floating Cards -->
+<!-- PDF Card -->
+<div class="absolute top-10 right-10 z-30 glass-card p-4 rounded-2xl flex items-center gap-4 glow-soft w-48 animate-bounce" style="animation-duration: 4s;">
+<div class="bg-red-500/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Invoice.pdf</span>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">2.4 MB</span>
+</div>
+</div>
+<!-- DOCX Card -->
+<div class="absolute bottom-12 left-10 z-30 glass-card p-4 rounded-2xl flex items-center gap-4 glow-soft w-52 animate-bounce" style="animation-duration: 5s;">
+<div class="bg-blue-500/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-blue-500">description</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Report_Final.docx</span>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">Optimizing...</span>
+</div>
+</div>
+<!-- JPG Card -->
+<div class="absolute top-1/4 -left-4 z-30 glass-card p-4 rounded-2xl flex items-center gap-4 glow-soft w-44 animate-bounce" style="animation-duration: 6s;">
+<div class="bg-amber-500/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-amber-500">image</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Logo.jpg</span>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">Compressed</span>
+</div>
+</div>
+<!-- Processing Indicator -->
+<div class="absolute bottom-1/4 right-0 z-10 glass-card p-3 rounded-full border-primary/40 flex items-center gap-3 px-6">
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-ping"></div>
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-ping" style="animation-delay: 0.2s"></div>
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-ping" style="animation-delay: 0.4s"></div>
+</div>
+<span class="text-xs font-semibold text-slate-700 dark:text-slate-300">AI Engine Active</span>
+</div>
+</div>
+</div>

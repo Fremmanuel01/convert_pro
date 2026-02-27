@@ -1,0 +1,201 @@
+<div class="max-w-4xl mx-auto w-full mt-6">
+  <!-- Breadcrumbs -->
+  <nav aria-label="breadcrumb" class="mb-6 flex text-sm text-slate-500 font-medium">
+    <ol class="flex items-center space-x-2">
+      <li><%= link_to "Tools", tools_path, class: "hover:text-primary transition-colors text-decoration-none" %></li>
+      <li class="flex items-center space-x-2">
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        <%= link_to "History", conversions_path, class: "hover:text-primary transition-colors text-decoration-none" %>
+      </li>
+      <li class="flex items-center space-x-2">
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        <span class="text-slate-900 dark:text-white" aria-current="page">Job #<%= @conversion.id %></span>
+      </li>
+    </ol>
+  </nav>
+
+  <% if @auto_download %>
+    <script>
+      document.addEventListener('turbo:load', function() {
+        const downloadUrl = "<%= download_conversion_path(@conversion) %>";
+        // Create a temporary link to trigger the download silently
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, { once: true });
+    </script>
+  <% end %>
+
+  <!-- Main Card -->
+  <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl shadow-primary/5">
+    
+    <!-- Header -->
+    <div class="px-6 py-6 sm:px-8 border-b border-slate-200/50 dark:border-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/30 dark:bg-slate-900/30">
+      <div class="flex items-center gap-4">
+        <div class="size-14 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-3xl">
+            <%# Map bootstrap icons back to material symbols for consistency if needed, or stick to a generic icon %>
+            <%= @tool_meta ? (@tool_meta[:icon] == 'bi-intersect' ? 'call_merge' : (@tool_meta[:icon].include?('scissors') ? 'content_cut' : 'transform')) : 'description' %>
+          </span>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
+            <%= @tool_meta ? @tool_meta[:name] : 'Conversion Details' %>
+          </h2>
+          <p class="text-sm text-slate-500 leading-relaxed">Processing Job #<%= @conversion.id %></p>
+        </div>
+      </div>
+      
+      <!-- Status Badge -->
+      <div>
+        <% if @conversion.completed? %>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 shadow-sm">
+            <span class="material-symbols-outlined text-[14px]">check_circle</span>
+            COMPLETED
+          </span>
+        <% elsif @conversion.failed? %>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 shadow-sm">
+            <span class="material-symbols-outlined text-[14px]">error</span>
+            FAILED
+          </span>
+        <% else %>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 shadow-sm">
+            <svg class="animate-spin size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            PROCESSING
+          </span>
+        <% end %>
+      </div>
+    </div>
+    
+    <!-- Body -->
+    <div class="p-6 sm:p-8 bg-white/10 dark:bg-transparent">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        
+        <!-- Input Files -->
+        <div class="md:border-r border-slate-200 dark:border-slate-800 md:pr-8">
+          <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px]">folder</span>
+            Input Files (<%= @conversion.input_files.count %>)
+          </h3>
+          <ul class="space-y-3">
+            <% @conversion.input_files.each do |file| %>
+              <li class="flex items-start gap-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                <span class="material-symbols-outlined text-rose-500 shrink-0 mt-0.5">picture_as_pdf</span>
+                <span class="break-all mt-0.5" title="<%= file.filename %>"><%= truncate(file.filename.to_s, length: 60) %></span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+        
+        <!-- Execution Details -->
+        <div class="md:pl-2">
+          <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px]">info</span>
+            Execution Details
+          </h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
+              <span class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">schedule</span> Started</span>
+              <span class="text-sm font-bold text-slate-900 dark:text-white"><%= time_ago_in_words(@conversion.created_at) %> ago</span>
+            </div>
+            <div class="flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
+              <span class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">timer</span> Processing Time</span>
+              <span class="text-sm font-bold text-slate-900 dark:text-white"><%= @conversion.processing_time ? "#{@conversion.processing_time.round(2)}s" : 'N/A' %></span>
+            </div>
+            <% if @conversion.output_file.attached? %>
+            <div class="flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
+              <span class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">hard_drive</span> Output Size</span>
+              <span class="text-sm font-bold text-slate-900 dark:text-white"><%= number_to_human_size(@conversion.output_file.byte_size) %></span>
+            </div>
+            <% end %>
+          </div>
+        </div>
+        
+      </div>
+
+      <!-- Action Area -->
+      <div class="rounded-2xl p-8 text-center border-2 border-dashed transition-all duration-500 <%= @conversion.completed? ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20' : (@conversion.failed? ? 'bg-rose-50/50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800/50 hover:bg-rose-50 dark:hover:bg-rose-900/20' : 'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700/50') %>">
+        
+        <% if @conversion.completed? && @conversion.output_file.attached? %>
+          <div class="size-16 mx-auto bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-4xl">task_alt</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Ready for Download</h3>
+          <p class="text-sm text-slate-500 mb-6">Your file has been successfully processed and is ready.</p>
+          
+          <% if user_signed_in? || @conversion.user_id.present? %>
+            <%= link_to download_conversion_path(@conversion), class: "inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:-translate-y-0.5 active:translate-y-0 w-full sm:w-auto min-w-[200px]" do %>
+              <span class="material-symbols-outlined text-[20px]">download</span>
+              Download File
+            <% end %>
+          <% else %>
+            <div class="flex flex-col items-center gap-3">
+              <%= link_to download_conversion_path(@conversion), class: "inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 active:translate-y-0 w-full sm:w-auto min-w-[200px] relative overflow-hidden group" do %>
+                <div class="absolute inset-0 bg-white/20 group-hover:translate-x-[150%] transition-transform duration-700 -translate-x-[150%] skew-x-12"></div>
+                <span class="material-symbols-outlined text-[20px] relative z-10">lock_open</span>
+                <span class="relative z-10">Sign up to Download</span>
+              <% end %>
+              <p class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800">
+                🎁 Unlocks <span class="text-primary font-bold">5 free</span> actions
+              </p>
+            </div>
+          <% end %>
+          
+        <% elsif @conversion.failed? %>
+          <div class="size-16 mx-auto bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-4xl">error</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Processing Failed</h3>
+          <div class="text-sm font-medium text-rose-700 dark:text-rose-300 text-left max-w-lg mx-auto mb-6 bg-rose-100/50 dark:bg-rose-900/40 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 overflow-auto">
+            <%= simple_format(@conversion.error_message.present? ? @conversion.error_message : "Unknown error occurred during processing.") %>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <%= link_to tool_path(@tool_meta ? @tool_meta[:id] : 'merge_pdf'), class: "inline-flex justify-center items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold py-3 px-6 rounded-xl hover:-translate-y-0.5 transition-all shadow-lg" do %>
+              <span class="material-symbols-outlined text-[18px]">refresh</span>
+              Try again
+            <% end %>
+            <%= link_to "mailto:support@convertpro.com", class: "inline-flex justify-center items-center gap-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-6 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" do %>
+              <span class="material-symbols-outlined text-[18px]">support_agent</span>
+              Contact Support
+            <% end %>
+          </div>
+          
+        <% else %>
+          <div class="py-6">
+            <div class="relative size-20 mx-auto mb-6">
+              <!-- Beautiful spinner -->
+              <svg class="animate-spin text-primary w-full h-full" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-100" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary text-xl animate-pulse">settings</span>
+              </div>
+            </div>
+            
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Processing your files...</h3>
+            <p class="text-sm font-medium text-slate-500 max-w-md mx-auto">
+              Please wait while our servers process your document. You can safely leave this page and check your conversion history later.
+            </p>
+            
+            <!-- Simple meta refresh to poll for status -->
+            <meta http-equiv="refresh" content="3">
+          </div>
+        <% end %>
+      </div>
+
+    </div>
+  </div>
+  
+  <div class="mt-6 mb-12 text-center">
+    <%= link_to conversions_path, class: "inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors bg-white/50 dark:bg-slate-800/50 px-6 py-2.5 rounded-full border border-slate-200 dark:border-slate-700" do %>
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+      Back to History
+    <% end %>
+  </div>
+</div>

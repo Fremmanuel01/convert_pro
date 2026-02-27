@@ -1,0 +1,117 @@
+<div class="max-w-3xl mx-auto w-full mt-6">
+  <!-- Breadcrumbs -->
+  <nav aria-label="breadcrumb" class="mb-6 flex text-sm text-slate-500 font-medium">
+    <ol class="flex items-center space-x-2">
+      <li><%= link_to "Tools", tools_path, class: "hover:text-primary transition-colors text-decoration-none" %></li>
+      <li class="flex items-center space-x-2">
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        <span class="text-slate-900 dark:text-white" aria-current="page"><%= @tool[:name] %></span>
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Main Card -->
+  <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl shadow-primary/5">
+    <div class="px-8 py-6 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center gap-4 bg-white/30 dark:bg-slate-900/30">
+      <div class="size-14 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-3xl"><%= @tool[:icon] || 'transform' %></span>
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1"><%= @tool[:name] %></h2>
+        <p class="text-sm text-slate-500 leading-relaxed"><%= @tool[:description] %></p>
+      </div>
+    </div>
+    
+    <div class="p-8 bg-white/10 dark:bg-transparent">
+      <%= form_with url: tools_path(tool_id: @tool[:id]), method: :post, local: true, multipart: true, class: "space-y-6 relative z-10" do |f| %>
+        
+        <% if @tool[:accepted_types].empty? %>
+          <!-- URL Input for Webpage to PDF -->
+          <div class="p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
+            <div class="size-16 mx-auto bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined text-4xl">link</span>
+            </div>
+            <h5 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Enter Webpage URL</h5>
+            <p class="text-sm text-slate-500 mb-6">We'll securely capture its formatting into a PDF document.</p>
+            <div class="max-w-md mx-auto relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">language</span>
+              <%= f.url_field :url, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400 shadow-sm", placeholder: "https://example.com", required: true %>
+            </div>
+          </div>
+        <% else %>
+          <!-- Standard File Upload Zone -->
+          <div class="relative p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-800/20 hover:border-primary/50 transition-colors group cursor-pointer" id="upload-zone">
+            
+            <%= f.file_field :files, multiple: @tool[:accepts_multiple], accept: @tool[:accepted_types].join(','), class: "absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20", required: true, id: "file_input" %>
+
+            <div class="pointer-events-none relative z-10 flex flex-col items-center justify-center">
+              <div class="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-4xl">cloud_upload</span>
+              </div>
+              <h5 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Select files to process</h5>
+              <p class="text-sm font-medium mb-6 <%= current_user&.pro? && current_user&.active? ? 'text-primary' : 'text-slate-500' %>">
+                <% if current_user&.pro? && current_user&.active? %>
+                  <span class="material-symbols-outlined text-[14px] align-middle mr-1">verified</span>Pro limit: Max 100MB
+                <% else %>
+                  Free limit: Max 10MB
+                <% end %>
+              </p>
+              
+              <div class="inline-flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-xl text-sm font-bold group-hover:-translate-y-0.5 transition-transform">
+                Browse Files
+              </div>
+              <p id="file-name-display" class="mt-4 text-sm font-bold text-primary hidden"></p>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Tool specific options -->
+        <% if @tool[:id] == 'protect_pdf' || @tool[:id] == 'unlock_pdf' %>
+          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <span class="material-symbols-outlined text-[16px] align-middle mr-1">key</span>
+              <%= @tool[:id] == 'protect_pdf' ? 'New Password' : 'Document Password' %>
+            </label>
+            <%= f.text_field :password, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", required: true, placeholder: (@tool[:id] == 'protect_pdf' ? "Enter a secure encryption password" : "Enter the document extraction password") %>
+          </div>
+        <% end %>
+
+        <% if @tool[:id] == 'ocr_pdf' %>
+          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <span class="material-symbols-outlined text-[16px] align-middle mr-1">translate</span>
+              OCR Language Limit
+            </label>
+            <%= f.select :language, [['English', 'eng'], ['Spanish', 'spa'], ['French', 'fra'], ['German', 'deu']], {}, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
+          </div>
+        <% end %>
+
+        <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4", data: { disable_with: "Uploading..." } do %>
+          Process Document
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        <% end %>
+      <% end %>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Simple script to display selected file names if files are chosen
+  const fileInput = document.getElementById('file_input');
+  if(fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      const displayContent = document.getElementById('file-name-display');
+      if(e.target.files.length > 0) {
+        if(e.target.files.length === 1) {
+          displayContent.textContent = e.target.files[0].name;
+        } else {
+          displayContent.textContent = e.target.files.length + " files selected";
+        }
+        displayContent.classList.remove('hidden');
+      } else {
+        displayContent.classList.add('hidden');
+      }
+    });
+  }
+</script>

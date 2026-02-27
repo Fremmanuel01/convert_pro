@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>
+      // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+    <title><%= content_for(:title) || "Convert Pro" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Convert Pro">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    
+    <% if ENV['FIREBASE_API_KEY'].present? %>
+      <meta name="firebase-config" content='{
+        "apiKey": "<%= ENV["FIREBASE_API_KEY"] %>",
+        "authDomain": "<%= ENV["FIREBASE_AUTH_DOMAIN"] %>",
+        "projectId": "<%= ENV["FIREBASE_PROJECT_ID"] %>",
+        "storageBucket": "<%= ENV["FIREBASE_STORAGE_BUCKET"] %>",
+        "messagingSenderId": "<%= ENV["FIREBASE_MESSAGING_SENDER_ID"] %>",
+        "appId": "<%= ENV["FIREBASE_APP_ID"] %>",
+        "measurementId": "<%= ENV["FIREBASE_MEASUREMENT_ID"] %>"
+      }'>
+    <% end %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload", "data-turbo-eval": "false" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <% if user_signed_in? %>
+  <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden">
+    <div class="flex h-full w-full">
+      <%= render "shared/sidebar" %>
+      <main class="flex-1 flex flex-col overflow-hidden relative">
+        <%= render "shared/header" %>
+        <div class="flex-1 overflow-y-auto p-8 bg-background-light dark:bg-background-dark relative">
+          <%= render "shared/flash" %>
+          <%= yield %>
+        </div>
+      </main>
+    </div>
+  </body>
+  <% else %>
+  <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden min-h-screen flex flex-col relative">
+    <!-- Background Decorative Elements -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[120px]"></div>
+      <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[100px]"></div>
+      <div class="absolute top-[20%] right-[15%] w-[300px] h-[300px] bg-primary/10 rounded-full blur-[80px]"></div>
+    </div>
+    
+    <div class="relative z-10 flex flex-col min-h-screen">
+      <%= render "shared/navbar" %>
+      <%= render "shared/flash" %>
+      <main class="flex-grow flex flex-col items-center">
+        <%= yield %>
+      </main>
+      <%= render "shared/footer" %>
+    </div>
+  </body>
+  <% end %>
+</html>

@@ -1,0 +1,155 @@
+<div class="max-w-7xl mx-auto w-full mt-8 px-4 sm:px-6 mb-20" id="tools-container">
+  
+  <!-- Header & Filters -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+    <div>
+      <h1 class="text-4xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Conversion Tools</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-lg font-medium max-w-xl">Everything you need to compress, convert, and manage your documents in one place.</p>
+    </div>
+
+    <!-- Filter Tabs (JS controlled) -->
+    <div class="flex items-center gap-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit overflow-x-auto hide-scrollbar shrink-0 border border-slate-300/30 dark:border-slate-700/50 backdrop-blur-md">
+      <button class="filter-tab active px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white" data-filter="all">
+        All Tools
+      </button>
+      <button class="filter-tab px-6 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all" data-filter="PDF Tools">
+        PDF
+      </button>
+      <button class="filter-tab px-6 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all" data-filter="Image Tools">
+        Images
+      </button>
+      <button class="filter-tab px-6 py-2.5 rounded-lg text-sm font-medium text-amber-500 hover:text-amber-600 transition-all flex items-center gap-1.5" data-filter="AI Tools">
+        <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+        AI
+      </button>
+    </div>
+  </div>
+
+  <!-- Tools Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="tools-grid">
+    
+    <% ToolRegistry.tools.each do |tool| %>
+      <% 
+        is_pdf = tool[:category] == 'PDF Tools' 
+        is_ai = tool[:category] == 'AI Tools'
+        bg_gradient = is_ai ? 'from-amber-400/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20' : (is_pdf ? 'from-rose-500/10 to-orange-500/10 dark:from-rose-500/20 dark:to-orange-500/20' : 'from-indigo-500/10 to-blue-500/10 dark:from-indigo-500/20 dark:to-blue-500/20')
+        icon_color = is_ai ? 'text-amber-500 dark:text-amber-400' : (is_pdf ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400')
+        glow_color = is_ai ? 'shadow-amber-500/20' : (is_pdf ? 'shadow-rose-500/20' : 'shadow-indigo-500/20')
+        icon_name = tool[:icon]
+      %>
+      
+      <%= link_to tool_path(tool[:id]), class: "tool-card bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl #{glow_color} group flex flex-col relative overflow-hidden", data: { category: tool[:category] } do %>
+        
+        <!-- Hover Ambient Backdrop -->
+        <div class="absolute inset-0 bg-gradient-to-br <%= bg_gradient %> opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col h-full">
+          <div class="size-14 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 <%= icon_color %> shrink-0">
+            <span class="material-symbols-outlined text-3xl"><%= icon_name %></span>
+          </div>
+          
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight"><%= tool[:name] %></h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-[90%] mb-8 flex-grow"><%= tool[:description] %></p>
+          
+          <div class="flex items-center text-primary dark:text-indigo-400 text-sm font-bold mt-auto group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
+            Open Tool 
+            <span class="material-symbols-outlined text-base ml-1 group-hover:translate-x-1.5 transition-transform duration-300">arrow_forward</span>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
+    <!-- Request Tool Placeholder CTA -->
+    <div class="tool-card bg-slate-50/50 dark:bg-slate-800/20 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40 hover:border-slate-400 dark:hover:border-slate-500 transition-all duration-300 group min-h-[240px]">
+      <div class="size-14 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-slate-300 dark:group-hover:bg-slate-600 transition-transform duration-300 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200">
+        <span class="material-symbols-outlined text-3xl">add</span>
+      </div>
+      <h3 class="font-bold text-slate-700 dark:text-slate-300 mb-1">Request Tool</h3>
+      <p class="text-xs text-slate-500">Need something else made?</p>
+    </div>
+  </div>
+
+  <!-- Premium Upgrade Banner CTA -->
+  <div class="mt-16 relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-primary p-10 sm:p-12 shadow-2xl text-white flex flex-col md:flex-row items-center justify-between gap-8 group">
+    
+    <!-- Animated Orbs -->
+    <div class="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 size-96 bg-white/5 rounded-full blur-3xl pointer-events-none group-hover:scale-125 transition-transform duration-1000"></div>
+    <div class="absolute bottom-0 right-32 translate-y-1/3 size-64 bg-indigo-500/20 rounded-full blur-2xl border border-white/5 pointer-events-none group-hover:translate-x-10 transition-transform duration-1000"></div>
+
+    <div class="relative z-10 max-w-2xl text-center md:text-left">
+      <div class="inline-flex items-center justify-center md:justify-start gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase mb-6 border border-white/20 mx-auto md:mx-0">
+        <span class="material-symbols-outlined text-sm text-emerald-400">verified</span>
+        ConvertPro Plus
+      </div>
+      <h2 class="text-3xl sm:text-4xl font-black mb-4 tracking-tight leading-tight">Unlock Unlimited Potential</h2>
+      <p class="text-indigo-100/80 text-lg mb-0 font-medium max-w-lg">Get unlimited conversions, priority server processing, and 30-days database retention to securely store your completed conversions.</p>
+    </div>
+    
+    <div class="relative z-10 shrink-0">
+      <% unless current_user&.pro? && current_user&.active? %>
+        <%= link_to pricing_path, class: "group/btn relative inline-flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-50 font-black py-4 px-8 rounded-2xl shadow-xl transition-all duration-300 hover:scale-[1.03] active:scale-95 overflow-hidden text-decoration-none" do %>
+          <div class="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300 ease-out"></div>
+          <span class="material-symbols-outlined text-xl relative z-10 text-primary">rocket_launch</span>
+          <span class="relative z-10">Get Plus Access</span>
+        <% end %>
+      <% else %>
+        <div class="bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold py-3 px-6 rounded-2xl flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-400">check_circle</span>
+            Active Subscription
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+</div>
+
+<!-- Vanilla JS for Filter Tabs -->
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const tabs = document.querySelectorAll('.filter-tab');
+    const cards = document.querySelectorAll('.tool-card');
+
+    if (tabs.length === 0 || cards.length === 0) return;
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        // 1. Manage Active Button CSS State
+        tabs.forEach(t => {
+          t.classList.remove('bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm', 'border', 'border-slate-200');
+          t.classList.add('text-slate-500', 'hover:text-slate-700', 'dark:hover:text-slate-300', 'border-transparent');
+        });
+        
+        const clickedTab = e.currentTarget;
+        clickedTab.classList.remove('text-slate-500', 'hover:text-slate-700', 'dark:hover:text-slate-300', 'border-transparent');
+        clickedTab.classList.add('bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm', 'border', 'border-slate-200');
+
+        // 2. Filter Logic
+        const filterTarget = clickedTab.getAttribute('data-filter');
+
+        cards.forEach(card => {
+          // If the card is the "Request Tool" placeholder (no data-category), never hide it
+          if (!card.hasAttribute('data-category')) {
+            card.style.display = 'flex';
+            return;
+          }
+
+          const cardCategory = card.getAttribute('data-category');
+
+          if (filterTarget === 'all' || cardCategory === filterTarget) {
+            // Fade In Animation logic
+            card.style.display = 'flex';
+            card.style.opacity = '0';
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.3s ease-in-out';
+                card.style.opacity = '1';
+            }, 10);
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+  });
+</script>

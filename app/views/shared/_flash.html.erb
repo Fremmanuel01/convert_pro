@@ -1,0 +1,20 @@
+<% if flash.any? %>
+  <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
+    <% flash.each do |key, message| %>
+      <% next if message.blank? %>
+      <div class="glass-card px-6 py-4 rounded-xl flex items-center gap-3 <%= key.to_s == 'alert' || key.to_s == 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' %> shadow-lg" role="alert">
+        <span class="material-symbols-outlined text-xl"><%= key.to_s == 'alert' || key.to_s == 'error' ? 'error' : 'check_circle' %></span>
+        <span class="text-sm font-medium"><%= message %></span>
+      </div>
+    <% end %>
+  </div>
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('[role="alert"]').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 5000);
+  </script>
+<% end %>

@@ -1,0 +1,20 @@
+# Configuration for Solid Queue recurring tasks
+#
+# production:
+#   cleanup_stale_data:
+#     class: CleanupJob
+#     schedule: "every day at 2am"
+#     args:
+#       - 100
+
+production:
+  cleanup_conversions:
+    class: CleanupConversionsJob
+    schedule: "0 0 * * *"
+    args: []
+
+development:
+  cleanup_conversions:
+    class: CleanupConversionsJob
+    schedule: "0 0 * * *"
+    args: []

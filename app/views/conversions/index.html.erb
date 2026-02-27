@@ -1,0 +1,73 @@
+<div class="mb-8 flex items-center justify-between">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Conversion History</h2>
+    <p class="text-sm text-slate-500 mt-1">Review and manage your processed documents.</p>
+  </div>
+  <%= link_to tools_path, class: "flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all text-decoration-none" do %>
+    <span class="material-symbols-outlined text-sm">add</span>
+    New Conversion
+  <% end %>
+</div>
+
+<% if @conversions.empty? %>
+  <div class="glass-card rounded-2xl p-12 flex flex-col items-center justify-center text-center border-dashed border-2 border-slate-300 dark:border-slate-700 mt-8">
+    <div class="size-16 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-4xl text-slate-400">inbox</span>
+    </div>
+    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No conversions yet</h4>
+    <p class="text-sm text-slate-500 mb-6 max-w-md">Your processed documents will appear here once you start using the tools.</p>
+    <%= link_to "Start converting", tools_path, class: "bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-transform hover:scale-105 text-decoration-none" %>
+  </div>
+<% else %>
+  <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm whitespace-nowrap">
+        <thead class="bg-slate-100/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-800">
+          <tr>
+            <th class="px-6 py-4">Date</th>
+            <th class="px-6 py-4">Tool</th>
+            <th class="px-6 py-4">Status</th>
+            <th class="px-6 py-4">Duration</th>
+            <th class="px-6 py-4 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+          <% @conversions.each do |conversion| %>
+            <% tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == conversion.tool_name } %>
+            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+              <td class="px-6 py-4 text-slate-500"><%= conversion.created_at.strftime("%b %d, %Y %H:%M") %></td>
+              <td class="px-6 py-4 font-semibold text-slate-900 dark:text-white">
+                <%= tool_meta ? tool_meta[:name] : "Unknown Tool" %>
+              </td>
+              <td class="px-6 py-4">
+                <% case conversion.status %>
+                <% when "pending", "processing" %>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                    <span class="material-symbols-outlined text-[14px]">hourglass_empty</span>
+                    Processing
+                  </span>
+                <% when "completed" %>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                    Completed
+                  </span>
+                <% when "failed" %>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Failed
+                  </span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 text-slate-500">
+                <%= conversion.processing_time ? "#{conversion.processing_time.round(2)}s" : "-" %>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <%= link_to "Details", conversion_path(conversion), class: "inline-block px-4 py-1.5 text-xs font-bold border-2 border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary hover:text-primary transition-colors text-decoration-none text-slate-600 dark:text-slate-300" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% end %>

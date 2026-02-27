@@ -1,0 +1,69 @@
+<header class="relative z-10 px-6 lg:px-20 py-4 md:py-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <a href="<%= root_path %>" class="flex items-center gap-2 group cursor-pointer text-decoration-none z-20">
+      <div class="bg-primary p-2 rounded-lg">
+        <span class="material-symbols-outlined text-white">auto_awesome</span>
+      </div>
+      <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">ConvertPro</span>
+    </a>
+
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="<%= tools_path %>">Features</a>
+      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="<%= pricing_path %>">Pricing</a>
+      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="#">Solutions</a>
+      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="#">Enterprise</a>
+    </nav>
+    <div class="hidden md:flex items-center gap-3">
+      <a href="<%= new_user_session_path %>" class="px-5 py-2 text-sm font-semibold hover:text-primary transition-colors text-slate-700 dark:text-slate-300 text-decoration-none">Login</a>
+      <a href="<%= new_user_registration_path %>" class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all text-decoration-none">
+          Get Started
+      </a>
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-button" class="md:hidden flex items-center justify-center p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors z-20">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+  </div>
+
+  <!-- Mobile Navigation Overlay -->
+  <div id="mobile-menu" class="fixed inset-0 bg-white dark:bg-slate-900 z-10 hidden flex-col pt-24 px-6 pb-6 h-screen overflow-y-auto">
+    <nav class="flex flex-col gap-6 mb-8 mt-4">
+      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="<%= tools_path %>">Features</a>
+      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="<%= pricing_path %>">Pricing</a>
+      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="#">Solutions</a>
+      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="#">Enterprise</a>
+    </nav>
+    <div class="flex flex-col gap-4 mt-auto">
+      <a href="<%= new_user_session_path %>" class="w-full text-center px-6 py-4 text-lg font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-decoration-none">Login</a>
+      <a href="<%= new_user_registration_path %>" class="w-full text-center bg-primary hover:bg-primary/90 text-white px-6 py-4 rounded-xl text-lg font-bold shadow-xl shadow-primary/25 transition-all text-decoration-none">
+          Get Started
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  document.addEventListener('turbo:load', function() {
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuButton && mobileMenu) {
+      mobileMenuButton.addEventListener('click', function() {
+        const icon = this.querySelector('span');
+        if (mobileMenu.classList.contains('hidden')) {
+          mobileMenu.classList.remove('hidden');
+          mobileMenu.classList.add('flex');
+          icon.textContent = 'close';
+          document.body.style.overflow = 'hidden'; // Prevent scrolling
+        } else {
+          mobileMenu.classList.add('hidden');
+          mobileMenu.classList.remove('flex');
+          icon.textContent = 'menu';
+          document.body.style.overflow = ''; // Restore scrolling
+        }
+      });
+    }
+  });
+</script>

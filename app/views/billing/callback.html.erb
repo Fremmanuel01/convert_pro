@@ -1,0 +1,47 @@
+<div class="w-full flex justify-center items-center min-h-[75vh] px-6">
+  <div class="w-full max-w-lg glow-border p-10 sm:p-14 rounded-[2.5rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-emerald-500/30 dark:border-emerald-400/20 shadow-2xl relative text-center">
+    
+    <!-- Success Icon Pop -->
+    <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-[2rem] shadow-xl shadow-emerald-500/40 flex items-center justify-center animate-[bounce_1s_ease-in-out_infinite]">
+        <div class="absolute inset-0 bg-white/20 rounded-[2rem] animate-ping opacity-75"></div>
+        <span class="material-symbols-outlined text-white text-4xl relative z-10" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+    </div>
+
+    <div class="mt-10 mb-8 space-y-3">
+        <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Payment Successful!</h2>
+        <p class="text-slate-500 dark:text-slate-400 leading-relaxed text-base px-4">
+            Thank you for subscribing to ConvertPro! Your payment was processed successfully. We are upgrading your account right now.
+        </p>
+    </div>
+
+    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 mb-8 border border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-4 text-emerald-600 dark:text-emerald-400 font-semibold text-sm mb-2">
+            <span class="material-symbols-outlined animate-spin" style="font-variation-settings: 'FILL' 1;">sync</span>
+            Confirming subscription status...
+        </div>
+        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-emerald-500 h-1.5 rounded-full animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] w-full" style="transform-origin: left; animation: load 3s ease-in-out forwards;"></div>
+        </div>
+    </div>
+    
+    <div class="space-y-4">
+        <%= link_to dashboard_path, class: "group w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]" do %>
+            Go to your Dashboard 
+            <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+        <% end %>
+    </div>
+    
+    <div class="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400 font-medium">
+        <span class="material-symbols-outlined text-[16px]">redeem</span>
+        Welcome to the Pro Tier
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes load {
+  0% { transform: scaleX(0); }
+  50% { transform: scaleX(0.7); }
+  100% { transform: scaleX(1); }
+}
+</style>

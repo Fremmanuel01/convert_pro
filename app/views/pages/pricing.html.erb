@@ -1,0 +1,162 @@
+<style>
+.glow-border {
+  position: relative;
+}
+.glow-border::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(45deg, #1f3dff, #6366f1, #1f3dff);
+  filter: blur(8px);
+  z-index: -1;
+  border-radius: 1.5rem;
+  opacity: 0.5;
+}
+</style>
+
+<div class="text-center mb-10 px-6">
+  <span class="inline-block px-4 py-1.5 mb-4 text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 rounded-full">Pricing Plans</span>
+  <h1 class="text-4xl md:text-6xl font-black mb-6 tracking-tight">Simple, transparent pricing</h1>
+  <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">Choose the plan that fits your workflow. From individual creators to power users, we've got you covered with premium document processing.</p>
+</div>
+
+<!-- Plan Toggle (Segmented Control) -->
+<div class="flex items-center justify-center mb-16 relative z-10">
+  <div class="flex items-center gap-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-300/30 dark:border-slate-700/50 backdrop-blur-md">
+    <button type="button" id="toggle-monthly" class="px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none">
+      Monthly
+    </button>
+    
+    <button type="button" id="toggle-yearly" class="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all focus:outline-none flex items-center gap-2">
+      Yearly 
+      <span class="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest font-black shadow-sm">Save 16%</span>
+    </button>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl relative px-6 z-10">
+  <!-- Free Plan -->
+  <div class="flex flex-col p-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm transition-transform hover:-translate-y-1">
+    <div class="mb-8">
+      <h3 class="text-lg font-bold mb-2">Free</h3>
+      <div class="flex items-baseline gap-1">
+        <span class="text-5xl font-black tracking-tighter">$0</span>
+        <span class="text-slate-500 font-medium">/month</span>
+      </div>
+      <p class="mt-4 text-sm text-slate-500">Perfect for occasional file conversions and testing features.</p>
+    </div>
+    <div class="space-y-4 mb-10 flex-1">
+      <div class="flex items-center gap-3 text-sm">
+        <span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+        <span>5 conversions per day</span>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+        <span>Standard engines</span>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+        <span>Local workspace only</span>
+      </div>
+    </div>
+    <% unless user_signed_in? %>
+      <a href="<%= new_user_registration_path %>" class="w-full text-center py-4 px-6 rounded-xl border-2 border-slate-200 dark:border-slate-800 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        Get Started Free
+      </a>
+    <% end %>
+  </div>
+
+  <!-- Pro Plan -->
+  <div class="glow-border flex flex-col p-8 rounded-xl border border-primary/50 bg-slate-900 shadow-2xl relative transition-transform hover:-translate-y-1">
+    <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+      <span class="bg-primary text-white text-[10px] uppercase font-black tracking-widest px-4 py-1.5 rounded-full shadow-lg shadow-primary/20">
+        Most Popular
+      </span>
+    </div>
+    <div class="mb-8">
+      <h3 class="text-lg font-bold mb-2 text-white">Pro</h3>
+      <div class="flex items-baseline gap-1 text-white">
+        <span class="text-5xl font-black tracking-tighter" id="pro-price">$5</span>
+        <span class="text-slate-400 font-medium" id="pro-period">/month</span>
+      </div>
+      <p class="mt-4 text-sm text-slate-400">Unlock the full power of AI-driven document processing.</p>
+    </div>
+    <div class="space-y-4 mb-10 flex-1">
+      <div class="flex items-center gap-3 text-sm text-slate-200">
+        <span class="material-symbols-outlined text-primary text-lg fill-1">check_circle</span>
+        <span class="font-semibold">Unlimited conversions</span>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-slate-200">
+        <span class="material-symbols-outlined text-primary text-lg fill-1">check_circle</span>
+        <span class="font-semibold">Priority Execution Queue</span>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-slate-200">
+        <span class="material-symbols-outlined text-primary text-lg fill-1">check_circle</span>
+        <span class="font-semibold">30-day extended retention</span>
+      </div>
+    </div>
+    <% if user_signed_in? && !(current_user.pro? && current_user.active?) %>
+      <a href="<%= upgrade_billing_path(plan: 'monthly') %>" id="pro-checkout-btn" class="w-full block text-center py-4 px-6 rounded-xl bg-primary text-white font-bold text-sm hover:shadow-[0_0_25px_rgba(31,61,255,0.5)] transition-all">
+        Upgrade to Pro
+      </a>
+    <% elsif user_signed_in? && current_user.pro? && current_user.active? %>
+      <div class="w-full text-center py-4 px-6 rounded-xl bg-slate-800 text-slate-400 font-bold text-sm border-2 border-slate-700 cursor-not-allowed">
+        Already Active
+      </div>
+    <% else %>
+      <a href="<%= new_user_registration_path %>" class="w-full text-center py-4 px-6 rounded-xl bg-primary text-white font-bold text-sm hover:shadow-[0_0_25px_rgba(31,61,255,0.5)] transition-all">
+        Sign Up & Upgrade
+      </a>
+    <% end %>
+  </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const btnMonthly = document.getElementById('toggle-monthly');
+    const btnYearly = document.getElementById('toggle-yearly');
+    
+    const proPrice = document.getElementById('pro-price');
+    const proPeriod = document.getElementById('pro-period');
+    const proCheckoutBtn = document.getElementById('pro-checkout-btn');
+    
+    function resetStyles(btn) {
+      btn.classList.remove('bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+      btn.classList.add('text-slate-500', 'hover:text-slate-700', 'dark:hover:text-slate-300');
+    }
+
+    function setActiveStyle(btn) {
+      btn.classList.remove('text-slate-500', 'hover:text-slate-700', 'dark:hover:text-slate-300');
+      btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+    }
+
+    if(btnMonthly && btnYearly) {
+      btnMonthly.addEventListener('click', () => {
+        setActiveStyle(btnMonthly);
+        resetStyles(btnYearly);
+
+        // Update Price and Button URL for Monthly
+        proPrice.textContent = '$5';
+        proPeriod.textContent = '/month';
+        
+        if(proCheckoutBtn) {
+          proCheckoutBtn.href = "<%= upgrade_billing_path(plan: 'monthly') %>";
+        }
+      });
+
+      btnYearly.addEventListener('click', () => {
+        setActiveStyle(btnYearly);
+        resetStyles(btnMonthly);
+
+        // Update Price and Button URL for Yearly
+        proPrice.textContent = '$50';
+        proPeriod.textContent = '/year';
+        
+        if(proCheckoutBtn) {
+          proCheckoutBtn.href = "<%= upgrade_billing_path(plan: 'yearly') %>";
+        }
+      });
+    }
+  });
+</script>
