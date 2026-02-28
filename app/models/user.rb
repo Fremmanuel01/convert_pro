@@ -6,14 +6,19 @@ class User < ApplicationRecord
          :omniauthable, omniauth_providers: [:google_oauth2]
 
   def self.from_omniauth(auth)
-    where(provider: auth.provider, uid: auth.uid).first_or_create do |user|
-      user.email = auth.info.email
-      user.password = Devise.friendly_token[0, 20]
-      # user.name = auth.info.name   # assuming the user model has a name
-      # user.image = auth.info.image # assuming the user model has an image
-      # If you are using confirmable and the provider(s) you use validate emails, 
-      # uncomment the line below to skip the confirmation emails.
-      # user.skip_confirmation!
+    # Check if a user already exists with this email address from standard sign-up
+    user = User.find_by(email: auth.info.email)
+
+    if user
+      # Link the Google provider to the existing account
+      user.update(provider: auth.provider, uid: auth.uid)
+      user
+    else
+      # Create a brand new user
+      where(provider: auth.provider, uid: auth.uid).first_or_create do |new_user|
+        new_user.email = auth.info.email
+        new_user.password = Devise.friendly_token[0, 20]
+      end
     end
   end
 
