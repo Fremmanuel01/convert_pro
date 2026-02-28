@@ -280,6 +280,8 @@ Devise.setup do |config|
     select_account: true,
     scope: 'email, profile'
   }
+  OmniAuth.config.allowed_request_methods = [:post, :get]
+  OmniAuth.config.silence_get_warning = true
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or
