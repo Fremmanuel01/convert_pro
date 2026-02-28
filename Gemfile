@@ -83,3 +83,7 @@ gem "tailwindcss-rails", "~> 4.4"
 
 # AI Features
 gem "pdf-reader"
+
+# Authentication
+gem "omniauth-google-oauth2", "~> 1.1"
+gem "omniauth-rails_csrf_protection", "~> 1.0"
