@@ -12,13 +12,11 @@ class BillingController < ApplicationController
     paystack = PaystackService.new
     url = paystack.initialize_subscription(current_user, callback_url: callback_billing_url, plan: plan_type)
 
-    if url
-      redirect_to url, allow_other_host: true
-    else
-      redirect_to upgrade_billing_path, alert: "Unable to start checkout. Please try again."
-    end
+    redirect_to url, allow_other_host: true
   rescue PaystackService::ConfigurationError
     redirect_to upgrade_billing_path, alert: "Payment system not configured yet."
+  rescue StandardError => e
+    redirect_to upgrade_billing_path, alert: "Paystack API Rejected Request: #{e.message}"
   end
 
   def callback

@@ -45,12 +45,13 @@ class PaystackService
     if response['status']
       response['data']['authorization_url']
     else
-      Rails.logger.error("Paystack API Error: #{response['message']}")
-      nil
+      err_msg = response['message'] || "Unknown Paystack Error: #{response.inspect}"
+      Rails.logger.error("Paystack API Error: #{err_msg}")
+      raise StandardError, err_msg
     end
   rescue StandardError => e
     Rails.logger.error("Paystack Initialize Error: #{e.message}")
-    nil
+    raise e
   end
 
   def verify_transaction(reference)
