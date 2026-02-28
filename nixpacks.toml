@@ -1,11 +1,12 @@
-[phases.setup]
-nixPkgs = ["...", "libreoffice", "ghostscript", "poppler_utils", "imagemagick"]
+providers = ["ruby"]
 
-# We also want to make sure the microsoft core fonts are available for LibreOffice
-[phases.install]
+[phases.setup]
+aptPkgs = ["...", "libreoffice", "ghostscript", "poppler-utils", "imagemagick", "fontconfig"]
+
+[phases.install_fonts]
+dependsOn = ["setup"]
 cmds = [
-  "...",
-  "apt-get update",
+  "echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections",
   "DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer",
   "fc-cache -f -v"
 ]
