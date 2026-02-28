@@ -26,8 +26,11 @@ module Tools
         input_path
       ].shelljoin
 
-      unless system(command)
-        raise ExecutionError, "LibreOffice conversion failed."
+      require 'open3'
+      stdout, stderr, status = Open3.capture3(command)
+
+      unless status.success?
+        raise ExecutionError, "LibreOffice conversion failed. Error: #{stderr.strip.presence || stdout.strip}"
       end
       
       unless File.exist?(expected_output_path)
