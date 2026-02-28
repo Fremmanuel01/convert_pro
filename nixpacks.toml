@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["...", "libreoffice", "ghostscript", "poppler_utils", "imagemagick"]
+
+# We also want to make sure the microsoft core fonts are available for LibreOffice
+[phases.install]
+cmds = [
+  "...",
+  "apt-get update",
+  "DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer",
+  "fc-cache -f -v"
+]
