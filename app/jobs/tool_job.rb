@@ -1,7 +1,7 @@
 class ToolJob < ApplicationJob
   queue_as :default
 
-  retry_on StandardError, wait: :exponentially_longer, attempts: 3 do |job, error|
+  retry_on StandardError, wait: 5.minutes, attempts: 3 do |job, error|
     conversion = Conversion.find_by(id: job.arguments.first)
     if conversion
       conversion.update!(
