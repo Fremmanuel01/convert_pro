@@ -43,49 +43,4 @@ document.addEventListener("turbo:load", () => {
     })
   }
 
-  // Logged-in App Sidebar (Mobile)
-  const sidebarToggle = document.getElementById("sidebar-toggle")
-  const appSidebar = document.getElementById("app-sidebar")
-  const sidebarOverlay = document.getElementById("sidebar-overlay")
-
-  if (sidebarToggle && appSidebar && sidebarOverlay) {
-    const toggleSidebar = () => {
-      const isHidden = appSidebar.classList.contains("-translate-x-full")
-      if (isHidden) {
-        appSidebar.classList.remove("-translate-x-full")
-        sidebarOverlay.classList.remove("hidden")
-        document.body.style.overflow = "hidden" // Prevent body scroll
-      } else {
-        appSidebar.classList.add("-translate-x-full")
-        sidebarOverlay.classList.add("hidden")
-        document.body.style.overflow = "" // Restore scroll
-      }
-    }
-
-    // Only attach if it hasn't been attached before to avoid duplicates
-    // Using onclick for turbo replacement safety
-    sidebarToggle.onclick = toggleSidebar
-    sidebarOverlay.onclick = toggleSidebar
-  }
-
-  // Public Landing Page Navbar (Mobile)
-  const mobileMenuButton = document.getElementById("mobile-menu-button")
-  const mobileMenu = document.getElementById("mobile-menu")
-
-  if (mobileMenuButton && mobileMenu) {
-    mobileMenuButton.onclick = function () {
-      const icon = this.querySelector('span')
-      if (mobileMenu.classList.contains('hidden')) {
-        mobileMenu.classList.remove('hidden')
-        mobileMenu.classList.add('flex')
-        icon.textContent = 'close'
-        document.body.style.overflow = 'hidden'
-      } else {
-        mobileMenu.classList.add('hidden')
-        mobileMenu.classList.remove('flex')
-        icon.textContent = 'menu'
-        document.body.style.overflow = ''
-      }
-    }
-  }
 })

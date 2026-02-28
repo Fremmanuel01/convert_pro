@@ -48,7 +48,7 @@
 
   <% if user_signed_in? %>
   <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden">
-    <div class="flex h-full w-full">
+    <div class="flex h-full w-full" data-controller="sidebar">
       <%= render "shared/sidebar" %>
       <main class="flex-1 flex flex-col overflow-hidden relative">
         <%= render "shared/header" %>
