@@ -1,6 +1,13 @@
 module Tools
   class DocxToPdf < BaseTool
-    SOFFICE_BIN = ENV.fetch("SOFFICE_BIN", Rails.env.production? ? "soffice" : "/Applications/LibreOffice.app/Contents/MacOS/soffice")
+    def self.find_binary
+      return "/Applications/LibreOffice.app/Contents/MacOS/soffice" unless Rails.env.production?
+      
+      # In Ubuntu, the binary might be installed as either `libreoffice` or `soffice`
+      ['libreoffice', 'soffice'].find { |bin| system("which #{bin} > /dev/null 2>&1") } || "soffice"
+    end
+
+    SOFFICE_BIN = ENV.fetch("SOFFICE_BIN", find_binary)
 
     protected
 
