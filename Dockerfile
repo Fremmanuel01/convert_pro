@@ -16,9 +16,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client libreoffice ghostscript poppler-utils imagemagick fontconfig && \
-    echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections && \
-    apt-get install --no-install-recommends -y ttf-mscorefonts-installer && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client libreoffice ghostscript poppler-utils imagemagick fontconfig fonts-liberation && \
     fc-cache -f -v && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
