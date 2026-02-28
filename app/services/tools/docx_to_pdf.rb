@@ -1,6 +1,6 @@
 module Tools
   class DocxToPdf < BaseTool
-    SOFFICE_BIN = '/Applications/LibreOffice.app/Contents/MacOS/soffice'
+    SOFFICE_BIN = ENV.fetch("SOFFICE_BIN", Rails.env.production? ? "soffice" : "/Applications/LibreOffice.app/Contents/MacOS/soffice")
 
     protected
 
