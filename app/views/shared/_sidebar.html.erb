@@ -76,28 +76,4 @@ Upgrade Plan
 </div>
 </aside>
 
-<script>
-  document.addEventListener('turbo:load', function() {
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const appSidebar = document.getElementById('app-sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-    
-    if (sidebarToggle && appSidebar && sidebarOverlay) {
-      function toggleSidebar() {
-        const isHidden = appSidebar.classList.contains('-translate-x-full');
-        if (isHidden) {
-          appSidebar.classList.remove('-translate-x-full');
-          sidebarOverlay.classList.remove('hidden');
-          document.body.style.overflow = 'hidden';
-        } else {
-          appSidebar.classList.add('-translate-x-full');
-          sidebarOverlay.classList.add('hidden');
-          document.body.style.overflow = '';
-        }
-      }
 
-      sidebarToggle.addEventListener('click', toggleSidebar);
-      sidebarOverlay.addEventListener('click', toggleSidebar);
-    }
-  });
-</script>

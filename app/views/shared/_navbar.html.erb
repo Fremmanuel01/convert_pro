@@ -44,26 +44,4 @@
   </div>
 </header>
 
-<script>
-  document.addEventListener('turbo:load', function() {
-    const mobileMenuButton = document.getElementById('mobile-menu-button');
-    const mobileMenu = document.getElementById('mobile-menu');
-    
-    if (mobileMenuButton && mobileMenu) {
-      mobileMenuButton.addEventListener('click', function() {
-        const icon = this.querySelector('span');
-        if (mobileMenu.classList.contains('hidden')) {
-          mobileMenu.classList.remove('hidden');
-          mobileMenu.classList.add('flex');
-          icon.textContent = 'close';
-          document.body.style.overflow = 'hidden'; // Prevent scrolling
-        } else {
-          mobileMenu.classList.add('hidden');
-          mobileMenu.classList.remove('flex');
-          icon.textContent = 'menu';
-          document.body.style.overflow = ''; // Restore scrolling
-        }
-      });
-    }
-  });
-</script>
+
