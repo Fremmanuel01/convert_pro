@@ -1,5 +1,7 @@
 import { application } from "controllers/application"
 
-// Eager load all controllers defined in the import map under controllers/**/*_controller
-import { eagerLoadControllersFrom } from "@hotwired/stimulus-loading"
-eagerLoadControllersFrom("controllers", application)
+import MobileMenuController from "controllers/mobile_menu_controller"
+application.register("mobile-menu", MobileMenuController)
+
+import SidebarController from "controllers/sidebar_controller"
+application.register("sidebar", SidebarController)
