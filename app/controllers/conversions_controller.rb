@@ -80,6 +80,26 @@ class ConversionsController < ApplicationController
     redirect_to rails_blob_path(@conversion.output_file, disposition: "attachment")
   end
 
+  def log
+    tool = ToolRegistry.find(params[:tool_id])
+    return head :not_found unless tool
+
+    conversion = Conversion.create!(
+      user: current_user,
+      tool_name: tool[:class_name],
+      status: :completed
+    )
+
+    if current_user
+      ConversionLimiter.new(current_user).increment!
+    else
+      session[:guest_conversion_ids] ||= []
+      session[:guest_conversion_ids] << conversion.id
+    end
+
+    head :ok
+  end
+
   private
 
   def guest_owns_conversion?(id)

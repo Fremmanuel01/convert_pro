@@ -23,6 +23,9 @@ Rails.application.routes.draw do
 
   resources :tools, only: [:index, :show, :create], param: :tool_id
   resources :conversions, only: [:index, :show] do
+    collection do
+      post :log
+    end
     member do
       get :download
     end

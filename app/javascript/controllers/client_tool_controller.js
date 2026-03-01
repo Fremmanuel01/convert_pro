@@ -54,6 +54,9 @@ export default class extends Controller {
                 pdf.addImage(imageData, 'auto', 0, 0, pdfWidth, pdfHeight)
             }
             pdf.save(`images_to_pdf_${Date.now()}.pdf`)
+            this.reportActivity()
+
+            // Reset the form after success
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -81,6 +84,7 @@ export default class extends Controller {
             }
             const pdfBytes = await mergedPdf.save()
             this.downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `merged_${Date.now()}.pdf`)
+            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -110,6 +114,7 @@ export default class extends Controller {
             }
             const zipped = zipSync(zipData)
             this.downloadBlob(new Blob([zipped], { type: 'application/zip' }), `split_${Date.now()}.zip`)
+            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -146,6 +151,7 @@ export default class extends Controller {
                 }
             })
             this.downloadBlob(new Blob([encryptedBytes], { type: 'application/pdf' }), `protected_${Date.now()}.pdf`)
+            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -170,6 +176,7 @@ export default class extends Controller {
             const pdf = await PDFDocument.load(fileBytes, { password })
             const decryptedBytes = await pdf.save()
             this.downloadBlob(new Blob([decryptedBytes], { type: 'application/pdf' }), `unlocked_${Date.now()}.pdf`)
+            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -178,6 +185,23 @@ export default class extends Controller {
         } finally {
             this.setProcessing(false)
         }
+    }
+
+    reportActivity() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+
+        fetch('/conversions/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ tool_id: this.toolIdValue })
+        })
+            .then(response => {
+                if (!response.ok) console.error("Failed to log activity")
+            })
+            .catch(error => console.error("Error logging activity:", error))
     }
 
     readFileAsDataURL(file) {
