@@ -1,7 +1,7 @@
 providers = ["ruby"]
 
 [phases.setup]
-aptPkgs = ["...", "libreoffice", "ghostscript", "poppler-utils", "imagemagick", "fontconfig", "default-jre", "nodejs", "npm", "ocrmypdf", "tesseract-ocr-eng"]
+aptPkgs = ["...", "libreoffice", "ghostscript", "poppler-utils", "imagemagick", "fontconfig", "default-jre", "nodejs", "npm", "ocrmypdf", "tesseract-ocr-eng", "chromium"]
 
 [phases.install_fonts]
 dependsOn = ["setup"]

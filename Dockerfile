@@ -29,6 +29,7 @@ RUN apt-get update -qq && \
     fonts-liberation \
     nodejs \
     npm \
+    chromium \
     ocrmypdf \
     tesseract-ocr-eng \
     libnss3 \
