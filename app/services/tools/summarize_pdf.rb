@@ -1,4 +1,5 @@
 require 'pdf-reader'
+require 'open3'
 
 module Tools
   class SummarizePdf < BaseTool
@@ -37,18 +38,18 @@ module Tools
     private
 
     def extract_text_from_pdf(path)
-      text = ""
-      begin
-        reader = PDF::Reader.new(path)
-        reader.pages.each do |page|
-          text << page.text
-          text << "\n\n"
-        end
-      rescue => e
-        Rails.logger.error "PDF::Reader Error: #{e.message}"
-        raise ExecutionError, "Failed to parse PDF document for text extraction."
+      # use pdftotext (from poppler-utils) which is much more robust than the ruby gem
+      stdout, stderr, status = Open3.capture3("pdftotext", path, "-")
+      
+      unless status.success?
+        Rails.logger.error "pdftotext Error: #{stderr}"
+        raise ExecutionError, "Failed to extract text from PDF document. Error: #{stderr.strip}"
       end
-      text
+
+      stdout
+    rescue => e
+      Rails.logger.error "Extraction error: #{e.message}"
+      raise ExecutionError, "Failed to parse PDF document for text extraction."
     end
 
     def generate_ai_summary(text)
