@@ -11,7 +11,8 @@ pdfjsDist.GlobalWorkerOptions.workerSrc = `https://esm.run/pdfjs-dist@4.0.379/bu
 export default class extends Controller {
     static values = {
         toolId: String,
-        acceptsMultiple: Boolean
+        acceptsMultiple: Boolean,
+        logUrl: String
     }
     static targets = ["form", "fileInput", "submitButton", "passwordInput"]
 
@@ -280,7 +281,9 @@ export default class extends Controller {
 
     reportActivity() {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-        fetch('/conversions/log', {
+        if (!this.logUrlValue) return
+
+        fetch(this.logUrlValue, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             body: JSON.stringify({ tool_id: this.toolIdValue })

@@ -28,6 +28,7 @@
             controller: "client-tool",
             client_tool_tool_id_value: @tool[:id],
             client_tool_accepts_multiple_value: @tool[:accepts_multiple],
+            client_tool_log_url_value: log_conversions_path,
             action: "submit->client-tool#process",
             client_tool_target: "form"
           } do |f| %>
