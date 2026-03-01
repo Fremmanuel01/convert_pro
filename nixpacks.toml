@@ -16,3 +16,6 @@ dependsOn = ["setup"]
 cmds = [
   "./bin/fix_imagemagick_policy.sh"
 ]
+
+[phases.install]
+dependsOn = ["setup", "install_fonts", "fix_imagemagick_policy"]
