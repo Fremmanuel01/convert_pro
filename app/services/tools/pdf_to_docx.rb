@@ -1,6 +1,13 @@
 module Tools
   class PdfToDocx < BaseTool
-    SOFFICE_BIN = '/Applications/LibreOffice.app/Contents/MacOS/soffice'
+    def self.find_binary
+      return "/Applications/LibreOffice.app/Contents/MacOS/soffice" unless Rails.env.production?
+      
+      # In Ubuntu, the binary might be installed as either `libreoffice` or `soffice`
+      ['libreoffice', 'soffice'].find { |bin| system("which #{bin} > /dev/null 2>&1") } || "soffice"
+    end
+
+    SOFFICE_BIN = ENV.fetch("SOFFICE_BIN", find_binary)
 
     protected
 
@@ -13,9 +20,13 @@ module Tools
       output_filename = File.basename(input_path, ".*") + ".docx"
       expected_output_path = tmp_path(output_filename)
 
-      # LibreOffice headless parsing via writer filter strategy
+      # LibreOffice headless command with isolated user profiles
+      # The UserInstallation flag prevents concurrent conversions from clashing over the same LibreOffice profile lock
+      profile_dir = tmp_path("lo_profile_#{Time.now.to_f}")
+      
       command = [
         SOFFICE_BIN,
+        "-env:UserInstallation=file://#{profile_dir}",
         "--infilter=writer_pdf_import",
         "--headless",
         "--convert-to", "docx",
@@ -23,8 +34,11 @@ module Tools
         input_path
       ].shelljoin
 
-      unless system(command)
-        raise ExecutionError, "LibreOffice conversion failed."
+      require 'open3'
+      stdout, stderr, status = Open3.capture3(command)
+
+      unless status.success?
+        raise ExecutionError, "LibreOffice conversion failed. Error: #{stderr.strip.presence || stdout.strip}"
       end
       
       unless File.exist?(expected_output_path)
