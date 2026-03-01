@@ -16,7 +16,30 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client libreoffice ghostscript poppler-utils imagemagick fontconfig fonts-liberation && \
+    apt-get install --no-install-recommends -y \
+    curl \
+    libjemalloc2 \
+    libvips \
+    postgresql-client \
+    libreoffice \
+    ghostscript \
+    poppler-utils \
+    imagemagick \
+    fontconfig \
+    fonts-liberation \
+    nodejs \
+    npm \
+    ocrmypdf \
+    tesseract-ocr-eng \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libxcomposite1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libadwaita-1-0 \
+    && \
     fc-cache -f -v && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
@@ -68,8 +91,6 @@ RUN bundle exec bootsnap precompile -j 1 app/ lib/
 # Precompiling assets for production without requiring secret RAILS_MASTER_KEY
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
-
-RUN rm -rf node_modules
 
 
 # Final stage for app image
