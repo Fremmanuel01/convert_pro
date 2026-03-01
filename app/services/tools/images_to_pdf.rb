@@ -2,6 +2,12 @@ require 'shellwords'
 
 module Tools
   class ImagesToPdf < BaseTool
+    def self.find_magick_binary
+      system("which magick > /dev/null 2>&1") ? "magick" : "convert"
+    end
+
+    MAGICK_BIN = ENV.fetch("MAGICK_BIN", find_magick_binary)
+
     protected
 
     def process(input_paths)
@@ -14,7 +20,7 @@ module Tools
 
       # Build bash command array to safely utilize ImageMagick with high quality
       command_args = [
-        "magick",
+        MAGICK_BIN,
         "-density", "300",
         "-quality", "100"
       ]
