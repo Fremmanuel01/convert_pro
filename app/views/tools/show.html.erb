@@ -82,7 +82,7 @@
               <span class="material-symbols-outlined text-[16px] align-middle mr-1">key</span>
               <%= @tool[:id] == 'protect_pdf' ? 'New Password' : 'Document Password' %>
             </label>
-            <%= f.text_field :password, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", required: true, placeholder: (@tool[:id] == 'protect_pdf' ? "Enter a secure encryption password" : "Enter the document extraction password") %>
+            <%= f.text_field :password, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", required: true, data: { client_tool_target: "passwordInput" }, placeholder: (@tool[:id] == 'protect_pdf' ? "Enter a secure encryption password" : "Enter the document extraction password") %>
           </div>
         <% end %>
 
