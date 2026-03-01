@@ -77,7 +77,17 @@ class ConversionsController < ApplicationController
       end
     end
 
-    redirect_to rails_blob_path(@conversion.output_file, disposition: "attachment")
+    blob = @conversion.output_file
+    filename = blob.filename.to_s
+    content_type = blob.content_type.presence || "application/octet-stream"
+
+    # Proxy through Rails to avoid Cloudinary URL format/auth issues
+    blob.open do |tempfile|
+      send_data tempfile.read,
+                filename: filename,
+                type: content_type,
+                disposition: "attachment"
+    end
   end
 
   def log
