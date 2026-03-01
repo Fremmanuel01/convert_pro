@@ -80,15 +80,13 @@ class ConversionsController < ApplicationController
     blob = @conversion.output_file
     mime = blob.content_type.presence || "application/octet-stream"
     
-    # Proxy through Rails — Active Storage retrieves the file from Cloudinary 
-    # server-to-server (authenticated) and streams it to the user.
-    # This bypasses ALL Cloudinary delivery URL format issues (401, 404, resource_type mismatch).
-    blob.open do |tempfile|
-      send_data tempfile.read,
-                filename: blob.filename.to_s,
-                type: mime,
-                disposition: "attachment"
-    end
+    # Use blob.service.download directly — bypasses ActiveStorage::IntegrityError
+    # that blob.open raises when Cloudinary's stored checksum doesn't match.
+    file_data = blob.service.download(blob.key)
+    send_data file_data,
+              filename: blob.filename.to_s,
+              type: mime,
+              disposition: "attachment"
   end
 
   def log
