@@ -1,13 +1,7 @@
-require 'shellwords'
+require 'prawn'
 
 module Tools
   class ImagesToPdf < BaseTool
-    def self.find_magick_binary
-      system("which magick > /dev/null 2>&1") ? "magick" : "convert"
-    end
-
-    MAGICK_BIN = ENV.fetch("MAGICK_BIN", find_magick_binary)
-
     protected
 
     def process(input_paths)
@@ -18,19 +12,19 @@ module Tools
       output_filename = "images_to_pdf_#{Time.current.to_i}.pdf"
       output_path = tmp_path(output_filename)
 
-      # Build bash command array to safely utilize ImageMagick with high quality
-      command_args = [
-        MAGICK_BIN,
-        "-density", "300",
-        "-quality", "100"
-      ]
-      command_args += input_paths
-      command_args += ["+repage", output_path]
-      
-      command = command_args.shelljoin
-
-      unless system(command)
-        raise ExecutionError, "ImageMagick conversion failed."
+      begin
+        Prawn::Document.generate(output_path, margin: 0) do |pdf|
+          input_paths.each_with_index do |image_path, index|
+            # Start a new page for every image except the very first one
+            pdf.start_new_page if index > 0
+            
+            # Fit the image to the standard letter page bounds (612x792 pt in Prawn)
+            pdf.image image_path, fit: [pdf.bounds.width, pdf.bounds.height], position: :center, vposition: :center
+          end
+        end
+      rescue => e
+        Rails.logger.error "Prawn PDF Generation Failed: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
+        raise ExecutionError, "Failed to compile images into PDF format."
       end
       
       unless File.exist?(output_path)
