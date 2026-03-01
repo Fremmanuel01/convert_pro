@@ -23,7 +23,14 @@
     </div>
     
     <div class="p-8 bg-white/10 dark:bg-transparent">
-      <%= form_with url: tools_path(tool_id: @tool[:id]), method: :post, local: true, multipart: true, class: "space-y-6 relative z-10" do |f| %>
+      <%= form_with url: tools_path(tool_id: @tool[:id]), method: :post, local: true, multipart: true, class: "space-y-6 relative z-10",
+          data: {
+            controller: "client-tool",
+            client_tool_tool_id_value: @tool[:id],
+            client_tool_accepts_multiple_value: @tool[:accepts_multiple],
+            action: "submit->client-tool#process",
+            client_tool_target: "form"
+          } do |f| %>
         
         <% if @tool[:accepted_types].empty? %>
           <!-- URL Input for Webpage to PDF -->
@@ -42,7 +49,10 @@
           <!-- Standard File Upload Zone -->
           <div class="relative p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-800/20 hover:border-primary/50 transition-colors group cursor-pointer" id="upload-zone">
             
-            <%= f.file_field :files, multiple: @tool[:accepts_multiple], accept: @tool[:accepted_types].join(','), class: "absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20", required: true, id: "file_input" %>
+            <%= f.file_field :files, multiple: @tool[:accepts_multiple], accept: @tool[:accepted_types].join(','), 
+                class: "absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20", 
+                required: true, id: "file_input",
+                data: { client_tool_target: "fileInput" } %>
 
             <div class="pointer-events-none relative z-10 flex flex-col items-center justify-center">
               <div class="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -86,7 +96,11 @@
           </div>
         <% end %>
 
-        <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4", data: { disable_with: "Uploading..." } do %>
+        <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4", 
+            data: { 
+              client_tool_target: "submitButton",
+              disable_with: "Uploading..." 
+            } do %>
           Process Document
           <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
         <% end %>

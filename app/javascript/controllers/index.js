@@ -11,3 +11,7 @@ application.register("theme", ThemeController)
 
 import DropdownController from "controllers/dropdown_controller"
 application.register("dropdown", DropdownController)
+
+import ClientToolController from "controllers/client_tool_controller"
+application.register("client-tool", ClientToolController)
+
