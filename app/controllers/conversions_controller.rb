@@ -77,7 +77,9 @@ class ConversionsController < ApplicationController
       end
     end
 
-    redirect_to rails_blob_path(@conversion.output_file, disposition: "attachment")
+    # For active storage services like Cloudinary, we want to force the browser to prompt a download.
+    # We can do this by redirecting to the URL directly with the attachment disposition.
+    redirect_to @conversion.output_file.url(disposition: "attachment"), allow_other_host: true
   end
 
   private
