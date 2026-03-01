@@ -78,11 +78,44 @@ class ConversionsController < ApplicationController
     end
 
     blob = @conversion.output_file
+    key = blob.key
 
-    # Let Active Storage handle Cloudinary URL construction with the correct resource type.
-    # With resource_type: raw in storage.yml, Cloudinary stores files as raw type
-    # and Active Storage generates /raw/upload/ delivery URLs that work correctly.
-    redirect_to rails_blob_url(blob, disposition: "attachment"), allow_other_host: true
+    # Files uploaded before our fix are stored as 'image' type.
+    # Files after the fix are stored as 'raw' type.
+    # Use Cloudinary Admin API to find the actual stored resource type, 
+    # then generate a signed delivery URL (bypasses Cloudinary access restrictions).
+    actual_resource_type = nil
+    ["raw", "image"].each do |rt|
+      begin
+        Cloudinary::Api.resource(key, resource_type: rt)
+        actual_resource_type = rt
+        break
+      rescue Cloudinary::Api::NotFound
+        next
+      rescue => e
+        Rails.logger.warn "Cloudinary Admin API check (#{rt}) failed: #{e.message}"
+        next
+      end
+    end
+
+    if actual_resource_type
+      signed_url = Cloudinary::Utils.cloudinary_url(key,
+        resource_type: actual_resource_type,
+        type: "upload",
+        secure: true,
+        sign_url: true,
+        attachment: blob.filename.to_s
+      )
+      redirect_to signed_url, allow_other_host: true
+    else
+      # Final fallback: stream through Rails
+      Rails.logger.warn "Cloudinary resource not found via Admin API for key: #{key}. Falling back to proxy."
+      file_data = blob.service.download(key)
+      send_data file_data,
+                filename: blob.filename.to_s,
+                type: blob.content_type.presence || "application/octet-stream",
+                disposition: "attachment"
+    end
   end
 
   def log
