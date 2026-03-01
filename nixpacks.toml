@@ -10,3 +10,9 @@ cmds = [
   "DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer",
   "fc-cache -f -v"
 ]
+
+[phases.fix_imagemagick_policy]
+dependsOn = ["setup"]
+cmds = [
+  "sed -i 's/<policy domain=\"coder\" rights=\"none\" pattern=\"PDF\" \\/>/<policy domain=\"coder\" rights=\"read | write\" pattern=\"PDF\" \\/>/g' /etc/ImageMagick-6/policy.xml"
+]
