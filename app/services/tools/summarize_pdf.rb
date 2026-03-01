@@ -38,19 +38,26 @@ module Tools
     private
 
     def extract_text_from_pdf(path)
-      # use pdftotext (from poppler-utils) with explicit path for production robustness
-      pdftotext_path = `which pdftotext`.strip.presence || "/usr/bin/pdftotext"
-      stdout, stderr, status = Open3.capture3(pdftotext_path, path, "-")
+      # Try pdftotext first (more robust), fall back to pdf-reader gem
+      pdftotext_bin = `which pdftotext 2>/dev/null`.strip
       
-      unless status.success?
-        Rails.logger.error "pdftotext Error: #{stderr}"
-        raise ExecutionError, "PDF text extraction failed. System reports: #{stderr.strip.presence || 'is pdftotext installed?'}"
+      if pdftotext_bin.present?
+        stdout, stderr, status = Open3.capture3(pdftotext_bin, path, "-")
+        if status.success? && stdout.strip.present?
+          return stdout
+        end
+        Rails.logger.warn "pdftotext returned empty or failed (#{stderr}), falling back to pdf-reader"
       end
 
-      stdout
+      # Fallback: pdf-reader gem
+      text = ""
+      PDF::Reader.new(path).pages.each do |page|
+        text << page.text.to_s << "\n\n"
+      end
+      text
     rescue => e
-      Rails.logger.error "Extraction error: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
-      raise ExecutionError, "AI Engine failed to read PDF: #{e.message}"
+      Rails.logger.error "Text extraction error: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
+      raise ExecutionError, "Failed to extract text from PDF: #{e.message}"
     end
 
     def generate_ai_summary(text)

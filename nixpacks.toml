@@ -1,12 +1,7 @@
 providers = ["ruby"]
 
-[variables]
-PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
-PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
-GROVER_CHROME_PATH = "/usr/bin/chromium"
-
 [phases.setup]
-aptPkgs = ["...", "libreoffice", "ghostscript", "poppler-utils", "imagemagick", "fontconfig", "default-jre", "nodejs", "npm", "ocrmypdf", "tesseract-ocr-eng", "chromium"]
+aptPkgs = ["...", "libreoffice", "ghostscript", "poppler-utils", "imagemagick", "fontconfig", "default-jre"]
 
 [phases.install_fonts]
 dependsOn = ["setup"]
