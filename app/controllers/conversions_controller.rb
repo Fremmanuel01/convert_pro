@@ -78,29 +78,16 @@ class ConversionsController < ApplicationController
     end
 
     blob = @conversion.output_file
+    mime = blob.content_type.presence || "application/octet-stream"
     
-    # Use Cloudinary SDK to build the correct delivery URL with the right resource type
-    # This avoids the 401 (wrong resource type) and 404 (wrong path) errors from raw redirects
-    begin
-      cloudinary_key = blob.key
-      # Determine if it's a raw file (PDF, ZIP, DOCX) or image
-      mime = blob.content_type.presence || "application/octet-stream"
-      resource_type = mime.start_with?("image/") ? "image" : "raw"
-      
-      url = Cloudinary::Utils.cloudinary_url(cloudinary_key, 
-        resource_type: resource_type,
-        type: "upload",
-        secure: true
-      )
-      redirect_to url, allow_other_host: true
-    rescue => e
-      Rails.logger.warn "Cloudinary URL build failed (#{e.message}), falling back to proxy"
-      blob.open do |tempfile|
-        send_data tempfile.read,
-                  filename: blob.filename.to_s,
-                  type: blob.content_type.presence || "application/octet-stream",
-                  disposition: "attachment"
-      end
+    # Proxy through Rails — Active Storage retrieves the file from Cloudinary 
+    # server-to-server (authenticated) and streams it to the user.
+    # This bypasses ALL Cloudinary delivery URL format issues (401, 404, resource_type mismatch).
+    blob.open do |tempfile|
+      send_data tempfile.read,
+                filename: blob.filename.to_s,
+                type: mime,
+                disposition: "attachment"
     end
   end
 
