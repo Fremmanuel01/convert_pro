@@ -21,30 +21,29 @@ module Tools
       expected_output_path = tmp_path(output_filename)
 
       # LibreOffice headless command with isolated user profiles
-      # The UserInstallation flag prevents concurrent conversions from clashing over the same LibreOffice profile lock
-      profile_dir = tmp_path("lo_profile_#{Time.now.to_f}")
+      profile_dir = tmp_path("lo_profile")
+      Dir.mkdir(profile_dir) unless Dir.exist?(profile_dir)
       
       command = [
         SOFFICE_BIN,
         "-env:UserInstallation=file://#{profile_dir}",
-        "-env:JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1",
-        "--nofirststartwizard",
-        "--infilter=writer_pdf_import",
         "--headless",
         "--convert-to", "docx",
         "--outdir", @tmp_dir,
         input_path
       ].shelljoin
-
+      
       require 'open3'
       stdout, stderr, status = Open3.capture3(command)
 
       unless status.success?
-        raise ExecutionError, "LibreOffice conversion failed. Error: #{stderr.strip.presence || stdout.strip}"
+        raise ExecutionError, "LibreOffice conversion failed. Exit code: #{status.exitstatus}. Error: #{stderr.strip.presence || stdout.strip}"
       end
       
       unless File.exist?(expected_output_path)
-        raise ExecutionError, "LibreOffice failed to generate a DOCX output."
+        # If the file doesn't exist, log what happened for debugging
+        Rails.logger.error("LibreOffice success but NO FILE found. STDOUT: #{stdout} STDERR: #{stderr}")
+        raise ExecutionError, "LibreOffice failed to generate a DOCX output. (Command reported success but file missing)"
       end
 
       expected_output_path

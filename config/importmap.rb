@@ -12,3 +12,5 @@ pin "firebase/auth", to: "https://www.gstatic.com/firebasejs/10.10.0/firebase-au
 pin "jspdf", to: "https://esm.run/jspdf@2.5.1"
 pin "fflate", to: "https://esm.run/fflate@0.8.2"
 pin "pdf-lib", to: "https://esm.run/pdf-lib@1.17.1"
+pin "pdfjs-dist", to: "https://esm.run/pdfjs-dist@4.0.379"
+pin "heic2any", to: "https://esm.run/heic2any@0.0.4"
