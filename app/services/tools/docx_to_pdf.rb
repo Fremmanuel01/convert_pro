@@ -27,6 +27,8 @@ module Tools
       command = [
         SOFFICE_BIN,
         "-env:UserInstallation=file://#{profile_dir}",
+        "-env:JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1",
+        "--nofirststartwizard",
         "--headless",
         "--convert-to", "pdf:writer_pdf_Export",
         "--outdir", @tmp_dir,
