@@ -15,12 +15,19 @@ module Tools
       output_path = tmp_path(output_filename)
 
       begin
-        grover = Grover.new(url, format: 'A4', debug_info: true)
+        executable_path = ENV.fetch('PUPPETEER_EXECUTABLE_PATH', '/usr/bin/chromium')
+        grover = Grover.new(url, 
+          format: 'A4', 
+          debug_info: true,
+          executable_path: executable_path,
+          launch_args: ['--no-sandbox', '--disable-setuid-sandbox']
+        )
         pdf_content = grover.to_pdf
         
         File.binwrite(output_path, pdf_content)
       rescue => e
-        raise ExecutionError, "Puppeteer conversion failed: #{e.message}"
+        Rails.logger.error "WebpageToPdf Error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
+        raise ExecutionError, "Webpage conversion failed: #{e.message}"
       end
 
       unless File.exist?(output_path)

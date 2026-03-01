@@ -38,25 +38,26 @@ module Tools
     private
 
     def extract_text_from_pdf(path)
-      # use pdftotext (from poppler-utils) which is much more robust than the ruby gem
-      stdout, stderr, status = Open3.capture3("pdftotext", path, "-")
+      # use pdftotext (from poppler-utils) with explicit path for production robustness
+      pdftotext_path = `which pdftotext`.strip.presence || "/usr/bin/pdftotext"
+      stdout, stderr, status = Open3.capture3(pdftotext_path, path, "-")
       
       unless status.success?
         Rails.logger.error "pdftotext Error: #{stderr}"
-        raise ExecutionError, "Failed to extract text from PDF document. Error: #{stderr.strip}"
+        raise ExecutionError, "PDF text extraction failed. System reports: #{stderr.strip.presence || 'is pdftotext installed?'}"
       end
 
       stdout
     rescue => e
-      Rails.logger.error "Extraction error: #{e.message}"
-      raise ExecutionError, "Failed to parse PDF document for text extraction."
+      Rails.logger.error "Extraction error: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
+      raise ExecutionError, "AI Engine failed to read PDF: #{e.message}"
     end
 
     def generate_ai_summary(text)
       api_key = ENV['GROQ_API_KEY']
       
       if api_key.blank?
-        raise ExecutionError, "Groq API Key is missing! The server admin must configure ENV['GROQ_API_KEY']."
+        raise ExecutionError, "Groq API Key is missing! Please configure GROQ_API_KEY."
       end
 
       begin
@@ -69,7 +70,6 @@ module Tools
           #{text}
         PROMPT
         
-        # Use HTTParty to hit the Groq REST API (OpenAI-compatible)
         url = "https://api.groq.com/openai/v1/chat/completions"
         
         headers = { 
@@ -78,7 +78,7 @@ module Tools
         }
         
         body = {
-          model: "llama-3.1-8b-instant", # Fast Llama 3.1 model hosted by Groq
+          model: "llama-3.1-8b-instant",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3
         }
@@ -86,36 +86,25 @@ module Tools
         response = HTTParty.post(url, headers: headers, body: body.to_json, timeout: 30)
 
         if response.success?
-          # Successfully got a completion (matches OpenAI JSON structure)
           response.dig("choices", 0, "message", "content")
         else
-          # Capture specific Groq API errors
-          error_msg = response.dig("error", "message") || "Unknown Groq API Error (Status: #{response.code})"
-          
-          if response.code == 429
-            raise ExecutionError, "Groq rejected the request (Error 429). Rate limit exceeded."
-          elsif response.code == 401
-            raise ExecutionError, "The provided Groq API key is invalid or unauthorized."
-          else
-            raise ExecutionError, "Groq API Error: #{error_msg}"
-          end
+          error_msg = response.dig("error", "message") || "Unknown AI Error (Status: #{response.code})"
+          raise ExecutionError, "AI Summary Generation Failed: #{error_msg}"
         end
 
       rescue HTTParty::Error, Net::ReadTimeout, SocketError => e
         Rails.logger.error "Groq Connection Error: #{e.message}"
-        raise ExecutionError, "Network error connecting to Groq AI: #{e.message}"
+        raise ExecutionError, "Network error connecting to AI Service: #{e.message}"
       rescue ExecutionError => e
-        # Re-raise explicit errors
         raise e
       rescue => e
         Rails.logger.error "Groq Backend Error: #{e.message}"
-        raise ExecutionError, "The AI engine failed: #{e.message}"
+        raise ExecutionError, "The AI summary engine failed: #{e.message}"
       end
     end
 
     def build_summary_html(markdown_content, original_filename)
-      # Extremely basic markdown to HTML conversion for headers and lists
-      # In a full app, you might use 'redcarpet' gem, but we'll do quick regex for MVP
+      # Basic markdown to HTML conversion
       html = markdown_content
         .gsub(/^### (.*)$/, '<h3>\1</h3>')
         .gsub(/^## (.*)$/, '<h2>\1</h2>')
@@ -125,7 +114,6 @@ module Tools
         .gsub(/^- (.*)$/, '<li>\1</li>')
         .gsub(/\n\n/, '</p><p>')
       
-      # Wrap bare lists in <ul>
       html.gsub!(/(<li>.*<\/li>)/m, '<ul>\1</ul>')
 
       <<~HTML
@@ -153,14 +141,14 @@ module Tools
         <div class="header">
           <div class="ai-badge">ConvertPro AI Analysis</div>
           <div class="title">Executive Summary</div>
-          <div class="subtitle">Source Profile: #{original_filename}</div>
+          <div class="subtitle">Source File: #{original_filename}</div>
         </div>
         
         <p>#{html}</p>
 
         <div class="footer">
-          Generated automatically by ConvertPro Artificial Intelligence Intelligence Engine.<br>
-          Responses are machine-generated and should be reviewed for critical accuracy.
+          Generated automatically by ConvertPro AI Engine.<br>
+          AI-generated content should be reviewed for accuracy.
         </div>
       </body>
       </html>
@@ -168,13 +156,21 @@ module Tools
     end
 
     def create_pdf_from_html(html, output_path)
+      # Force chromium path for production stability
+      executable_path = ENV.fetch('PUPPETEER_EXECUTABLE_PATH', '/usr/bin/chromium')
+      
       begin
-        grover = Grover.new(html, format: 'A4', margin: { top: '20px', bottom: '20px' })
+        grover = Grover.new(html, 
+          format: 'A4', 
+          margin: { top: '20px', bottom: '20px' },
+          executable_path: executable_path,
+          launch_args: ['--no-sandbox', '--disable-setuid-sandbox']
+        )
         pdf_data = grover.to_pdf
         File.binwrite(output_path, pdf_data)
       rescue => e
-        Rails.logger.error "Grover Render Error: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
-        raise ExecutionError, "Failed to render the AI summary into a PDF document. System error: #{e.message}"
+        Rails.logger.error "Grover Render Error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
+        raise ExecutionError, "AI layout engine failed: #{e.message}"
       end
     end
 
