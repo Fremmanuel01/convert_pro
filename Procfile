@@ -1,1 +1,1 @@
-web: bin/rails db:migrate && bundle exec puma -C config/puma.rb
+web: bin/rails db:migrate db:migrate:cache db:migrate:queue && bundle exec puma -C config/puma.rb

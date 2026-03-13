@@ -20,8 +20,8 @@ class FirebaseTokenVerifier
     # 2. Fetch Google's public x509 certificates and cache them for 1 hour
     # This automatically uses SolidCache (PostgreSQL) instead of requiring Redis!
     certificates = Rails.cache.fetch('firebase_certificates', expires_in: 1.hour) do
-      response = HTTParty.get(CERT_URL)
-      
+      response = HTTParty.get(CERT_URL, timeout: 5)
+
       if response.success?
         JSON.parse(response.body)
       else
