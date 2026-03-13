@@ -127,7 +127,7 @@ module Tools
       Prawn::Document.generate(output_path, page_size: 'A4', margin: 40) do |pdf|
         # Header
         pdf.fill_color "4338ca"
-        pdf.text "ConvertPro AI Analysis", size: 10, align: :center
+        pdf.text "OfficedocTools AI Analysis", size: 10, align: :center
         pdf.move_down 8
         pdf.text "Executive Summary", size: 22, style: :bold, align: :center
         pdf.fill_color "64748b"
@@ -172,7 +172,7 @@ module Tools
         pdf.fill_color "94a3b8"
         pdf.stroke_horizontal_rule
         pdf.move_down 8
-        pdf.text "Generated automatically by ConvertPro AI Engine.", size: 8, align: :center
+        pdf.text "Generated automatically by OfficedocTools AI Engine.", size: 8, align: :center
         pdf.text "AI-generated content should be reviewed for accuracy.", size: 8, align: :center
       end
     rescue => e

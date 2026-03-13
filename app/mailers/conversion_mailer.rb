@@ -6,7 +6,7 @@ class ConversionMailer < ApplicationMailer
     
     mail(
       to: @user.email,
-      subject: "Your processed file is ready! - ConvertPro"
+      subject: "Your processed file is ready! - OfficedocTools"
     )
   end
 end
