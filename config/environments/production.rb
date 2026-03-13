@@ -79,9 +79,10 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Allow requests from Heroku domain
+  # Allow requests from custom domain and Heroku fallback
   config.hosts = [
-    ENV.fetch("APP_HOST", "convert-pro-app-53d82a111eac.herokuapp.com"),
+    "officedoctools.com",
+    "www.officedoctools.com",
     /.*\.herokuapp\.com/
   ]
 end
