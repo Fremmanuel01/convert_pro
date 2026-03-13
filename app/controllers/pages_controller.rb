@@ -7,6 +7,12 @@ class PagesController < ApplicationController
   def pricing
   end
 
+  def solutions
+  end
+
+  def enterprise
+  end
+
   def dashboard
     @limiter = ConversionLimiter.new(current_user)
     @recent_conversions = current_user.conversions.order(created_at: :desc).limit(5)

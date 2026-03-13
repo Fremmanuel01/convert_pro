@@ -8,6 +8,8 @@ Rails.application.routes.draw do
   root "pages#home"
 
   get "pricing", to: "pages#pricing"
+  get "solutions", to: "pages#solutions"
+  get "enterprise", to: "pages#enterprise"
   get "dashboard", to: "pages#dashboard"
   get "analytics", to: "analytics#index"
 

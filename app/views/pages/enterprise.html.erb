@@ -1,0 +1,81 @@
+<%- content_for :title, "Enterprise – OfficedocTools" %>
+
+<!-- Hero -->
+<div class="w-full max-w-5xl mx-auto px-6 pt-16 pb-12 text-center">
+  <span class="inline-block px-4 py-1.5 mb-4 text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 rounded-full">Enterprise</span>
+  <h1 class="text-4xl md:text-6xl font-black mb-6 tracking-tight text-slate-900 dark:text-white">Document processing <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-400">at scale</span></h1>
+  <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">Built for organisations that process high volumes of documents. Get dedicated support, custom integrations, priority processing, and SLA-backed reliability.</p>
+  <div class="flex flex-col sm:flex-row gap-4 justify-center mt-10">
+    <a href="mailto:hello@officedoctools.com" class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-primary/30 transition-all text-decoration-none">Contact Sales</a>
+    <a href="<%= pricing_path %>" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white px-8 py-4 rounded-xl font-bold transition-all text-decoration-none">View Pricing</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="w-full max-w-5xl mx-auto px-6 pb-16">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+    <% [["99.9%", "Uptime SLA"], ["50k+", "Users Globally"], ["17+", "Conversion Tools"], ["<2s", "Avg. Processing"]].each do |stat, label| %>
+      <div class="glass-card p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+        <div class="text-3xl font-black text-primary mb-1"><%= stat %></div>
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400"><%= label %></div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Enterprise Features -->
+  <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-8 text-center">Everything your organisation needs</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+    <% [
+      ["manage_accounts", "Team Management", "Add unlimited team members, manage roles and permissions, and track usage across your entire organisation."],
+      ["support_agent", "Dedicated Support", "Get a dedicated account manager and priority support with guaranteed response times and direct escalation channels."],
+      ["integration_instructions", "API & Integrations", "Integrate document conversion directly into your own apps and workflows via our REST API with high rate limits."],
+      ["security", "Advanced Security", "Enterprise-grade encryption, SSO support, audit logs, and compliance-ready data handling for regulated industries."],
+      ["bar_chart", "Usage Analytics", "Detailed usage dashboards to monitor conversions, team activity and optimise your document workflows."],
+      ["price_check", "Custom Pricing", "Volume-based pricing tailored to your usage. Predictable costs with annual billing and invoicing options."]
+    ].each do |icon, title, desc| %>
+      <div class="glass-card p-7 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+        <div class="size-11 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+          <span class="material-symbols-outlined text-xl"><%= icon %></span>
+        </div>
+        <h4 class="font-bold text-slate-900 dark:text-white"><%= title %></h4>
+        <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><%= desc %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Trusted By -->
+  <div class="glass-card rounded-2xl border border-slate-200 dark:border-slate-800 p-10 mb-16 text-center">
+    <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-8">Trusted by teams at</p>
+    <div class="flex flex-wrap justify-center items-center gap-10 opacity-50 grayscale">
+      <% ["Microsoft", "Google", "Dropbox", "Notion", "Atlassian"].each do |company| %>
+        <span class="text-xl font-black text-slate-500 dark:text-slate-400"><%= company %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Contact Form CTA -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center glass-card rounded-2xl border border-slate-200 dark:border-slate-800 p-10">
+    <div>
+      <h2 class="text-3xl font-black text-slate-900 dark:text-white mb-4">Let's talk about your needs</h2>
+      <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">Our enterprise team is ready to help you find the right plan, set up your account, and get your team converting documents faster.</p>
+      <ul class="space-y-3">
+        <% ["Custom volume pricing", "Dedicated onboarding", "SLA-backed uptime guarantee", "Compliance & security review"].each do |item| %>
+          <li class="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+            <span class="material-symbols-outlined text-primary text-base">check_circle</span>
+            <%= item %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    <div class="flex flex-col gap-4">
+      <input type="text" placeholder="Your name" class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary outline-none transition-all" disabled>
+      <input type="email" placeholder="Work email" class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary outline-none transition-all" disabled>
+      <input type="text" placeholder="Company name" class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary outline-none transition-all" disabled>
+      <textarea placeholder="Tell us about your use case..." rows="3" class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary outline-none transition-all resize-none" disabled></textarea>
+      <a href="mailto:hello@officedoctools.com" class="w-full text-center bg-primary hover:bg-primary/90 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all text-decoration-none">
+        Contact Sales →
+      </a>
+      <p class="text-xs text-slate-400 text-center">Or email us directly at <strong>hello@officedoctools.com</strong></p>
+    </div>
+  </div>
+</div>
