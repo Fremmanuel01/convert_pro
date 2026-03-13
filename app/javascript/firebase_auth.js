@@ -28,24 +28,24 @@ const setupFirebaseAuth = (firebaseConfig, csrfToken) => {
             // 2. Get the secure JWT token
             const idToken = await result.user.getIdToken()
 
-            // 3. Send the token to the Rails backend
-            const response = await fetch('/users/auth/firebase', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({ token: idToken })
+            // 3. Submit a hidden form so the browser handles the session cookie
+            //    naturally via a full page POST + redirect (fetch breaks cookie persistence)
+            const form = document.createElement('form')
+            form.method = 'POST'
+            form.action = '/users/auth/firebase'
+
+            const fields = { token: idToken, authenticity_token: csrfToken }
+            Object.entries(fields).forEach(([name, value]) => {
+                const input = document.createElement('input')
+                input.type = 'hidden'
+                input.name = name
+                input.value = value
+                form.appendChild(input)
             })
 
-            const data = await response.json()
+            document.body.appendChild(form)
+            form.submit()
 
-            if (response.ok && data.success) {
-                // Successfully authenticated & bridged to Devise session!
-                window.location.href = data.redirect_url || '/'
-            } else {
-                throw new Error(data.error || "Failed to authenticate with server")
-            }
         } catch (error) {
             console.error("Firebase Auth Error:", error)
 
