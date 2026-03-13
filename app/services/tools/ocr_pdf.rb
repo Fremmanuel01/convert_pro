@@ -22,9 +22,9 @@ module Tools
         "--force-ocr", # Forces OCR even if text already exists
         "--optimize", "1",
         input_path, output_path
-      ].shelljoin
+      ]
 
-      unless system(command)
+      unless system(*command)
         raise ExecutionError, "OCR Process failed. Ensure ocrmypdf is installed and the file is valid."
       end
       

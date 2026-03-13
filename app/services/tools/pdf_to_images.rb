@@ -18,16 +18,16 @@ module Tools
       command = [
         "gs",
         "-sDEVICE=jpeg",
-        "-dJPEGQ=100",     # max quality
-        "-r600",           # 600 DPI for ultra-high resolution mirroring
+        "-dJPEGQ=90",      # high quality with reasonable file size
+        "-r300",           # 300 DPI for high resolution output
         "-dNOPAUSE",
         "-dQUIET",
         "-dBATCH",
         "-sOutputFile=#{output_pattern}",
         input_path
-      ].shelljoin
+      ]
 
-      unless system(command)
+      unless system(*command)
         raise ExecutionError, "Ghostscript failed to map PDF arrays."
       end
 

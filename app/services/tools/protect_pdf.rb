@@ -24,9 +24,9 @@ module Tools
         "qpdf",
         "--encrypt", password, password, "256", "--",
         input_path, output_path
-      ].shelljoin
+      ]
 
-      unless system(command)
+      unless system(*command)
         raise ExecutionError, "qpdf encryption failed."
       end
       

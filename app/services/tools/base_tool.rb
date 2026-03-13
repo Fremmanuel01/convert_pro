@@ -51,7 +51,10 @@ module Tools
     def download_inputs
       paths = []
       @conversion.input_files.each_with_index do |file, index|
-        path = tmp_path("input_#{index}_#{file.filename}")
+        # Use sanitized filenames to avoid issues with special characters
+        # (spaces, brackets, etc.) that break tools like LibreOffice
+        extension = File.extname(file.filename.to_s)
+        path = tmp_path("input_#{index}#{extension}")
         File.binwrite(path, file.download)
         paths << path
       end

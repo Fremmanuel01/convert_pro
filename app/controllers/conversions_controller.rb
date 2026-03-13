@@ -22,7 +22,7 @@ class ConversionsController < ApplicationController
       limiter = ConversionLimiter.new(current_user)
       if limiter.can_convert?
         @conversion.update(user: current_user)
-        limiter.increment!
+        limiter.increment! # Count this guest conversion against the user's limit
         clear_guest_conversion(@conversion.id)
         
         # Send result email
@@ -64,11 +64,11 @@ class ConversionsController < ApplicationController
         return redirect_to new_user_registration_path, notice: "Please create an account to download your file. You get 5 free conversions!"
       end
 
-      # User is signed in, associate conversion and increment limit
+      # User is signed in, associate conversion
       limiter = ConversionLimiter.new(current_user)
       if limiter.can_convert?
         @conversion.update(user: current_user)
-        limiter.increment!
+        limiter.increment! # Count this guest conversion against the user's limit
         clear_guest_conversion(@conversion.id)
         # Send result email for users who just sign in directly and click download
         ConversionMailer.with(user: current_user, conversion: @conversion).result_email.deliver_later
@@ -77,12 +77,24 @@ class ConversionsController < ApplicationController
       end
     end
 
-    blob = @conversion.output_file
+    unless @conversion.output_file.attached?
+      return redirect_to conversion_path(@conversion), alert: "File is not ready for download yet."
+    end
+
+    blob = @conversion.output_file.blob
+
+    # In development (local disk storage), use Rails' built-in redirect
+    unless blob.service_name == "cloudinary"
+      redirect_to rails_blob_path(blob, disposition: "attachment")
+      return
+    end
+
+    # Production: Cloudinary storage
     key = blob.key
 
     # Files uploaded before our fix are stored as 'image' type.
     # Files after the fix are stored as 'raw' type.
-    # Use Cloudinary Admin API to find the actual stored resource type, 
+    # Use Cloudinary Admin API to find the actual stored resource type,
     # then generate a signed delivery URL (bypasses Cloudinary access restrictions).
     actual_resource_type = nil
     ["raw", "image"].each do |rt|
@@ -110,11 +122,7 @@ class ConversionsController < ApplicationController
     else
       # Final fallback: stream through Rails
       Rails.logger.warn "Cloudinary resource not found via Admin API for key: #{key}. Falling back to proxy."
-      file_data = blob.service.download(key)
-      send_data file_data,
-                filename: blob.filename.to_s,
-                type: blob.content_type.presence || "application/octet-stream",
-                disposition: "attachment"
+      redirect_to rails_blob_path(blob, disposition: "attachment")
     end
   end
 
@@ -144,9 +152,6 @@ class ConversionsController < ApplicationController
     session[:guest_conversion_ids]&.include?(id)
   end
 
-  def clear_guest_conversion?(id)
-    session[:guest_conversion_ids]&.delete(id)
-  end
   def clear_guest_conversion(id)
     session[:guest_conversion_ids]&.delete(id)
   end

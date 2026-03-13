@@ -1,5 +1,6 @@
 require 'pdf-reader'
 require 'open3'
+require 'prawn'
 
 module Tools
   class SummarizePdf < BaseTool
@@ -16,9 +17,22 @@ module Tools
 
       # 1. Extract Text from PDF
       extracted_text = extract_text_from_pdf(input_path)
-      
+
+      # If no text found, try OCR as fallback for image-based PDFs
       if extracted_text.strip.empty?
-        raise ExecutionError, "Could not extract any readable text from this PDF. It might be an image-based scan without OCR."
+        ocr_path = tmp_path("ocr_output.pdf")
+        ocr_bin = `which ocrmypdf 2>/dev/null`.strip
+        if ocr_bin.present?
+          Rails.logger.info("SummarizePdf: No text found, attempting OCR...")
+          stdout, stderr, status = Open3.capture3(ocr_bin, "--force-ocr", input_path, ocr_path)
+          if status.success? && File.exist?(ocr_path)
+            extracted_text = extract_text_from_pdf(ocr_path)
+          end
+        end
+      end
+
+      if extracted_text.strip.empty?
+        raise ExecutionError, "Could not extract any readable text from this PDF, even after OCR. The file may be corrupted or contain only blank pages."
       end
 
       # Truncate text if it's absurdly long to avoid blowing up the API token limits
@@ -28,9 +42,8 @@ module Tools
       # 2. Call OpenAI API for Summarization
       summary_markdown = generate_ai_summary(extracted_text)
 
-      # 3. Generate HTML & convert to PDF using Grover
-      html_content = build_summary_html(summary_markdown, File.basename(input_path))
-      create_pdf_from_html(html_content, expected_output_path)
+      # 3. Generate PDF using Prawn
+      create_summary_pdf(summary_markdown, File.basename(input_path), expected_output_path)
 
       expected_output_path
     end
@@ -62,7 +75,7 @@ module Tools
 
     def generate_ai_summary(text)
       api_key = ENV['GROQ_API_KEY']
-      
+
       if api_key.blank?
         raise ExecutionError, "Groq API Key is missing! Please configure GROQ_API_KEY."
       end
@@ -76,21 +89,21 @@ module Tools
           --- DOCUMENT TEXT ---
           #{text}
         PROMPT
-        
+
         url = "https://api.groq.com/openai/v1/chat/completions"
-        
-        headers = { 
+
+        headers = {
           'Content-Type' => 'application/json',
           'Authorization' => "Bearer #{api_key}"
         }
-        
+
         body = {
-          model: "llama-3.1-8b-instant",
+          model: "llama-3.3-70b-versatile",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3
         }
 
-        response = HTTParty.post(url, headers: headers, body: body.to_json, timeout: 30)
+        response = HTTParty.post(url, headers: headers, body: body.to_json, timeout: 60)
 
         if response.success?
           response.dig("choices", 0, "message", "content")
@@ -110,75 +123,61 @@ module Tools
       end
     end
 
-    def build_summary_html(markdown_content, original_filename)
-      # Basic markdown to HTML conversion
-      html = markdown_content
-        .gsub(/^### (.*)$/, '<h3>\1</h3>')
-        .gsub(/^## (.*)$/, '<h2>\1</h2>')
-        .gsub(/^# (.*)$/, '<h1>\1</h1>')
-        .gsub(/\*\*(.*?)\*\*/, '<strong>\1</strong>')
-        .gsub(/^\* (.*)$/, '<li>\1</li>')
-        .gsub(/^- (.*)$/, '<li>\1</li>')
-        .gsub(/\n\n/, '</p><p>')
-      
-      html.gsub!(/(<li>.*<\/li>)/m, '<ul>\1</ul>')
+    def create_summary_pdf(markdown, source_filename, output_path)
+      Prawn::Document.generate(output_path, page_size: 'A4', margin: 40) do |pdf|
+        # Header
+        pdf.fill_color "4338ca"
+        pdf.text "ConvertPro AI Analysis", size: 10, align: :center
+        pdf.move_down 8
+        pdf.text "Executive Summary", size: 22, style: :bold, align: :center
+        pdf.fill_color "64748b"
+        pdf.text "Source: #{source_filename}", size: 10, align: :center
+        pdf.move_down 5
+        pdf.fill_color "6366f1"
+        pdf.stroke_horizontal_rule
+        pdf.move_down 20
 
-      <<~HTML
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; margin: 40px; line-height: 1.6; }
-          .header { text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 30px; }
-          .title { color: #4338ca; font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-          .subtitle { color: #64748b; font-size: 14px; }
-          .ai-badge { display: inline-block; background-color: #e0e7ff; color: #4f46e5; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 15px; }
-          h1 { color: #0f172a; font-size: 22px; margin-top: 30px; }
-          h2 { color: #1e293b; font-size: 18px; margin-top: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;}
-          h3 { color: #334155; font-size: 16px; margin-top: 20px; }
-          p { margin-bottom: 15px; }
-          ul { margin-bottom: 20px; padding-left: 20px; }
-          li { margin-bottom: 8px; }
-          strong { color: #0f172a; }
-          .footer { margin-top: 50px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="ai-badge">ConvertPro AI Analysis</div>
-          <div class="title">Executive Summary</div>
-          <div class="subtitle">Source File: #{original_filename}</div>
-        </div>
-        
-        <p>#{html}</p>
+        # Body - render markdown lines
+        pdf.fill_color "1e293b"
+        markdown.each_line do |line|
+          line = line.strip
+          next if line.empty?
 
-        <div class="footer">
-          Generated automatically by ConvertPro AI Engine.<br>
-          AI-generated content should be reviewed for accuracy.
-        </div>
-      </body>
-      </html>
-      HTML
-    end
+          # Strip bold markers for Prawn (no inline styling support)
+          clean = line.gsub(/\*\*(.*?)\*\*/, '\1')
 
-    def create_pdf_from_html(html, output_path)
-      # Force chromium path for production stability
-      executable_path = ENV.fetch('PUPPETEER_EXECUTABLE_PATH', '/usr/bin/chromium')
-      
-      begin
-        grover = Grover.new(html, 
-          format: 'A4', 
-          margin: { top: '20px', bottom: '20px' },
-          executable_path: executable_path,
-          launch_args: ['--no-sandbox', '--disable-setuid-sandbox']
-        )
-        pdf_data = grover.to_pdf
-        File.binwrite(output_path, pdf_data)
-      rescue => e
-        Rails.logger.error "Grover Render Error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
-        raise ExecutionError, "AI layout engine failed: #{e.message}"
+          if line.start_with?('# ')
+            pdf.move_down 12
+            pdf.text clean.sub(/^#+ /, ''), size: 18, style: :bold
+            pdf.move_down 4
+          elsif line.start_with?('## ')
+            pdf.move_down 10
+            pdf.text clean.sub(/^#+ /, ''), size: 15, style: :bold
+            pdf.move_down 3
+          elsif line.start_with?('### ')
+            pdf.move_down 8
+            pdf.text clean.sub(/^#+ /, ''), size: 13, style: :bold
+            pdf.move_down 2
+          elsif line.start_with?('- ') || line.start_with?('* ')
+            pdf.indent(15) do
+              pdf.text "\u2022 #{clean.sub(/^[-*] /, '')}", size: 10, leading: 4
+            end
+          else
+            pdf.text clean, size: 10, leading: 4
+          end
+        end
+
+        # Footer
+        pdf.move_down 30
+        pdf.fill_color "94a3b8"
+        pdf.stroke_horizontal_rule
+        pdf.move_down 8
+        pdf.text "Generated automatically by ConvertPro AI Engine.", size: 8, align: :center
+        pdf.text "AI-generated content should be reviewed for accuracy.", size: 8, align: :center
       end
+    rescue => e
+      Rails.logger.error "Prawn PDF Error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
+      raise ExecutionError, "Failed to generate summary PDF: #{e.message}"
     end
 
   end

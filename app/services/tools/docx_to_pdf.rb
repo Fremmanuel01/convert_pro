@@ -33,10 +33,10 @@ module Tools
         "--convert-to", "pdf:writer_pdf_Export",
         "--outdir", @tmp_dir,
         input_path
-      ].shelljoin
+      ]
 
       require 'open3'
-      stdout, stderr, status = Open3.capture3(command)
+      stdout, stderr, status = Open3.capture3(*command)
 
       unless status.success?
         raise ExecutionError, "LibreOffice conversion failed. Error: #{stderr.strip.presence || stdout.strip}"

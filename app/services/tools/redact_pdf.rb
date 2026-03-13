@@ -29,9 +29,9 @@ module Tools
           "-dBATCH",
           "-sOutputFile=#{output_path}",
           input_path
-        ].shelljoin
+        ]
 
-        unless system(command)
+        unless system(*command)
           raise ExecutionError, "Image flattening failed."
         end
       else

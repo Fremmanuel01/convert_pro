@@ -128,7 +128,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/50">
                   <% @recent_conversions.each do |conversion| %>
-                    <% tool_info = ToolRegistry.tools.find { |t| t[:class_name] == conversion.tool_name } || { title: conversion.tool_name, icon: 'build' } %>
+                    <% tool_info = ToolRegistry.tools.find { |t| t[:class_name] == conversion.tool_name } || { name: conversion.tool_name, icon: 'build' } %>
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors group">
                       <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
@@ -136,7 +136,7 @@
                             <span class="material-symbols-outlined text-lg"><%= tool_info[:icon] %></span>
                           </div>
                           <div>
-                            <p class="text-sm font-bold text-slate-900 dark:text-white"><%= tool_info[:title] %></p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white"><%= tool_info[:name] %></p>
                             <p class="text-xs text-slate-500"><%= conversion.processing_time&.round(2) || '0.0' %>s execution</p>
                           </div>
                         </div>

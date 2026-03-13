@@ -90,7 +90,7 @@
         <% else %>
           <div class="flex items-center gap-2 text-amber-500 font-bold text-xs uppercase tracking-widest mt-1">
             <span class="material-symbols-outlined text-sm">info</span>
-            Free plan: <%= current_user.conversion_limit_per_day - @total_conversions %> conversions remaining
+            Free plan: <%= [current_user.conversion_limit_per_day - @total_conversions, 0].max %> conversions remaining
           </div>
         <% end %>
       </div>

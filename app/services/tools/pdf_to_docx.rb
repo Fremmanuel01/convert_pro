@@ -28,13 +28,14 @@ module Tools
         SOFFICE_BIN,
         "-env:UserInstallation=file://#{profile_dir}",
         "--headless",
+        "--infilter=writer_pdf_import",
         "--convert-to", "docx",
         "--outdir", @tmp_dir,
         input_path
-      ].shelljoin
-      
+      ]
+
       require 'open3'
-      stdout, stderr, status = Open3.capture3(command)
+      stdout, stderr, status = Open3.capture3(*command)
 
       unless status.success?
         raise ExecutionError, "LibreOffice conversion failed. Exit code: #{status.exitstatus}. Error: #{stderr.strip.presence || stdout.strip}"

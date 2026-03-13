@@ -24,4 +24,19 @@
         box-shadow: 0 0 20px rgba(31, 61, 255, 0.3);
         border-color: rgba(31, 61, 255, 0.5);
     }
+
+    .glow-border {
+        position: relative;
+    }
+
+    .glow-border::after {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        background: linear-gradient(45deg, #1f3dff, #6366f1, #1f3dff);
+        filter: blur(8px);
+        z-index: -1;
+        border-radius: 1.5rem;
+        opacity: 0.5;
+    }
 }

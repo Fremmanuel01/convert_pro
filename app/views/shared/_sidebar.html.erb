@@ -59,7 +59,7 @@
 <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
 <div class="h-full bg-primary" style="width: <%= current_user.pro? && current_user.active? ? '100' : [((current_user.conversions_count.to_f / current_user.conversion_limit_per_day) * 100), 100].min %>%;"></div>
 </div>
-<p class="text-[10px] text-slate-500 text-center"><%= current_user.pro? && current_user.active? ? 'Premium Unlocked' : 'Resets daily at midnight' %></p>
+<p class="text-[10px] text-slate-500 text-center"><%= current_user.pro? && current_user.active? ? 'Premium Unlocked' : 'Upgrade for unlimited' %></p>
 </div>
 </div>
 <div class="space-y-4">

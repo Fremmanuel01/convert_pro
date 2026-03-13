@@ -21,9 +21,9 @@ module Tools
         "-dBATCH",
         "-sOutputFile=#{output_path}",
         input_path
-      ].shelljoin
+      ]
 
-      unless system(command)
+      unless system(*command)
         raise ExecutionError, "Ghostscript compression failed. Could not process file."
       end
       

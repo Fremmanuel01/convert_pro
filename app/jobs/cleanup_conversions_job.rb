@@ -5,7 +5,7 @@ class CleanupConversionsJob < ApplicationJob
     # 1. Clean up Free user conversions older than 24 hours
     free_threshold = 24.hours.ago
     free_users_conversions = Conversion.joins(:user)
-                                       .where(users: { plan: :free })
+                                       .where(users: { plan: User.plans[:free] })
                                        .where("conversions.created_at < ?", free_threshold)
     
     deleted_free = purge_conversions(free_users_conversions)
@@ -13,7 +13,7 @@ class CleanupConversionsJob < ApplicationJob
     # 2. Clean up Pro user conversions older than 30 days
     pro_threshold = 30.days.ago
     pro_users_conversions = Conversion.joins(:user)
-                                      .where(users: { plan: :pro })
+                                      .where(users: { plan: User.plans[:pro] })
                                       .where("conversions.created_at < ?", pro_threshold)
     
     deleted_pro = purge_conversions(pro_users_conversions)

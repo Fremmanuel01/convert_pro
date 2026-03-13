@@ -31,11 +31,13 @@ module Webhooks
       return head :unauthorized unless secret_key
 
       payload = request.raw_post
-      signature = request.headers['x-paystack-signature']
-      
+      signature = request.headers['x-paystack-signature'].to_s
+
       expected_signature = OpenSSL::HMAC.hexdigest('SHA512', secret_key, payload)
 
-      head :unauthorized unless Rack::Utils.secure_compare(signature, expected_signature)
+      unless Rack::Utils.secure_compare(signature, expected_signature)
+        head :unauthorized
+      end
     end
 
     def process_event(event_type, data)

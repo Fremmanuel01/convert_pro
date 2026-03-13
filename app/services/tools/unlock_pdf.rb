@@ -20,9 +20,9 @@ module Tools
         "--decrypt",
         "--password=#{password}",
         input_path, output_path
-      ].shelljoin
+      ]
 
-      unless system(command)
+      unless system(*command)
         raise ExecutionError, "qpdf decryption failed. Incorrect password or corrupted file."
       end
       

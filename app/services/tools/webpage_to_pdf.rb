@@ -1,3 +1,5 @@
+
+
 require 'grover'
 
 module Tools
@@ -15,13 +17,14 @@ module Tools
       output_path = tmp_path(output_filename)
 
       begin
-        executable_path = ENV.fetch('PUPPETEER_EXECUTABLE_PATH', '/usr/bin/chromium')
-        grover = Grover.new(url, 
-          format: 'A4', 
-          debug_info: true,
-          executable_path: executable_path,
+        grover_opts = {
+          format: 'A4',
           launch_args: ['--no-sandbox', '--disable-setuid-sandbox']
-        )
+        }
+        if ENV['PUPPETEER_EXECUTABLE_PATH'].present?
+          grover_opts[:executable_path] = ENV['PUPPETEER_EXECUTABLE_PATH']
+        end
+        grover = Grover.new(url, grover_opts)
         pdf_content = grover.to_pdf
         
         File.binwrite(output_path, pdf_content)

@@ -18,7 +18,7 @@ export default class extends Controller {
 
     process(event) {
         const clientSideTools = [
-            'images_to_pdf', 'merge_pdf', 'split_pdf', 'protect_pdf', 'unlock_pdf',
+            'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',
             'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'
         ]
 

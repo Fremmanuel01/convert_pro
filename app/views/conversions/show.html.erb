@@ -37,8 +37,7 @@
       <div class="flex items-center gap-4">
         <div class="size-14 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
           <span class="material-symbols-outlined text-3xl">
-            <%# Map bootstrap icons back to material symbols for consistency if needed, or stick to a generic icon %>
-            <%= @tool_meta ? (@tool_meta[:icon] == 'bi-intersect' ? 'call_merge' : (@tool_meta[:icon].include?('scissors') ? 'content_cut' : 'transform')) : 'description' %>
+            <%= @tool_meta ? @tool_meta[:icon] : 'description' %>
           </span>
         </div>
         <div>
@@ -182,9 +181,9 @@
             <p class="text-sm font-medium text-slate-500 max-w-md mx-auto">
               Please wait while our servers process your document. You can safely leave this page and check your conversion history later.
             </p>
-            
-            <!-- Simple meta refresh to poll for status -->
-            <meta http-equiv="refresh" content="3">
+            <% content_for :head do %>
+              <meta http-equiv="refresh" content="3">
+            <% end %>
           </div>
         <% end %>
       </div>
