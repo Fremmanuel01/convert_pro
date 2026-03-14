@@ -60,16 +60,16 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "officedoctools.com"), protocol: "https" }
 
-  # SendGrid SMTP for transactional email
-  if ENV["SENDGRID_API_KEY"].present?
+  # Brevo (Sendinblue) SMTP for transactional email
+  if ENV["BREVO_SMTP_KEY"].present?
     config.action_mailer.delivery_method = :smtp
     config.action_mailer.raise_delivery_errors = true
     config.action_mailer.smtp_settings = {
-      address:              "smtp.sendgrid.net",
+      address:              "smtp-relay.brevo.com",
       port:                 587,
       domain:               ENV.fetch("APP_HOST", "officedoctools.com"),
-      user_name:            "apikey",
-      password:             ENV["SENDGRID_API_KEY"],
+      user_name:            ENV.fetch("BREVO_SMTP_LOGIN", "fremmanuel@shanahanef.org"),
+      password:             ENV["BREVO_SMTP_KEY"],
       authentication:       :plain,
       enable_starttls_auto: true
     }
