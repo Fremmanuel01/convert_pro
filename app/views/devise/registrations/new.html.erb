@@ -1,76 +1,310 @@
-<div class="w-full flex items-center justify-center min-h-[80vh] px-6 py-16 lg:py-24">
-  <div class="glow-border w-full max-w-md p-8 sm:p-10 rounded-2xl border border-primary/30 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md shadow-2xl relative">
-    <div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary p-3 rounded-xl shadow-lg shadow-primary/30 text-white">
-      <span class="material-symbols-outlined text-3xl">how_to_reg</span>
+<style>
+  @keyframes regFloat {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-8px) rotate(1deg); }
+    66% { transform: translateY(-4px) rotate(-1deg); }
+  }
+  @keyframes regSlideIn {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes regFadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes regGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(31,61,255,0.3); }
+    50% { box-shadow: 0 0 40px rgba(31,61,255,0.6), 0 0 60px rgba(14,165,233,0.2); }
+  }
+  @keyframes regShimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+  @keyframes regOrbit {
+    from { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+  }
+  @keyframes regOrbit2 {
+    from { transform: rotate(120deg) translateX(60px) rotate(-120deg); }
+    to { transform: rotate(480deg) translateX(60px) rotate(-480deg); }
+  }
+  @keyframes regOrbit3 {
+    from { transform: rotate(240deg) translateX(60px) rotate(-240deg); }
+    to { transform: rotate(600deg) translateX(60px) rotate(-600deg); }
+  }
+  @keyframes regPulseRing {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+  @keyframes regCountUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reg-panel-left {
+    animation: regSlideIn 0.6s ease forwards;
+  }
+  .reg-panel-right {
+    animation: regFadeUp 0.6s ease 0.15s both;
+  }
+  .reg-float-card {
+    animation: regFloat 6s ease-in-out infinite;
+  }
+  .reg-glow-btn {
+    animation: regGlow 3s ease-in-out infinite;
+  }
+  .reg-shimmer-text {
+    background: linear-gradient(90deg, #1f3dff, #0ea5e9, #10b981, #f59e0b, #ef6c00, #1f3dff);
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: regShimmer 6s linear infinite;
+  }
+  .reg-orbit-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -5px;
+    margin-left: -5px;
+  }
+  .reg-orbit-dot:nth-child(1) { animation: regOrbit 4s linear infinite; background: #1f3dff; }
+  .reg-orbit-dot:nth-child(2) { animation: regOrbit2 4s linear infinite; background: #10b981; }
+  .reg-orbit-dot:nth-child(3) { animation: regOrbit3 4s linear infinite; background: #f59e0b; }
+  .reg-pulse-ring {
+    animation: regPulseRing 2.5s ease-out infinite;
+  }
+  .reg-pulse-ring:nth-child(2) { animation-delay: 0.8s; }
+  .reg-pulse-ring:nth-child(3) { animation-delay: 1.6s; }
+  .reg-input-field {
+    transition: all 0.2s ease;
+  }
+  .reg-input-field:focus {
+    box-shadow: 0 0 0 3px rgba(31,61,255,0.15);
+  }
+  .reg-submit-btn {
+    background: linear-gradient(135deg, #1f3dff, #0ea5e9);
+    transition: all 0.3s ease;
+  }
+  .reg-submit-btn:hover {
+    background: linear-gradient(135deg, #1830e0, #0284c7);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(31,61,255,0.4);
+  }
+  .reg-submit-btn:active { transform: translateY(0); }
+  .reg-stat {
+    animation: regCountUp 0.5s ease both;
+  }
+  .reg-stat:nth-child(1) { animation-delay: 0.3s; }
+  .reg-stat:nth-child(2) { animation-delay: 0.45s; }
+  .reg-stat:nth-child(3) { animation-delay: 0.6s; }
+  .reg-feature {
+    animation: regFadeUp 0.5s ease both;
+  }
+  .reg-feature:nth-child(1) { animation-delay: 0.35s; }
+  .reg-feature:nth-child(2) { animation-delay: 0.5s; }
+  .reg-feature:nth-child(3) { animation-delay: 0.65s; }
+</style>
+
+<div class="w-full min-h-[calc(100vh-4rem)] flex items-stretch bg-[#0f1223]">
+
+  <!-- LEFT PANEL — Brand -->
+  <div class="reg-panel-left hidden lg:flex lg:w-1/2 xl:w-[55%] flex-col justify-between p-12 xl:p-16 relative overflow-hidden">
+    <!-- Background gradient mesh -->
+    <div class="absolute inset-0">
+      <div class="absolute top-0 left-0 w-[500px] h-[500px] bg-[#1f3dff]/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2"></div>
+      <div class="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[#10b981]/8 rounded-full blur-[100px] translate-x-1/3 translate-y-1/3"></div>
+      <div class="absolute top-1/3 right-1/4 w-[200px] h-[200px] bg-[#f59e0b]/5 rounded-full blur-[60px]"></div>
+      <!-- Dot grid -->
+      <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 28px 28px;"></div>
     </div>
 
-    <div class="text-center mt-6 mb-8">
-      <h2 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Create an Account</h2>
-      <p class="text-sm text-slate-500 mt-2">Join OfficedocTools and start transforming your documents instantly.</p>
+    <!-- Logo + Wordmark -->
+    <div class="relative z-10 flex items-center gap-3">
+      <%= link_to root_path, class: "flex items-center gap-3" do %>
+        <div class="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-[#1f3dff]/30">
+          <%= image_tag "logo.png", class: "w-full h-full object-contain", alt: "OfficedocTools" %>
+        </div>
+        <span class="text-white font-black text-xl tracking-tight">OfficedocTools</span>
+      <% end %>
     </div>
 
-    <!-- Firebase Auth Error Alert -->
-    <div id="firebase-auth-error" class="hidden w-full mb-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm font-medium p-4 rounded-xl"></div>
-
-    <!-- Google Auth Button (Firebase JS Bridge) -->
-    <button type="button" id="google-signin-btn" class="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all duration-300 hover:scale-[1.02] active:scale-95 focus:ring-2 focus:ring-primary focus:outline-none">
-      <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 10.22 1 12s.43 3.45 1.16 4.93l3.68-2.84z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.68 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Continue with Google
-    </button>
-
-    <div class="relative flex items-center py-6">
-      <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-      <span class="flex-shrink-0 mx-4 text-xs font-bold text-slate-400 uppercase tracking-wider">or sign up with email</span>
-      <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-    </div>
-
-    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-5" }) do |f| %>
-      <%= render "devise/shared/error_messages", resource: resource %>
-
-      <div>
-        <%= f.label :email, class: "block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1" %>
-        <div class="relative">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
-          <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", placeholder: "you@example.com" %>
+    <!-- Central visual -->
+    <div class="relative z-10 flex flex-col items-center justify-center flex-1 py-10">
+      <!-- Orbit hub -->
+      <div class="relative w-48 h-48 mb-10 flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full border border-[#10b981]/20 reg-pulse-ring"></div>
+        <div class="absolute inset-0 rounded-full border border-[#10b981]/20 reg-pulse-ring"></div>
+        <div class="absolute inset-0 rounded-full border border-[#10b981]/20 reg-pulse-ring"></div>
+        <div class="absolute w-32 h-32 rounded-full border border-[#10b981]/20 border-dashed"></div>
+        <div class="reg-orbit-dot"></div>
+        <div class="reg-orbit-dot"></div>
+        <div class="reg-orbit-dot"></div>
+        <div class="relative z-10 w-20 h-20 rounded-2xl overflow-hidden shadow-2xl shadow-[#10b981]/30 border border-white/10 reg-glow-btn">
+          <%= image_tag "logo.png", class: "w-full h-full object-contain p-2", alt: "Logo" %>
         </div>
       </div>
 
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <%= f.label :password, class: "block text-sm font-bold text-slate-700 dark:text-slate-300" %>
-          <% if @minimum_password_length %>
-            <span class="text-xs text-slate-500">(<%= @minimum_password_length %> characters min)</span>
-          <% end %>
-        </div>
-        <div class="relative">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
-          <%= f.password_field :password, autocomplete: "new-password", class: "w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", placeholder: "••••••••" %>
-        </div>
-      </div>
-
-      <div>
-        <%= f.label :password_confirmation, "Confirm Password", class: "block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1" %>
-        <div class="relative">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock_reset</span>
-          <%= f.password_field :password_confirmation, autocomplete: "new-password", class: "w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", placeholder: "••••••••" %>
-        </div>
-      </div>
-
-      <div class="pt-2">
-        <%= f.submit "Sign up", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-95" %>
-      </div>
-    <% end %>
-
-    <div class="mt-8 text-center border-t border-slate-200/50 dark:border-slate-700/50 pt-6">
-      <p class="text-sm text-slate-500">
-        Already have an account? 
-        <%= link_to "Log in", new_session_path(resource_name), class: "font-bold text-primary hover:text-indigo-400 transition-colors" %>
+      <!-- Headline -->
+      <h1 class="text-3xl xl:text-4xl font-black text-center leading-tight mb-4">
+        <span class="text-white">Your document</span><br>
+        <span class="reg-shimmer-text">superpower awaits.</span>
+      </h1>
+      <p class="text-white/50 text-center text-sm max-w-xs leading-relaxed mb-10">
+        Join thousands of professionals converting documents in seconds — for free.
       </p>
+
+      <!-- Stats row -->
+      <div class="flex gap-6">
+        <div class="reg-stat text-center">
+          <div class="text-2xl font-black text-white">28</div>
+          <div class="text-white/40 text-xs mt-0.5">Tools</div>
+        </div>
+        <div class="w-px bg-white/10"></div>
+        <div class="reg-stat text-center">
+          <div class="text-2xl font-black text-white">Free</div>
+          <div class="text-white/40 text-xs mt-0.5">To Start</div>
+        </div>
+        <div class="w-px bg-white/10"></div>
+        <div class="reg-stat text-center">
+          <div class="text-2xl font-black text-white">100%</div>
+          <div class="text-white/40 text-xs mt-0.5">Secure</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature list -->
+    <div class="relative z-10 space-y-3">
+      <div class="reg-feature flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(31,61,255,0.15)">
+          <span class="material-symbols-outlined text-[#1f3dff] text-sm">picture_as_pdf</span>
+        </div>
+        <span class="text-white/70 text-sm">Merge, compress, protect & split PDFs</span>
+      </div>
+      <div class="reg-feature flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(16,185,129,0.15)">
+          <span class="material-symbols-outlined text-[#10b981] text-sm">description</span>
+        </div>
+        <span class="text-white/70 text-sm">Convert PDF ↔ Word, Excel, PowerPoint</span>
+      </div>
+      <div class="reg-feature flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(245,158,11,0.15)">
+          <span class="material-symbols-outlined text-[#f59e0b] text-sm">image</span>
+        </div>
+        <span class="text-white/70 text-sm">Convert HEIC, WebP, PNG, JPG images</span>
+      </div>
     </div>
   </div>
+
+  <!-- RIGHT PANEL — Form -->
+  <div class="reg-panel-right flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-12 bg-white dark:bg-[#0f1223] lg:bg-white lg:dark:bg-slate-950">
+
+    <!-- Mobile logo -->
+    <div class="lg:hidden mb-8 flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg overflow-hidden">
+        <%= image_tag "logo.png", class: "w-full h-full object-contain", alt: "OfficedocTools" %>
+      </div>
+      <span class="text-slate-900 dark:text-white font-black text-lg">OfficedocTools</span>
+    </div>
+
+    <div class="w-full max-w-sm">
+      <!-- Heading -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Create your account</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1.5">Free forever. No credit card needed.</p>
+      </div>
+
+      <!-- Firebase Auth Error -->
+      <div id="firebase-auth-error" class="hidden w-full mb-5 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm font-medium p-3.5 rounded-xl flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">error</span>
+        <span id="firebase-auth-error-msg"></span>
+      </div>
+
+      <!-- Google Auth -->
+      <button type="button" id="google-signin-btn"
+        class="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold py-3 px-4 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 mb-6 focus:outline-none focus:ring-2 focus:ring-[#1f3dff]/40">
+        <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 12s.43 3.45 1.16 4.93l3.68-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.68 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Sign up with Google
+      </button>
+
+      <!-- Divider -->
+      <div class="relative flex items-center mb-6">
+        <div class="flex-grow border-t border-slate-200 dark:border-slate-700/60"></div>
+        <span class="flex-shrink-0 mx-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">or</span>
+        <div class="flex-grow border-t border-slate-200 dark:border-slate-700/60"></div>
+      </div>
+
+      <!-- Signup form -->
+      <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-4" }) do |f| %>
+        <%= render "devise/shared/error_messages", resource: resource %>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[18px] select-none">mail</span>
+            <%= f.email_field :email, autofocus: true, autocomplete: "email",
+                class: "reg-input-field w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1f3dff]/30 focus:border-[#1f3dff]/50 transition-all",
+                placeholder: "you@example.com" %>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Password</label>
+            <% if @minimum_password_length %>
+              <span class="text-xs text-slate-400"><%= @minimum_password_length %>+ chars</span>
+            <% end %>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[18px] select-none">lock</span>
+            <%= f.password_field :password, autocomplete: "new-password",
+                class: "reg-input-field w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1f3dff]/30 focus:border-[#1f3dff]/50 transition-all",
+                placeholder: "Create a strong password" %>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Confirm Password</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[18px] select-none">lock_reset</span>
+            <%= f.password_field :password_confirmation, autocomplete: "new-password",
+                class: "reg-input-field w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1f3dff]/30 focus:border-[#1f3dff]/50 transition-all",
+                placeholder: "Repeat your password" %>
+          </div>
+        </div>
+
+        <div class="pt-1">
+          <%= f.submit "Create free account", class: "reg-submit-btn w-full text-white font-bold py-3 px-4 rounded-xl cursor-pointer" %>
+        </div>
+      <% end %>
+
+      <!-- Sign in link -->
+      <p class="mt-7 text-center text-sm text-slate-500 dark:text-slate-400">
+        Already have an account?
+        <%= link_to "Sign in", new_session_path(resource_name),
+            class: "font-bold text-[#1f3dff] hover:text-[#0ea5e9] transition-colors ml-1" %>
+      </p>
+
+      <!-- Trust badges -->
+      <div class="mt-8 flex items-center justify-center gap-4 text-xs text-slate-400">
+        <span class="flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px] text-[#10b981]">verified_user</span>
+          Secure & private
+        </span>
+        <span class="w-px h-3 bg-slate-300 dark:bg-slate-700"></span>
+        <span class="flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px] text-[#1f3dff]">credit_card_off</span>
+          No credit card
+        </span>
+      </div>
+    </div>
+  </div>
+
 </div>
