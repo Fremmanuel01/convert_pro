@@ -47,8 +47,15 @@ module Tools
       api_key = ENV['ANTHROPIC_API_KEY']
       raise ExecutionError, "Anthropic API key not configured (ANTHROPIC_API_KEY)." if api_key.blank?
 
+      opts        = @conversion.try(:options) || {}
+      slide_count = opts['slide_count'].present? ? opts['slide_count'].to_i.clamp(4, 20) : 8
+      tone        = opts['tone'].presence || 'professional'
+      audience    = opts['audience'].presence || 'general business audience'
+
       user_prompt = <<~PROMPT
-        Create a professional PowerPoint presentation about: #{topic}
+        Create a #{tone} PowerPoint presentation about: #{topic}
+
+        Target audience: #{audience}
 
         Return ONLY valid JSON (no markdown fences, no explanation) with this exact structure:
         {
@@ -60,11 +67,12 @@ module Tools
         }
 
         Requirements:
-        - 6 to 9 content slides
+        - Exactly #{slide_count} content slides
         - 3 to 5 concise bullet points per slide (max 12 words each)
         - First content slide: overview or agenda
         - Last slide: conclusion or call to action
-        - Professional, insightful, well-structured content
+        - Tone must be #{tone} throughout
+        - Content tailored for: #{audience}
       PROMPT
 
       response = HTTParty.post(

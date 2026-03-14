@@ -23,6 +23,8 @@
     </div>
     
     <div class="p-8 bg-white/10 dark:bg-transparent">
+      <% select_class = "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
+
       <%= form_with url: tools_path(tool_id: @tool[:id]), method: :post, local: true, multipart: true, class: "space-y-6 relative z-10",
           data: {
             controller: "client-tool",
@@ -97,60 +99,278 @@
           </div>
         <% end %>
 
-        <!-- Tool specific options -->
-        <% if @tool[:id] == 'protect_pdf' || @tool[:id] == 'unlock_pdf' %>
-          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              <span class="material-symbols-outlined text-[16px] align-middle mr-1">key</span>
-              <%= @tool[:id] == 'protect_pdf' ? 'New Password' : 'Document Password' %>
-            </label>
-            <%= f.text_field :password, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", required: true, data: { client_tool_target: "passwordInput" }, placeholder: (@tool[:id] == 'protect_pdf' ? "Enter a secure encryption password" : "Enter the document extraction password") %>
-          </div>
-        <% end %>
+        <%
+          page_layout_tools  = %w[images_to_pdf docx_to_pdf xlsx_to_pdf pptx_to_pdf]
+          has_page_layout    = page_layout_tools.include?(@tool[:id])
+          has_password       = %w[protect_pdf unlock_pdf].include?(@tool[:id])
+          has_quality        = @tool[:id] == 'compress_pdf'
+          has_dpi            = @tool[:id] == 'pdf_to_images'
+          has_ocr_lang       = @tool[:id] == 'ocr_pdf'
+          has_rotation       = @tool[:id] == 'rotate_pdf'
+          has_watermark      = @tool[:id] == 'watermark_pdf'
+          has_translate      = @tool[:id] == 'ai_translate_pdf'
+          has_pptx_opts      = @tool[:id] == 'ai_generate_pptx'
+          has_docx_opts      = @tool[:id] == 'ai_generate_docx'
+          has_any_options    = has_page_layout || has_password || has_quality || has_dpi || has_ocr_lang || has_rotation || has_watermark || has_translate || has_pptx_opts || has_docx_opts
+        %>
 
-        <% if @tool[:id] == 'ocr_pdf' %>
-          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              <span class="material-symbols-outlined text-[16px] align-middle mr-1">translate</span>
-              OCR Language Limit
-            </label>
-            <%= f.select :language, [['English', 'eng'], ['Spanish', 'spa'], ['French', 'fra'], ['German', 'deu']], {}, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
-          </div>
-        <% end %>
+        <% if has_any_options %>
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-700/50 overflow-hidden">
+          <!-- Options Header (toggle) -->
+          <button type="button" id="options-toggle" onclick="toggleOptions()" class="w-full flex items-center justify-between px-5 py-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+              <span class="material-symbols-outlined text-[18px] text-primary">tune</span>
+              Document Options
+              <span class="text-xs font-normal text-slate-400 ml-1">— page size, orientation & more</span>
+            </div>
+            <span id="options-chevron" class="material-symbols-outlined text-slate-400 transition-transform duration-200">expand_more</span>
+          </button>
 
-        <% if @tool[:id] == 'rotate_pdf' %>
-          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              <span class="material-symbols-outlined text-[16px] align-middle mr-1">rotate_right</span>
-              Rotation Angle
-            </label>
-            <%= f.select :rotation, [['90° Clockwise', '90'], ['180°', '180'], ['270° Clockwise (90° Counter-clockwise)', '270']], {}, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
-          </div>
-        <% end %>
+          <!-- Options Body -->
+          <div id="options-body" class="px-5 pb-5 pt-4 bg-white/50 dark:bg-slate-900/30 space-y-5 hidden">
 
-        <% if @tool[:id] == 'watermark_pdf' %>
-          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              <span class="material-symbols-outlined text-[16px] align-middle mr-1">branding_watermark</span>
-              Watermark Text
-            </label>
-            <%= f.text_field :watermark, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", placeholder: "e.g. CONFIDENTIAL, DRAFT, INTERNAL", value: "CONFIDENTIAL" %>
-          </div>
-        <% end %>
+            <!-- Page Layout (size + orientation) -->
+            <% if has_page_layout %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">article</span> Page Layout
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Page Size</label>
+                  <%= f.select :page_size,
+                    [['A4 (International)', 'A4'], ['A3 (Large)', 'A3'], ['US Letter', 'Letter'], ['US Legal', 'Legal']],
+                    { selected: 'A4' },
+                    class: select_class %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Orientation</label>
+                  <%= f.select :page_orientation,
+                    [['Portrait ↕', 'portrait'], ['Landscape ↔', 'landscape']],
+                    { selected: 'portrait' },
+                    class: select_class %>
+                </div>
+              </div>
+            </div>
+            <% end %>
 
-        <% if @tool[:id] == 'ai_translate_pdf' %>
-          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              <span class="material-symbols-outlined text-[16px] align-middle mr-1">translate</span>
-              Translate to
-            </label>
-            <%= f.select :target_language, [
-              ['Spanish', 'es'], ['French', 'fr'], ['German', 'de'], ['Portuguese', 'pt'],
-              ['Italian', 'it'], ['Dutch', 'nl'], ['Polish', 'pl'], ['Russian', 'ru'],
-              ['Chinese (Simplified)', 'zh'], ['Japanese', 'ja'], ['Arabic', 'ar'],
-              ['Hindi', 'hi'], ['Korean', 'ko'], ['Turkish', 'tr'], ['English', 'en']
-            ], {}, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
+            <!-- Image Fit (images_to_pdf only) -->
+            <% if @tool[:id] == 'images_to_pdf' %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">fit_screen</span> Image Placement
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Fit Mode</label>
+                  <%= f.select :fit_mode,
+                    [['Fit to Page (keep ratio)', 'fit'], ['Centre (original size)', 'center'], ['Stretch to Fill', 'stretch']],
+                    { selected: 'fit' },
+                    class: select_class %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Page Margin (px)</label>
+                  <%= f.select :margin,
+                    [['None (0)', '0'], ['Small (20)', '20'], ['Normal (40)', '40'], ['Wide (72)', '72']],
+                    { selected: '0' },
+                    class: select_class %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Compression Quality -->
+            <% if has_quality %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">compress</span> Compression Level
+              </p>
+              <%= f.select :quality,
+                [['Screen — Smallest file (72 dpi)', 'screen'], ['Ebook — Balanced (150 dpi)', 'ebook'], ['Printer — High quality (300 dpi)', 'printer'], ['Prepress — Best quality (300 dpi + colour)', 'prepress']],
+                { selected: 'ebook' },
+                class: select_class %>
+              <p class="text-xs text-slate-400 mt-1.5">Higher quality = larger file size.</p>
+            </div>
+            <% end %>
+
+            <!-- PDF to Images: DPI + format -->
+            <% if has_dpi %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">image</span> Image Settings
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Resolution (DPI)</label>
+                  <%= f.select :dpi,
+                    [['72 dpi — Web / preview', '72'], ['150 dpi — Standard (default)', '150'], ['300 dpi — Print quality', '300']],
+                    { selected: '150' },
+                    class: select_class %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Output Format</label>
+                  <%= f.select :image_format,
+                    [['JPG (smaller size)', 'jpg'], ['PNG (transparent support)', 'png']],
+                    { selected: 'jpg' },
+                    class: select_class %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- OCR Language -->
+            <% if has_ocr_lang %>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">translate</span> OCR Language
+              </label>
+              <%= f.select :language,
+                [['English', 'eng'], ['Spanish', 'spa'], ['French', 'fra'], ['German', 'deu'], ['Portuguese', 'por'], ['Italian', 'ita'], ['Chinese Simplified', 'chi_sim'], ['Japanese', 'jpn'], ['Arabic', 'ara']],
+                { selected: 'eng' },
+                class: select_class %>
+            </div>
+            <% end %>
+
+            <!-- Rotation -->
+            <% if has_rotation %>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">rotate_right</span> Rotation Angle
+              </label>
+              <%= f.select :rotation,
+                [['90° Clockwise', '90'], ['180°', '180'], ['270° Clockwise (90° Counter-clockwise)', '270']],
+                {},
+                class: select_class %>
+            </div>
+            <% end %>
+
+            <!-- Password -->
+            <% if has_password %>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">key</span>
+                <%= @tool[:id] == 'protect_pdf' ? 'Encryption Password' : 'Document Password' %>
+              </label>
+              <%= f.text_field :password,
+                  required: true,
+                  data: { client_tool_target: "passwordInput" },
+                  placeholder: (@tool[:id] == 'protect_pdf' ? "Enter a strong password" : "Enter the document password"),
+                  class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400" %>
+            </div>
+            <% end %>
+
+            <!-- Watermark options -->
+            <% if has_watermark %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">branding_watermark</span> Watermark Settings
+              </p>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Watermark Text</label>
+                  <%= f.text_field :watermark,
+                      value: 'CONFIDENTIAL',
+                      placeholder: 'e.g. CONFIDENTIAL, DRAFT, INTERNAL',
+                      class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400" %>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Position</label>
+                    <%= f.select :watermark_position,
+                      [['Diagonal (centre)', 'diagonal'], ['Centre', 'center'], ['Header (top)', 'header'], ['Footer (bottom)', 'footer']],
+                      { selected: 'diagonal' },
+                      class: select_class %>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Opacity</label>
+                    <%= f.select :opacity,
+                      [['Light (10%)', '10'], ['Standard (15%)', '15'], ['Medium (25%)', '25'], ['Bold (40%)', '40']],
+                      { selected: '15' },
+                      class: select_class %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Translation target language -->
+            <% if has_translate %>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">translate</span> Translate To
+              </label>
+              <%= f.select :target_language,
+                [['Spanish', 'es'], ['French', 'fr'], ['German', 'de'], ['Portuguese', 'pt'], ['Italian', 'it'], ['Dutch', 'nl'], ['Polish', 'pl'], ['Russian', 'ru'], ['Chinese (Simplified)', 'zh'], ['Japanese', 'ja'], ['Arabic', 'ar'], ['Hindi', 'hi'], ['Korean', 'ko'], ['Turkish', 'tr'], ['English', 'en']],
+                { selected: 'es' },
+                class: select_class %>
+            </div>
+            <% end %>
+
+            <!-- AI Presentation options -->
+            <% if has_pptx_opts %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">slideshow</span> Presentation Settings
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Number of Slides</label>
+                  <%= f.select :slide_count,
+                    [['5 slides', '5'], ['8 slides (default)', '8'], ['10 slides', '10'], ['15 slides', '15']],
+                    { selected: '8' },
+                    class: select_class %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Tone / Style</label>
+                  <%= f.select :tone,
+                    [['Professional', 'professional'], ['Executive / Board', 'executive'], ['Creative & Engaging', 'creative'], ['Educational', 'educational'], ['Sales Pitch', 'persuasive sales pitch']],
+                    { selected: 'professional' },
+                    class: select_class %>
+                </div>
+              </div>
+              <div class="mt-3">
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Target Audience</label>
+                <%= f.text_field :audience,
+                    placeholder: "e.g. C-suite executives, university students, sales team...",
+                    class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400" %>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- AI Document options -->
+            <% if has_docx_opts %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">edit_document</span> Document Settings
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Document Type</label>
+                  <%= f.select :doc_type,
+                    [['Business Report', 'report'], ['Proposal', 'proposal'], ['Cover Letter', 'cover letter'], ['Executive Summary', 'executive summary'], ['Policy Document', 'policy document'], ['Article / Blog Post', 'article'], ['Research Brief', 'research brief']],
+                    { selected: 'report' },
+                    class: select_class %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Tone</label>
+                  <%= f.select :tone,
+                    [['Professional', 'professional'], ['Formal', 'formal'], ['Friendly', 'friendly'], ['Persuasive', 'persuasive'], ['Academic', 'academic']],
+                    { selected: 'professional' },
+                    class: select_class %>
+                </div>
+              </div>
+              <div class="mt-3">
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Approximate Length</label>
+                <%= f.select :page_count,
+                  [['1 page', '1'], ['2–3 pages (default)', '3'], ['5 pages', '5'], ['10 pages', '10']],
+                  { selected: '3' },
+                  class: select_class %>
+              </div>
+            </div>
+            <% end %>
+
           </div>
+        </div>
         <% end %>
 
         <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4",
@@ -173,6 +393,14 @@
 </div>
 
 <script>
+  function toggleOptions() {
+    const body    = document.getElementById('options-body');
+    const chevron = document.getElementById('options-chevron');
+    if (!body) return;
+    const hidden = body.classList.toggle('hidden');
+    chevron.style.transform = hidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+
   // Simple script to display selected file names if files are chosen
   const fileInput = document.getElementById('file_input');
   if(fileInput) {

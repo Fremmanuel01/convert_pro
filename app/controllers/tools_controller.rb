@@ -15,7 +15,15 @@ class ToolsController < ApplicationController
     return redirect_to tools_path, alert: "Tool not found." unless @tool
 
     begin
-      runner = ToolRunner.new(current_user, @tool[:id], params[:files], params.permit(:url, :password, :language, :rotation, :prompt, :watermark, :target_language).to_h)
+      options = params.permit(
+        :url, :password, :language, :rotation,
+        :prompt, :watermark, :watermark_position, :opacity, :target_language,
+        :page_size, :page_orientation, :fit_mode, :margin,
+        :quality, :dpi, :image_format,
+        :slide_count, :tone, :audience,
+        :doc_type, :page_count
+      ).to_h
+      runner = ToolRunner.new(current_user, @tool[:id], params[:files], options)
       conversion = runner.run!
       
       if current_user.nil?

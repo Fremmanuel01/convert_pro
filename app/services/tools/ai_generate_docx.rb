@@ -54,17 +54,23 @@ module Tools
       api_key = ENV['ANTHROPIC_API_KEY']
       raise ExecutionError, "Anthropic API key not configured (ANTHROPIC_API_KEY)." if api_key.blank?
 
+      opts     = @conversion.try(:options) || {}
+      doc_type = opts['doc_type'].presence || 'report'
+      tone     = opts['tone'].presence     || 'professional'
+      pages    = opts['page_count'].present? ? opts['page_count'].to_i.clamp(1, 20) : 3
+
       user_prompt = <<~PROMPT
-        Write a professional Word document about: #{topic}
+        Write a #{tone} #{doc_type} about: #{topic}
 
         Return ONLY valid HTML (no markdown, no code fences). The HTML should:
         - Have a proper <html><head><body> structure
         - Include a <style> block with clean typography (font-family: Calibri, Arial; line-height: 1.6; max-width: 800px; margin: 40px auto; color: #1e293b)
-        - Use semantic tags: <h1> for the document title, <h2> for section headers, <h3> for sub-sections, <p> for paragraphs, <ul>/<li> for lists
+        - Use semantic tags: <h1> for the document title, <h2> for section headers, <h3> for sub-sections, <p> for paragraphs, <ul>/<li> for lists, <table> for data where appropriate
         - Style h1 with color #4F46E5 (indigo), h2 with color #1E293B (dark), horizontal rules between major sections
-        - Be comprehensive, professional, and well-structured
+        - Document type: #{doc_type}
+        - Tone: #{tone}
+        - Target length: approximately #{pages} page(s) worth of content (#{pages * 400} words minimum)
         - Include an executive summary, multiple detailed sections, and a conclusion
-        - Minimum 600 words of actual content
       PROMPT
 
       response = HTTParty.post(

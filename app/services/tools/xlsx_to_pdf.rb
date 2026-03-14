@@ -42,7 +42,32 @@ module Tools
         raise ExecutionError, "LibreOffice failed to generate a PDF output."
       end
 
+      apply_page_layout!(expected_output_path)
       expected_output_path
+    end
+
+    private
+
+    def apply_page_layout!(pdf_path)
+      opts        = @conversion.try(:options) || {}
+      page_size   = opts['page_size'].presence
+      orientation = opts['page_orientation'].presence
+      return unless page_size || orientation
+
+      gs_size = { 'A4' => 'a4', 'A3' => 'a3', 'Letter' => 'letter', 'Legal' => 'legal' }[page_size] || 'a4'
+      resized = pdf_path + '_resized.pdf'
+
+      extra = if orientation == 'landscape'
+        dims = { 'a4' => '842 595', 'a3' => '1191 842', 'letter' => '792 612', 'legal' => '1008 612' }[gs_size] || '842 595'
+        ["-dDEVICEWIDTHPOINTS=#{dims.split.first}", "-dDEVICEHEIGHTPOINTS=#{dims.split.last}"]
+      else
+        ["-sPAPERSIZE=#{gs_size}"]
+      end
+
+      command = ['gs', '-sDEVICE=pdfwrite', '-dNOPAUSE', '-dBATCH', '-dQUIET', '-dFIXEDMEDIA', '-dPDFFitPage', *extra, "-sOutputFile=#{resized}", pdf_path]
+      require 'open3'
+      _o, _e, status = Open3.capture3(*command)
+      FileUtils.mv(resized, pdf_path) if status.success? && File.exist?(resized)
     end
   end
 end

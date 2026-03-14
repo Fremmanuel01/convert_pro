@@ -11,28 +11,30 @@ module Tools
       end
 
       input_path = input_paths.first
-      
-      # We will extract each page as a JPEG using Ghostscript
-      output_pattern = tmp_path("page_%03d.jpg")
+
+      opts   = @conversion.try(:options) || {}
+      dpi    = [72, 150, 300].include?(opts['dpi'].to_i) ? opts['dpi'].to_i : 150
+      fmt    = opts['image_format'] == 'png' ? 'png16m' : 'jpeg'
+      ext    = opts['image_format'] == 'png' ? 'png'   : 'jpg'
+      output_pattern = tmp_path("page_%03d.#{ext}")
 
       command = [
         "gs",
-        "-sDEVICE=jpeg",
-        "-dJPEGQ=90",      # high quality with reasonable file size
-        "-r300",           # 300 DPI for high resolution output
+        "-sDEVICE=#{fmt}",
+        ("-dJPEGQ=92" if ext == 'jpg'),
+        "-r#{dpi}",
         "-dNOPAUSE",
         "-dQUIET",
         "-dBATCH",
         "-sOutputFile=#{output_pattern}",
         input_path
-      ]
+      ].compact
 
-      unless system(*command)
-        raise ExecutionError, "Ghostscript failed to map PDF arrays."
-      end
+      require 'open3'
+      _stdout, stderr, status = Open3.capture3(*command)
+      raise ExecutionError, "Image extraction failed: #{stderr.strip}" unless status.success?
 
-      # Collect all generated JPEGs
-      page_paths = Dir.glob(tmp_path("page_*.jpg"))
+      page_paths = Dir.glob(tmp_path("page_*.#{ext}")).sort
       
       if page_paths.empty?
         raise ExecutionError, "Engine failed to extract any image structures."

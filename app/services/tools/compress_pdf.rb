@@ -11,11 +11,19 @@ module Tools
       output_path = tmp_path("compressed_output.pdf")
 
       # Ghostscript command for screen-level compression
+      quality_map = {
+        'screen'   => '/screen',   # 72 dpi — smallest file
+        'ebook'    => '/ebook',    # 150 dpi — good balance (default)
+        'printer'  => '/printer',  # 300 dpi — high quality
+        'prepress' => '/prepress'  # 300 dpi + colour preservation — best quality
+      }
+      quality = quality_map[@conversion.try(:options)&.dig('quality')] || '/ebook'
+
       command = [
         "gs",
         "-sDEVICE=pdfwrite",
         "-dCompatibilityLevel=1.4",
-        "-dPDFSETTINGS=/ebook", # 150dpi baseline (better than /screen 72dpi) for legible text
+        "-dPDFSETTINGS=#{quality}",
         "-dNOPAUSE",
         "-dQUIET",
         "-dBATCH",
