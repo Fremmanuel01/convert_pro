@@ -70,31 +70,61 @@
             </div>
           </div>
         <% else %>
-          <!-- Standard File Upload Zone -->
-          <div class="relative p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-800/20 hover:border-primary/50 transition-colors group cursor-pointer" id="upload-zone">
-            
-            <%= f.file_field :files, multiple: @tool[:accepts_multiple], accept: @tool[:accepted_types].join(','), 
-                class: "absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20", 
-                required: true, id: "file_input",
-                data: { client_tool_target: "fileInput" } %>
+          <!-- Upload container: drop zone + preview zone -->
+          <div id="upload-container">
 
-            <div class="pointer-events-none relative z-10 flex flex-col items-center justify-center">
-              <div class="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <span class="material-symbols-outlined text-4xl">cloud_upload</span>
+            <!-- Drop / Browse zone -->
+            <div class="relative p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-800/20 hover:border-primary/50 transition-colors group cursor-pointer" id="upload-zone">
+              <%= f.file_field :files, multiple: @tool[:accepts_multiple], accept: @tool[:accepted_types].join(','),
+                  class: "absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20",
+                  required: true, id: "file_input",
+                  data: { client_tool_target: "fileInput" } %>
+              <div class="pointer-events-none relative z-10 flex flex-col items-center justify-center">
+                <div class="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-4xl">cloud_upload</span>
+                </div>
+                <h5 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Select files to process</h5>
+                <p class="text-sm font-medium mb-6 <%= current_user&.pro? && current_user&.active? ? 'text-primary' : 'text-slate-500' %>">
+                  <% if current_user&.pro? && current_user&.active? %>
+                    <span class="material-symbols-outlined text-[14px] align-middle mr-1">verified</span>Pro limit: Max 100MB
+                  <% else %>
+                    Free limit: Max 10MB
+                  <% end %>
+                </p>
+                <div class="inline-flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-xl text-sm font-bold group-hover:-translate-y-0.5 transition-transform">
+                  Browse Files
+                </div>
               </div>
-              <h5 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Select files to process</h5>
-              <p class="text-sm font-medium mb-6 <%= current_user&.pro? && current_user&.active? ? 'text-primary' : 'text-slate-500' %>">
-                <% if current_user&.pro? && current_user&.active? %>
-                  <span class="material-symbols-outlined text-[14px] align-middle mr-1">verified</span>Pro limit: Max 100MB
-                <% else %>
-                  Free limit: Max 10MB
-                <% end %>
-              </p>
-              
-              <div class="inline-flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-xl text-sm font-bold group-hover:-translate-y-0.5 transition-transform">
-                Browse Files
+            </div>
+
+            <!-- Preview zone (shown once files are selected) -->
+            <div id="file-preview-zone" class="hidden rounded-3xl border-2 border-primary/20 dark:border-primary/30 bg-slate-50 dark:bg-slate-900 overflow-hidden">
+
+              <!-- Header bar -->
+              <div class="px-5 py-3 bg-primary/5 dark:bg-primary/10 border-b border-primary/10 dark:border-primary/20 flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[14px] text-primary">preview</span>
+                  Document Preview
+                </span>
+                <button type="button" id="change-file-btn"
+                        class="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+                  Change file
+                </button>
               </div>
-              <p id="file-name-display" class="mt-4 text-sm font-bold text-primary hidden"></p>
+
+              <!-- Thumbnail grid -->
+              <div id="preview-thumbnails"
+                   class="p-6 flex flex-wrap gap-5 justify-center items-end min-h-[200px]">
+                <!-- thumbnail cards injected by JS -->
+              </div>
+
+              <!-- Footer bar: file info + active effects -->
+              <div class="px-5 py-3 bg-slate-100/70 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <span id="preview-file-info" class="text-xs font-medium text-slate-500 dark:text-slate-400"></span>
+                <div id="preview-effects-bar" class="flex flex-wrap gap-1.5"></div>
+              </div>
+
             </div>
           </div>
         <% end %>
@@ -504,153 +534,314 @@
 </div>
 
 <script>
-  function toggleOptions() {
-    const body    = document.getElementById('options-body');
-    const chevron = document.getElementById('options-chevron');
-    if (!body) return;
-    const hidden = body.classList.toggle('hidden');
-    chevron.style.transform = hidden ? 'rotate(0deg)' : 'rotate(180deg)';
-  }
-  // Panel is open by default — ensure chevron reflects that on load
-  document.addEventListener('DOMContentLoaded', function() {
-    const chevron = document.getElementById('options-chevron');
-    if (chevron) chevron.style.transform = 'rotate(180deg)';
-  });
-
-  // Simple script to display selected file names if files are chosen
-  const fileInput = document.getElementById('file_input');
-  if(fileInput) {
-    fileInput.addEventListener('change', function(e) {
-      const displayContent = document.getElementById('file-name-display');
-      if(e.target.files.length > 0) {
-        if(e.target.files.length === 1) {
-          displayContent.textContent = e.target.files[0].name;
-        } else {
-          displayContent.textContent = e.target.files.length + " files selected";
-        }
-        displayContent.classList.remove('hidden');
-      } else {
-        displayContent.classList.add('hidden');
-      }
-    });
-  }
-
-  // ── Settings Preview ────────────────────────────────────────────
+  // ── Document Thumbnail Preview Engine ───────────────────────────
   (function() {
-    const PAGE_DIMS = { A4: [60,84], A3: [84,60*1.41], Letter: [58,75], Legal: [58,95] };
-    const SIZE_LABELS = { A4: 'A4 · 210×297mm', A3: 'A3 · 297×420mm', Letter: 'Letter · 8.5×11"', Legal: 'Legal · 8.5×14"' };
 
-    function val(name) {
-      const el = document.querySelector('[name$="['+name+']"], [name="'+name+'"]');
+    // Load PDF.js from CDN
+    const pdfJsScript = document.createElement('script');
+    pdfJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    document.head.appendChild(pdfJsScript);
+
+    const THUMB_W = 130; // px width of each thumbnail canvas
+
+    // ── helpers ──────────────────────────────────────────
+    function fmtSize(bytes) {
+      if (bytes < 1024)       return bytes + ' B';
+      if (bytes < 1048576)    return (bytes/1024).toFixed(1) + ' KB';
+      return (bytes/1048576).toFixed(2) + ' MB';
+    }
+    function getVal(name) {
+      const el = document.querySelector(`[name$="[${name}]"],[name="${name}"]`);
       return el ? el.value : null;
     }
-    function labelOf(name) {
-      const el = document.querySelector('[name$="['+name+']"], [name="'+name+'"]');
+    function getLabel(name) {
+      const el = document.querySelector(`[name$="[${name}]"],[name="${name}"]`);
       if (!el) return null;
-      const opt = el.querySelector ? el.querySelector('option:checked') : null;
+      const opt = el.querySelector && el.querySelector('option:checked');
       return opt ? opt.textContent.trim() : el.value;
     }
 
-    function updatePreview() {
-      const preview = document.getElementById('settings-preview');
-      const page    = document.getElementById('preview-page');
-      const sizeLabel = document.getElementById('preview-size-label');
-      const list    = document.getElementById('preview-settings-list');
-      if (!preview) return;
+    // ── thumbnail rendering ───────────────────────────────
+    async function renderPdf(file, container) {
+      const url  = URL.createObjectURL(file);
+      const wrap = document.createElement('div');
+      wrap.className = 'thumb-card flex flex-col items-center gap-2';
 
-      const rows = [];
+      const canvasWrap = document.createElement('div');
+      canvasWrap.className = 'relative';
+      const canvas = document.createElement('canvas');
+      canvas.className = 'rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 bg-white transition-all duration-300';
+      canvas.style.maxWidth = THUMB_W + 'px';
+      canvas.id = 'thumb-canvas-' + Math.random().toString(36).slice(2);
+      canvasWrap.appendChild(canvas);
 
-      // Page size / orientation
-      const size   = val('page_size');
-      const orient = val('page_orientation');
-      if (size || orient) {
-        const dims   = PAGE_DIMS[size] || PAGE_DIMS['A4'];
-        const isLand = orient === 'landscape';
-        const w = isLand ? Math.max(...dims) : Math.min(...dims);
-        const h = isLand ? Math.min(...dims) : Math.max(...dims);
-        page.style.width  = w + 'px';
-        page.style.height = h + 'px';
-        const sl = SIZE_LABELS[size] || (size || 'A4');
-        sizeLabel.textContent = sl + (isLand ? ' · Landscape' : ' · Portrait');
-        rows.push({ icon: 'article', label: 'Page', value: (size || 'A4') + ' · ' + (isLand ? 'Landscape ↔' : 'Portrait ↕') });
+      // Watermark overlay (hidden by default)
+      const wmOverlay = document.createElement('div');
+      wmOverlay.className = 'thumb-wm-overlay absolute inset-0 flex items-center justify-center pointer-events-none rounded-lg hidden';
+      canvasWrap.appendChild(wmOverlay);
+
+      wrap.appendChild(canvasWrap);
+
+      const label = document.createElement('p');
+      label.className = 'text-xs text-center text-slate-500 dark:text-slate-400 max-w-[130px] truncate';
+      label.textContent = file.name;
+      wrap.appendChild(label);
+
+      const badge = document.createElement('p');
+      badge.className = 'thumb-page-badge text-[10px] font-bold text-primary/60 uppercase tracking-wide';
+      wrap.appendChild(badge);
+
+      container.appendChild(wrap);
+
+      try {
+        await pdfJsScript.onload; // wait if still loading
+        if (typeof pdfjsLib === 'undefined') {
+          await new Promise(res => { pdfJsScript.addEventListener('load', res, {once:true}); });
+        }
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const pdf  = await pdfjsLib.getDocument(url).promise;
+        const page = await pdf.getPage(1);
+        const vp   = page.getViewport({ scale: 1 });
+        const scale = THUMB_W / vp.width;
+        const viewport = page.getViewport({ scale });
+
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        badge.textContent = pdf.numPages + (pdf.numPages === 1 ? ' page' : ' pages');
+        URL.revokeObjectURL(url);
+        applySettingsToThumbs(); // apply current settings once rendered
+      } catch(e) {
+        canvas.width = THUMB_W; canvas.height = Math.round(THUMB_W * 1.414);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PDF', canvas.width/2, canvas.height/2);
+        URL.revokeObjectURL(url);
       }
+    }
 
-      // Quality
-      const quality = labelOf('quality');
-      if (quality) rows.push({ icon: 'compress', label: 'Quality', value: quality });
+    function renderImage(file, container) {
+      const url  = URL.createObjectURL(file);
+      const wrap = document.createElement('div');
+      wrap.className = 'thumb-card flex flex-col items-center gap-2';
 
-      // DPI / Format
-      const dpi = labelOf('dpi');
-      const fmt = labelOf('image_format');
-      if (dpi) rows.push({ icon: 'image', label: 'Resolution', value: dpi });
-      if (fmt) rows.push({ icon: 'photo', label: 'Format', value: fmt.toUpperCase() });
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'relative';
 
-      // Fit mode / Margin
-      const fit    = labelOf('fit_mode');
-      const margin = labelOf('margin');
-      if (fit)    rows.push({ icon: 'fit_screen', label: 'Image Fit', value: fit });
-      if (margin) rows.push({ icon: 'border_all', label: 'Margin', value: margin });
+      const img = document.createElement('img');
+      img.className = 'thumb-canvas rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 object-contain transition-all duration-300';
+      img.style.maxWidth = THUMB_W + 'px';
+      img.style.maxHeight = Math.round(THUMB_W * 1.5) + 'px';
+      img.src = url;
+      img.onload = () => { URL.revokeObjectURL(url); applySettingsToThumbs(); };
+      imgWrap.appendChild(img);
 
-      // Watermark
-      const wm = val('watermark');
-      const wmPos = labelOf('watermark_position');
-      const opacity = labelOf('opacity');
-      if (wm) rows.push({ icon: 'branding_watermark', label: 'Watermark', value: '"' + wm + '" · ' + (wmPos || 'diagonal') + (opacity ? ' · ' + opacity + '% opacity' : '') });
+      const wmOverlay = document.createElement('div');
+      wmOverlay.className = 'thumb-wm-overlay absolute inset-0 flex items-center justify-center pointer-events-none rounded-lg hidden';
+      imgWrap.appendChild(wmOverlay);
 
-      // Rotation
-      const rot = labelOf('rotation');
-      if (rot) rows.push({ icon: 'rotate_right', label: 'Rotation', value: rot });
+      wrap.appendChild(imgWrap);
 
-      // Language
-      const lang = labelOf('language');
-      if (lang) rows.push({ icon: 'translate', label: 'OCR Language', value: lang });
+      const label = document.createElement('p');
+      label.className = 'text-xs text-center text-slate-500 dark:text-slate-400 max-w-[130px] truncate';
+      label.textContent = file.name;
+      wrap.appendChild(label);
 
-      // Target language
-      const tl = labelOf('target_language');
-      if (tl) rows.push({ icon: 'g_translate', label: 'Translate to', value: tl });
+      container.appendChild(wrap);
+    }
 
-      // AI Presentation
-      const slides = labelOf('slide_count');
-      const tone   = labelOf('tone');
-      const audience = val('audience');
-      if (slides) rows.push({ icon: 'slideshow', label: 'Slides', value: slides });
-      if (tone)   rows.push({ icon: 'record_voice_over', label: 'Tone', value: tone });
-      if (audience && audience.trim()) rows.push({ icon: 'group', label: 'Audience', value: audience });
+    // ── apply settings effects to all thumbs ─────────────
+    function applySettingsToThumbs() {
+      const canvases = document.querySelectorAll('#preview-thumbnails canvas, #preview-thumbnails img.thumb-canvas');
+      if (!canvases.length) return;
 
-      // AI Document
-      const docType  = labelOf('doc_type');
-      const pageCount = labelOf('page_count');
-      if (docType)   rows.push({ icon: 'edit_document', label: 'Doc Type', value: docType });
-      if (pageCount) rows.push({ icon: 'auto_stories', label: 'Length', value: pageCount });
+      const rotation    = getVal('rotation')          || '0';
+      const quality     = getVal('quality')           || '';
+      const dpi         = getVal('dpi')               || '';
+      const orient      = getVal('page_orientation')  || '';
+      const wmText      = getVal('watermark')         || '';
+      const wmPos       = getVal('watermark_position')|| 'diagonal';
+      const wmOpacity   = parseInt(getVal('opacity')  || '15') / 100;
+      const targetLang  = getLabel('target_language') || '';
 
-      // Page range (split)
-      const fromPage = val('from_page');
-      const toPage   = val('to_page');
-      if (fromPage || toPage) rows.push({ icon: 'content_cut', label: 'Page Range', value: (fromPage || '1') + ' → ' + (toPage || 'last') });
+      canvases.forEach(el => {
+        // CSS transform: rotation
+        let rotate = 0;
+        if (rotation === '90')  rotate = 90;
+        if (rotation === '180') rotate = 180;
+        if (rotation === '270') rotate = 270;
 
-      if (rows.length === 0) {
-        list.innerHTML = '<p class="text-xs text-slate-400 italic">Adjust settings above to see your output preview.</p>';
-        preview.classList.add('hidden');
-        return;
-      }
+        // Orientation: show landscape ratio
+        let scaleX = 1, scaleY = 1;
+        if (orient === 'landscape') {
+          // squish portrait to landscape ratio visually
+          scaleX = 1.3; scaleY = 0.75;
+        }
 
-      preview.classList.remove('hidden');
-      list.innerHTML = rows.map(r =>
-        `<div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-[14px] text-primary/70">${r.icon}</span>
-          <span class="text-xs text-slate-500 dark:text-slate-400 w-20 shrink-0">${r.label}</span>
-          <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">${r.value}</span>
-        </div>`
+        // CSS filter: quality/dpi simulation
+        let filter = '';
+        if (quality === 'screen') filter = 'contrast(0.75) saturate(0.6) blur(0.6px)';
+        else if (quality === 'ebook') filter = 'contrast(0.88) saturate(0.85)';
+        else if (quality === 'printer') filter = 'contrast(1.08) saturate(1.1)';
+        else if (quality === 'prepress') filter = 'contrast(1.12) saturate(1.2) brightness(1.02)';
+        // image quality %
+        const qNum = parseInt(quality);
+        if (!isNaN(qNum) && qNum <= 60)  filter = 'contrast(0.82) saturate(0.7) blur(0.4px)';
+        else if (!isNaN(qNum) && qNum <= 75) filter = 'contrast(0.9) saturate(0.88)';
+        else if (!isNaN(qNum) && qNum >= 100) filter = 'contrast(1.1) saturate(1.15) brightness(1.01)';
+
+        if (dpi === '72')  filter = (filter||'') + ' blur(0.8px) contrast(0.8)';
+        if (dpi === '300') filter = (filter||'') + ' contrast(1.1) saturate(1.1)';
+
+        // OCR scan effect
+        const isOcr = !!document.querySelector('[name$="[language]"],[name="language"]');
+        if (isOcr) filter = (filter||'') + ' grayscale(0.3) contrast(1.15)';
+
+        el.style.transition   = 'all 0.35s cubic-bezier(.4,0,.2,1)';
+        el.style.transform    = `rotate(${rotate}deg) scale(${scaleX}, ${scaleY})`;
+        el.style.filter       = filter || 'none';
+
+        // Watermark overlay
+        const parent  = el.closest('[class*="relative"]');
+        const overlay = parent && parent.querySelector('.thumb-wm-overlay');
+        if (overlay) {
+          if (wmText.trim()) {
+            overlay.classList.remove('hidden');
+            const posStyles = {
+              diagonal: 'items-center justify-center rotate-[-35deg]',
+              center:   'items-center justify-center',
+              header:   'items-start justify-center pt-2',
+              footer:   'items-end justify-center pb-2'
+            };
+            overlay.className = 'thumb-wm-overlay absolute inset-0 flex pointer-events-none rounded-lg ' + (posStyles[wmPos] || posStyles.diagonal);
+            overlay.innerHTML = `<span style="font-size:11px;font-weight:900;letter-spacing:2px;color:rgba(99,102,241,${wmOpacity*3});white-space:nowrap;text-shadow:0 0 2px rgba(0,0,0,0.1)">${wmText.toUpperCase()}</span>`;
+          } else {
+            overlay.classList.add('hidden');
+          }
+        }
+      });
+
+      // Update effects badge bar
+      updateEffectsBadges(rotation, quality, dpi, orient, wmText, targetLang);
+    }
+
+    function updateEffectsBadges(rotation, quality, dpi, orient, wmText, targetLang) {
+      const bar = document.getElementById('preview-effects-bar');
+      if (!bar) return;
+      const badges = [];
+      if (rotation && rotation !== '0') badges.push({ icon: 'rotate_right', text: rotation + '°' });
+      if (orient === 'landscape')       badges.push({ icon: 'screen_rotation', text: 'Landscape' });
+      if (quality && isNaN(parseInt(quality))) badges.push({ icon: 'compress', text: quality });
+      else if (!isNaN(parseInt(quality)) && quality) badges.push({ icon: 'high_quality', text: quality + '% quality' });
+      if (dpi)     badges.push({ icon: 'image', text: dpi });
+      if (wmText)  badges.push({ icon: 'branding_watermark', text: 'Watermark' });
+      if (targetLang) badges.push({ icon: 'g_translate', text: '→ ' + targetLang });
+
+      bar.innerHTML = badges.map(b =>
+        `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 dark:bg-primary/20 px-2 py-1 rounded-full">
+          <span class="material-symbols-outlined text-[11px]">${b.icon}</span>${b.text}
+        </span>`
       ).join('');
     }
 
-    // Watch all inputs/selects inside the options body
+    // ── main file-input handler ───────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
-      const body = document.getElementById('options-body');
-      if (!body) return;
-      body.addEventListener('change', updatePreview);
-      body.addEventListener('input', updatePreview);
-      updatePreview(); // run once on load
+      const fileInput    = document.getElementById('file_input');
+      const uploadZone   = document.getElementById('upload-zone');
+      const previewZone  = document.getElementById('file-preview-zone');
+      const thumbsArea   = document.getElementById('preview-thumbnails');
+      const fileInfo     = document.getElementById('preview-file-info');
+      const changeBtn    = document.getElementById('change-file-btn');
+
+      if (!fileInput) return;
+
+      async function handleFiles(files) {
+        if (!files.length) return;
+
+        thumbsArea.innerHTML = `
+          <div class="flex flex-col items-center gap-3 text-slate-400">
+            <svg class="animate-spin size-8 text-primary" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span class="text-sm font-medium text-primary">Generating preview…</span>
+          </div>`;
+
+        uploadZone.classList.add('hidden');
+        previewZone.classList.remove('hidden');
+
+        // Total size
+        let totalBytes = 0;
+        Array.from(files).forEach(f => totalBytes += f.size);
+        fileInfo.textContent = files.length === 1
+          ? `${files[0].name}  ·  ${fmtSize(totalBytes)}`
+          : `${files.length} files  ·  ${fmtSize(totalBytes)} total`;
+
+        thumbsArea.innerHTML = '';
+
+        for (const file of Array.from(files)) {
+          const ext = file.name.split('.').pop().toLowerCase();
+          if (ext === 'pdf') {
+            await renderPdf(file, thumbsArea);
+          } else if (['jpg','jpeg','png','gif','webp','heic','bmp','tiff'].includes(ext)) {
+            renderImage(file, thumbsArea);
+          } else {
+            // Generic file card for DOCX, XLSX, PPTX etc.
+            const wrap = document.createElement('div');
+            wrap.className = 'thumb-card flex flex-col items-center gap-2';
+            const icon = { docx:'description', xlsx:'table_chart', pptx:'slideshow', zip:'folder_zip' }[ext] || 'insert_drive_file';
+            wrap.innerHTML = `
+              <div class="w-[${THUMB_W}px] h-[${Math.round(THUMB_W*1.3)}px] rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-4xl text-primary/60">${icon}</span>
+                <span class="text-xs font-bold text-slate-500 uppercase">${ext}</span>
+              </div>
+              <p class="text-xs text-center text-slate-500 max-w-[130px] truncate">${file.name}</p>`;
+            thumbsArea.appendChild(wrap);
+          }
+        }
+        applySettingsToThumbs();
+      }
+
+      fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) handleFiles(e.target.files);
+      });
+
+      // "Change file" button resets back to upload zone
+      if (changeBtn) {
+        changeBtn.addEventListener('click', function() {
+          previewZone.classList.add('hidden');
+          uploadZone.classList.remove('hidden');
+          thumbsArea.innerHTML = '';
+          fileInput.value = '';
+        });
+      }
+
+      // Settings changes → re-apply effects on thumbnails
+      const optionsBody = document.getElementById('options-body');
+      if (optionsBody) {
+        optionsBody.addEventListener('change', applySettingsToThumbs);
+        optionsBody.addEventListener('input',  applySettingsToThumbs);
+      }
+
+      // Chevron already open on load
+      const chevron = document.getElementById('options-chevron');
+      if (chevron) chevron.style.transform = 'rotate(180deg)';
     });
+
+    // ── options toggle ────────────────────────────────────
+    window.toggleOptions = function() {
+      const body    = document.getElementById('options-body');
+      const chevron = document.getElementById('options-chevron');
+      if (!body) return;
+      const hidden = body.classList.toggle('hidden');
+      chevron.style.transform = hidden ? 'rotate(0deg)' : 'rotate(180deg)';
+    };
+
   })();
 </script>
