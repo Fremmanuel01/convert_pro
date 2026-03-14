@@ -1,4 +1,4 @@
-require 'shellwords'
+require 'open3'
 
 module Tools
   class OcrPdf < BaseTool
@@ -15,23 +15,20 @@ module Tools
 
       language = @conversion.try(:options)&.dig('language') || 'eng'
 
-      # Requires `ocrmypdf` installed on the host system
-      command = [
+      command = with_timeout(180,
         "ocrmypdf",
         "-l", language,
-        "--force-ocr", # Forces OCR even if text already exists
+        "--force-ocr",
         "--optimize", "1",
         input_path, output_path
-      ]
+      )
 
-      unless system(*command)
-        raise ExecutionError, "OCR Process failed. Ensure ocrmypdf is installed and the file is valid."
-      end
-      
-      unless File.exist?(output_path)
-        raise ExecutionError, "Failed to generate OCR output."
+      _stdout, stderr, status = Open3.capture3(*command)
+      unless status.success?
+        raise ExecutionError, "OCR failed: #{stderr.strip.presence || 'ensure ocrmypdf is installed and the file is valid'}"
       end
 
+      validate_pdf!(output_path)
       output_path
     end
   end

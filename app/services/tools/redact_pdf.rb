@@ -1,4 +1,4 @@
-require 'shellwords'
+require 'open3'
 
 module Tools
   class RedactPdf < BaseTool
@@ -11,40 +11,33 @@ module Tools
 
       input_path = input_paths.first
       output_path = tmp_path("redacted_output.pdf")
-      
-      # For a strict redaction, usually coordinate arrays are passed from a frontend canvas
-      # format: [{page: 1, x: 100, y: 100, w: 200, h: 50}]
+
       redactions = @conversion.try(:options)&.dig('redactions')
 
-      if redactions.blank?
-        # If no coordinates provided, we simulate redaction in this phase by flattening the PDF
-        # into images to strip hidden text metadata, which acts as a "sanitize" fallback.
-        command = [
-          "gs",
-          "-sDEVICE=pdfwrite",
-          "-dCompatibilityLevel=1.4",
-          "-dPrinted=true",     
-          "-dNOPAUSE",
-          "-dQUIET",
-          "-dBATCH",
-          "-sOutputFile=#{output_path}",
-          input_path
-        ]
-
-        unless system(*command)
-          raise ExecutionError, "Image flattening failed."
-        end
-      else
-        # Placeholder for complex hexapdf coordinate injection
+      if redactions.present?
         raise ExecutionError, "Specific coordinate redaction requires the hexapdf adapter (pending)."
       end
 
-      unless File.exist?(output_path)
-        raise ExecutionError, "Failed to generate redacted output."
+      # Sanitise: re-render through Ghostscript to strip hidden text/metadata layers
+      command = with_timeout(120,
+        "gs",
+        "-sDEVICE=pdfwrite",
+        "-dCompatibilityLevel=1.4",
+        "-dPrinted=true",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
+        "-sOutputFile=#{output_path}",
+        input_path
+      )
+
+      _stdout, stderr, status = Open3.capture3(*command)
+      unless status.success?
+        raise ExecutionError, "PDF sanitisation failed: #{stderr.strip.presence || 'unknown error'}"
       end
 
+      validate_pdf!(output_path)
       output_path
     end
-
   end
 end

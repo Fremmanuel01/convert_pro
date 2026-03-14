@@ -1,3 +1,5 @@
+require 'open3'
+
 module Tools
   class PdfToText < BaseTool
     protected
@@ -11,14 +13,12 @@ module Tools
       output_filename = File.basename(input_path, ".*") + ".txt"
       output_path = tmp_path(output_filename)
 
-      # pdftotext is provided by poppler-utils (already in Dockerfile)
-      command = ["pdftotext", "-layout", input_path, output_path]
-
-      require 'open3'
-      stdout, stderr, status = Open3.capture3(*command)
+      _stdout, stderr, status = Open3.capture3(*with_timeout(60,
+        "pdftotext", "-layout", input_path, output_path
+      ))
 
       unless status.success?
-        raise ExecutionError, "pdftotext extraction failed. Error: #{stderr.strip.presence || stdout.strip}"
+        raise ExecutionError, "pdftotext extraction failed: #{stderr.strip.presence || 'unknown error'}"
       end
 
       unless File.exist?(output_path)

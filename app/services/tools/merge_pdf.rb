@@ -38,11 +38,12 @@ module Tools
           cmd = ['gs', '-sDEVICE=pdfwrite', '-dNOPAUSE', '-dBATCH', '-dQUIET',
                  '-dFIXEDMEDIA', '-dPDFFitPage', "-sPAPERSIZE=#{gs_size}",
                  "-sOutputFile=#{resized}", output_path]
-          _out, _err, status = Open3.capture3(*cmd)
+          _out, _err, status = Open3.capture3(*with_timeout(120, *cmd))
           output_path = resized if status.success? && File.exist?(resized)
         end
       end
 
+      validate_pdf!(output_path)
       output_path
     end
   end

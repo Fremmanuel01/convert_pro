@@ -1,3 +1,5 @@
+require 'open3'
+
 module Tools
   class RotatePdf < BaseTool
     protected
@@ -10,7 +12,6 @@ module Tools
       input_path = input_paths.first
       output_path = tmp_path("rotated_output.pdf")
 
-      # Read rotation option: 90, 180, or 270 (default: 90)
       degrees = @conversion.try(:options)&.dig('rotation') || '90'
       degrees = degrees.to_s
 
@@ -18,26 +19,18 @@ module Tools
         raise ExecutionError, "Invalid rotation. Must be 90, 180, or 270 degrees."
       end
 
-      # Ghostscript autorotatepages with explicit page rotation via pdfmark
-      # Use qpdf which supports direct rotation
-      command = [
+      _stdout, stderr, status = Open3.capture3(*with_timeout(60,
         "qpdf",
         "--rotate=+#{degrees}",
         input_path,
         output_path
-      ]
-
-      require 'open3'
-      stdout, stderr, status = Open3.capture3(*command)
+      ))
 
       unless status.success?
-        raise ExecutionError, "PDF rotation failed. Error: #{stderr.strip.presence || stdout.strip}"
+        raise ExecutionError, "PDF rotation failed: #{stderr.strip.presence || 'unknown error'}"
       end
 
-      unless File.exist?(output_path)
-        raise ExecutionError, "Failed to generate rotated PDF."
-      end
-
+      validate_pdf!(output_path)
       output_path
     end
   end

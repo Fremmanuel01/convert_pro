@@ -37,6 +37,7 @@ module Tools
         raise ExecutionError, "Failed to extract Webpage layout onto PDF buffer."
       end
 
+      validate_pdf!(output_path)
       output_path
     end
   end

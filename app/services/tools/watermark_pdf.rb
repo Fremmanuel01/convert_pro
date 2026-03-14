@@ -34,6 +34,7 @@ module Tools
         raise ExecutionError, "Failed to generate watermarked PDF."
       end
 
+      validate_pdf!(output_path)
       output_path
     end
 

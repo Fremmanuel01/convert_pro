@@ -1,3 +1,5 @@
+require 'open3'
+
 module Tools
   class PngToJpg < BaseTool
     protected
@@ -14,14 +16,14 @@ module Tools
       opts    = @conversion.try(:options) || {}
       quality = opts['quality'].to_i
       quality = 90 if quality < 1 || quality > 100
-      # Flatten to white background to handle transparency before converting to JPG
-      command = ["magick", input_path, "-background", "white", "-flatten", "-quality", quality.to_s, output_path]
 
-      require 'open3'
-      stdout, stderr, status = Open3.capture3(*command)
+      # Flatten to white background to handle transparency before converting to JPG
+      _stdout, stderr, status = Open3.capture3(*with_timeout(60,
+        "magick", input_path, "-background", "white", "-flatten", "-quality", quality.to_s, output_path
+      ))
 
       unless status.success?
-        raise ExecutionError, "ImageMagick conversion failed. Error: #{stderr.strip.presence || stdout.strip}"
+        raise ExecutionError, "ImageMagick conversion failed: #{stderr.strip.presence || 'unknown error'}"
       end
 
       unless File.exist?(output_path)

@@ -1,3 +1,5 @@
+require 'open3'
+
 module Tools
   class CompressPdf < BaseTool
     protected
@@ -10,16 +12,15 @@ module Tools
       input_path = input_paths.first
       output_path = tmp_path("compressed_output.pdf")
 
-      # Ghostscript command for screen-level compression
       quality_map = {
-        'screen'   => '/screen',   # 72 dpi — smallest file
-        'ebook'    => '/ebook',    # 150 dpi — good balance (default)
-        'printer'  => '/printer',  # 300 dpi — high quality
-        'prepress' => '/prepress'  # 300 dpi + colour preservation — best quality
+        'screen'   => '/screen',
+        'ebook'    => '/ebook',
+        'printer'  => '/printer',
+        'prepress' => '/prepress'
       }
       quality = quality_map[@conversion.try(:options)&.dig('quality')] || '/ebook'
 
-      command = [
+      command = with_timeout(120,
         "gs",
         "-sDEVICE=pdfwrite",
         "-dCompatibilityLevel=1.4",
@@ -29,16 +30,14 @@ module Tools
         "-dBATCH",
         "-sOutputFile=#{output_path}",
         input_path
-      ]
+      )
 
-      unless system(*command)
-        raise ExecutionError, "Ghostscript compression failed. Could not process file."
-      end
-      
-      unless File.exist?(output_path)
-        raise ExecutionError, "Output file was not generated."
+      _stdout, stderr, status = Open3.capture3(*command)
+      unless status.success?
+        raise ExecutionError, "Ghostscript compression failed: #{stderr.strip.presence || 'unknown error'}"
       end
 
+      validate_pdf!(output_path)
       output_path
     end
   end

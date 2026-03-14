@@ -14,8 +14,12 @@ module Tools
       expected_output_path = tmp_path(output_filename)
 
       begin
+        opts    = @conversion.try(:options) || {}
+        quality = opts['quality'].to_i
+        quality = 90 if quality < 1 || quality > 100
         image = MiniMagick::Image.open(input_path)
         image.format "png"
+        image.quality quality.to_s
         image.write(expected_output_path)
       rescue => e
         Rails.logger.error "MiniMagick Error: #{e.message}\n#{e.backtrace.first(5).join("\n")}"

@@ -1,4 +1,4 @@
-require 'shellwords'
+require 'open3'
 
 module Tools
   class ProtectPdf < BaseTool
@@ -12,28 +12,22 @@ module Tools
       input_path = input_paths.first
       output_filename = File.basename(input_path, ".*") + "_protected.pdf"
       output_path = tmp_path(output_filename)
-      
-      # We extract the password param from @conversion if we added options to the DB.
-      # But since we didn't add an `options` JSON column yet, let's hardcode a default "protected" 
-      # or require an options payload. For now, we will add an implementation standard using a default password.
-      # To do this correctly, a migration for `options:jsonb` would be ideal.
-      # We'll default to "secret" if options aren't present.
-      password = @conversion.try(:options)&.dig('password') || 'secret'
 
-      command = [
+      password = @conversion.try(:options)&.dig('password').presence
+      raise ExecutionError, "A password is required to protect this PDF." if password.blank?
+
+      command = with_timeout(60,
         "qpdf",
         "--encrypt", password, password, "256", "--",
         input_path, output_path
-      ]
+      )
 
-      unless system(*command)
-        raise ExecutionError, "qpdf encryption failed."
-      end
-      
-      unless File.exist?(output_path)
-        raise ExecutionError, "Failed to generate protected output."
+      _stdout, stderr, status = Open3.capture3(*command)
+      unless status.success?
+        raise ExecutionError, "PDF encryption failed: #{stderr.strip.presence || 'unknown error'}"
       end
 
+      validate_pdf!(output_path)
       output_path
     end
   end

@@ -1,4 +1,4 @@
-require 'shellwords'
+require 'open3'
 require 'zip'
 
 module Tools
@@ -18,7 +18,7 @@ module Tools
       ext    = opts['image_format'] == 'png' ? 'png'   : 'jpg'
       output_pattern = tmp_path("page_%03d.#{ext}")
 
-      command = [
+      gs_args = [
         "gs",
         "-sDEVICE=#{fmt}",
         ("-dJPEGQ=92" if ext == 'jpg'),
@@ -30,19 +30,17 @@ module Tools
         input_path
       ].compact
 
-      require 'open3'
-      _stdout, stderr, status = Open3.capture3(*command)
+      _stdout, stderr, status = Open3.capture3(*with_timeout(120, *gs_args))
       raise ExecutionError, "Image extraction failed: #{stderr.strip}" unless status.success?
 
       page_paths = Dir.glob(tmp_path("page_*.#{ext}")).sort
-      
+
       if page_paths.empty?
         raise ExecutionError, "Engine failed to extract any image structures."
       end
 
-      # Zip the results via rubyzip natively
       zip_path = tmp_path("extracted_images.zip")
-      
+
       Zip::File.open(zip_path, create: true) do |zipfile|
         page_paths.each do |file_path|
           filename = File.basename(file_path)

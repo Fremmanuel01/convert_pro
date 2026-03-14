@@ -49,6 +49,7 @@ module Tools
       end
 
       raise ExecutionError, "Engine failed to output PDF." unless File.exist?(output_path)
+      validate_pdf!(output_path)
       output_path
     end
   end
