@@ -81,48 +81,26 @@ class ConversionsController < ApplicationController
       return redirect_to conversion_path(@conversion), alert: "File is not ready for download yet."
     end
 
-    blob = @conversion.output_file.blob
-
-    # In development (local disk storage), use Rails' built-in redirect
-    unless blob.service_name == "cloudinary"
-      redirect_to rails_blob_path(blob, disposition: "attachment")
-      return
+    blob     = @conversion.output_file.blob
+    filename = blob.filename.to_s
+    # Ensure the filename has an extension so the browser knows the file type
+    if File.extname(filename).blank?
+      filename += ".pdf"
     end
+    content_type = blob.content_type.presence || "application/octet-stream"
 
-    # Production: Cloudinary storage
-    key = blob.key
-
-    # Files uploaded before our fix are stored as 'image' type.
-    # Files after the fix are stored as 'raw' type.
-    # Use Cloudinary Admin API to find the actual stored resource type,
-    # then generate a signed delivery URL (bypasses Cloudinary access restrictions).
-    actual_resource_type = nil
-    ["raw", "image"].each do |rt|
-      begin
-        Cloudinary::Api.resource(key, resource_type: rt)
-        actual_resource_type = rt
-        break
-      rescue Cloudinary::Api::NotFound
-        next
-      rescue => e
-        Rails.logger.warn "Cloudinary Admin API check (#{rt}) failed: #{e.message}"
-        next
-      end
-    end
-
-    if actual_resource_type
-      signed_url = Cloudinary::Utils.cloudinary_url(key,
-        resource_type: actual_resource_type,
-        type: "upload",
-        secure: true,
-        sign_url: true,
-        attachment: blob.filename.to_s
-      )
-      redirect_to signed_url, allow_other_host: true
-    else
-      # Final fallback: stream through Rails
-      Rails.logger.warn "Cloudinary resource not found via Admin API for key: #{key}. Falling back to proxy."
-      redirect_to rails_blob_path(blob, disposition: "attachment")
+    # Stream the file bytes through Rails with explicit Content-Disposition so
+    # the browser always prompts a download with the correct filename/extension,
+    # regardless of where the file is stored (local disk, Cloudinary, etc.).
+    begin
+      file_data = blob.download
+      send_data file_data,
+        filename:    filename,
+        type:        content_type,
+        disposition: "attachment"
+    rescue => e
+      Rails.logger.error "Download stream failed for conversion #{@conversion.id}: #{e.message}"
+      redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
     end
   end
 
