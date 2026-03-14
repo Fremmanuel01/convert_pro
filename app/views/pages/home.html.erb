@@ -109,6 +109,9 @@
   }
 </style>
 
+<!-- Force white background for entire home page regardless of dark mode -->
+<div class="bg-white">
+
 <!-- ══════════════════ HERO ══════════════════ -->
 <section class="relative w-full min-h-[calc(100vh-4.5rem)] flex items-center overflow-hidden">
   <div class="absolute inset-0 -z-10 overflow-hidden">
@@ -188,7 +191,7 @@
 
       <!-- Orbit ring (logo colours) -->
       <div class="absolute w-64 h-64 rounded-full p-[3px] orbit-ring opacity-25">
-        <div class="w-full h-full rounded-full bg-background-light dark:bg-background-dark"></div>
+        <div class="w-full h-full rounded-full bg-white"></div>
       </div>
 
       <!-- Central hub -->
@@ -317,7 +320,7 @@
       {n:"03",icon:"download",    g1:"#10b981", g2:"#f59e0b",
        t:"Download Instantly", d:"Your file is ready in seconds. Download directly — all files are automatically deleted after processing."},
     ].each_with_index do |s,i| %>
-      <div class="reveal flex flex-col items-center text-center p-8 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative z-10"
+      <div class="reveal flex flex-col items-center text-center p-8 rounded-3xl bg-white border border-slate-200/80 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative z-10 shadow-sm"
            style="transition-delay:<%= i*0.12 %>s;">
         <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center mb-5 shadow-lg"
              style="background:linear-gradient(135deg,<%= s[:g1] %>,<%= s[:g2] %>);">
@@ -333,7 +336,7 @@
 
 <!-- ══════════════════ ALL TOOLS ══════════════════ -->
 <section id="tools" class="py-20 lg:py-28 px-6 lg:px-16 xl:px-20"
-         style="background:rgba(245,246,248,.65);">
+         style="background:#f1f5f9;">
   <div class="max-w-7xl mx-auto">
     <div class="text-center mb-16 reveal">
       <span class="text-xs font-bold uppercase tracking-widest mb-3 block" style="color:#1f3dff;">All Tools</span>
@@ -388,14 +391,14 @@
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           <% cat[:tools].each do |tool| %>
             <a href="/tools/<%= tool[:id] %>"
-               class="card-lift group flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 dark:hover:border-primary/30 no-underline">
+               class="card-lift group flex items-center gap-3.5 p-4 rounded-2xl bg-white border border-slate-200 hover:border-primary/40 no-underline shadow-sm">
               <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                    style="background:<%= tool[:bg] %>;">
                 <span class="material-symbols-outlined text-[20px]" style="color:<%= tool[:cl] %>;"><%= tool[:ic] %></span>
               </div>
               <div class="min-w-0 flex-1">
-                <div class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate"><%= tool[:t] %></div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug"><%= tool[:d] %></div>
+                <div class="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors truncate"><%= tool[:t] %></div>
+                <div class="text-xs text-slate-500 mt-0.5 leading-snug"><%= tool[:d] %></div>
               </div>
               <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 text-lg">chevron_right</span>
             </a>
@@ -420,7 +423,7 @@
       {ic:"devices",      g1:"#8b5cf6",g2:"#6366f1", t:"Works Everywhere", d:"Desktop, tablet, or mobile — just your browser, nothing to install."},
       {ic:"high_quality", g1:"#f59e0b",g2:"#ef6c00", t:"High Fidelity",    d:"Preserves fonts, tables, images, and layouts with high accuracy."},
     ].each_with_index do |f,i| %>
-      <div class="reveal p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      <div class="reveal p-6 rounded-3xl bg-white border border-slate-200 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 shadow-sm"
            style="transition-delay:<%= i*0.1 %>s;">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 shadow-lg"
              style="background:linear-gradient(135deg,<%= f[:g1] %>,<%= f[:g2] %>);">
@@ -473,3 +476,5 @@
   );
   document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
 </script>
+
+</div><!-- end bg-white wrapper -->
