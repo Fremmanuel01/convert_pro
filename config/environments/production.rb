@@ -63,7 +63,7 @@ Rails.application.configure do
   # Brevo (Sendinblue) SMTP for transactional email
   if ENV["BREVO_SMTP_KEY"].present?
     config.action_mailer.delivery_method = :smtp
-    config.action_mailer.raise_delivery_errors = true
+    config.action_mailer.raise_delivery_errors = false
     config.action_mailer.smtp_settings = {
       address:              "smtp-relay.brevo.com",
       port:                 587,
