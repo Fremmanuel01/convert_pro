@@ -1,0 +1,237 @@
+<% content_for :page_title, "Dashboard" %>
+
+<!-- ── STAT CARDS ───────────────────────────────────────────── -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <% [
+    { label: "Total Users",        value: @total_users,           icon: "group",           color: "#1f3dff", bg: "rgba(31,61,255,0.08)"  },
+    { label: "New (7 days)",        value: @users_this_week,       icon: "person_add",      color: "#10b981", bg: "rgba(16,185,129,0.08)" },
+    { label: "Total Conversions",  value: @total_conversions,     icon: "transform",       color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
+    { label: "Conversions Today",  value: @conversions_today,     icon: "today",           color: "#0ea5e9", bg: "rgba(14,165,233,0.08)" },
+    { label: "Completed",          value: @completed_conversions, icon: "check_circle",    color: "#10b981", bg: "rgba(16,185,129,0.08)" },
+    { label: "Failed",             value: @failed_conversions,    icon: "error",           color: "#ef4444", bg: "rgba(239,68,68,0.08)"  },
+    { label: "Pro Users",          value: @pro_users,             icon: "workspace_premium",color: "#8b5cf6", bg: "rgba(139,92,246,0.08)"},
+    { label: "Unconfirmed",        value: @unconfirmed_users,     icon: "mark_email_unread",color: "#f59e0b", bg: "rgba(245,158,11,0.08)"},
+  ].each do |s| %>
+    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider"><%= s[:label] %></span>
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:<%= s[:bg] %>;">
+          <span class="material-symbols-outlined text-[16px]" style="color:<%= s[:color] %>;"><%= s[:icon] %></span>
+        </div>
+      </div>
+      <div class="text-3xl font-black text-slate-900"><%= number_with_delimiter(s[:value]) %></div>
+    </div>
+  <% end %>
+</div>
+
+<!-- ── CHARTS ROW ────────────────────────────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+
+  <!-- Conversions per day -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h3 class="font-bold text-slate-900 mb-4">Conversions — last 30 days</h3>
+    <canvas id="conversionsChart" height="200"></canvas>
+  </div>
+
+  <!-- New users per day -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h3 class="font-bold text-slate-900 mb-4">New users — last 30 days</h3>
+    <canvas id="usersChart" height="200"></canvas>
+  </div>
+
+</div>
+
+<!-- ── TOP TOOLS + BREAKDOWN ─────────────────────────────────── -->
+<div class="grid lg:grid-cols-3 gap-6 mb-8">
+
+  <!-- Top tools bar chart -->
+  <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h3 class="font-bold text-slate-900 mb-4">Top tools (last 30 days)</h3>
+    <canvas id="toolsChart" height="220"></canvas>
+  </div>
+
+  <!-- Breakdown doughnut -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h3 class="font-bold text-slate-900 mb-4">Signup method</h3>
+    <canvas id="signupChart" height="200"></canvas>
+    <div class="mt-4 space-y-2">
+      <div class="flex items-center justify-between text-sm">
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#1f3dff;"></span>Google OAuth</span>
+        <span class="font-bold"><%= @google_users %></span>
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#10b981;"></span>Email</span>
+        <span class="font-bold"><%= @email_users %></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── RECENT ACTIVITY ────────────────────────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-6">
+
+  <!-- Recent users -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="font-bold text-slate-900">Recent signups</h3>
+      <%= link_to "View all →", admin_users_path, class: "text-sm text-[#1f3dff] font-medium hover:underline" %>
+    </div>
+    <div class="divide-y divide-slate-100">
+      <% @recent_users.each do |user| %>
+        <div class="px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                 style="background: linear-gradient(135deg, #1f3dff, #0ea5e9);">
+              <%= user.email[0].upcase %>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-slate-900 truncate max-w-[180px]"><%= user.email %></div>
+              <div class="text-xs text-slate-400"><%= user.created_at.strftime("%b %d, %Y") %></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <% if user.provider == "google_oauth2" %>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">Google</span>
+            <% end %>
+            <% if user.confirmed? %>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-600">✓</span>
+            <% else %>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">Pending</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Recent conversions -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900">Recent conversions</h3>
+    </div>
+    <div class="divide-y divide-slate-100">
+      <% @recent_conversions.each do |c| %>
+        <div class="px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                 style="background:rgba(31,61,255,0.08);">
+              <span class="material-symbols-outlined text-[14px]" style="color:#1f3dff;">transform</span>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-slate-900"><%= c.tool_name&.humanize %></div>
+              <div class="text-xs text-slate-400"><%= c.user&.email&.truncate(28) || "Guest" %></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <% status_styles = { "completed" => "bg-green-50 text-green-600", "failed" => "bg-red-50 text-red-600", "processing" => "bg-blue-50 text-blue-600", "pending" => "bg-slate-100 text-slate-500" } %>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full <%= status_styles[c.status] || 'bg-slate-100 text-slate-500' %>">
+              <%= c.status.capitalize %>
+            </span>
+            <span class="text-xs text-slate-400"><%= c.created_at.strftime("%b %d") %></span>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── CHART.JS DATA ─────────────────────────────────────────── -->
+<script>
+  const chartDefaults = {
+    borderRadius: 6,
+    borderWidth: 0,
+  };
+
+  // Build full 30-day date range
+  function last30Days() {
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().slice(0, 10));
+    }
+    return days;
+  }
+
+  const dates = last30Days();
+
+  const convData = <%= raw @conversions_by_day.transform_keys { |k| k.to_s }.to_json %>;
+  const userData = <%= raw @users_by_day.transform_keys { |k| k.to_s }.to_json %>;
+
+  const convValues = dates.map(d => convData[d] || 0);
+  const userValues = dates.map(d => userData[d] || 0);
+  const shortDates = dates.map(d => d.slice(5)); // MM-DD
+
+  // Conversions chart
+  new Chart(document.getElementById('conversionsChart'), {
+    type: 'line',
+    data: {
+      labels: shortDates,
+      datasets: [{
+        label: 'Conversions',
+        data: convValues,
+        borderColor: '#1f3dff',
+        backgroundColor: 'rgba(31,61,255,0.06)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 2,
+        borderWidth: 2,
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } }
+  });
+
+  // Users chart
+  new Chart(document.getElementById('usersChart'), {
+    type: 'bar',
+    data: {
+      labels: shortDates,
+      datasets: [{
+        label: 'New users',
+        data: userValues,
+        backgroundColor: '#10b981',
+        ...chartDefaults,
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } }
+  });
+
+  // Top tools chart
+  const toolLabels = <%= raw @top_tools.keys.map { |k| k.to_s.humanize }.to_json %>;
+  const toolValues = <%= raw @top_tools.values.to_json %>;
+  const toolColors = ['#1f3dff','#0ea5e9','#10b981','#f59e0b','#ef6c00','#8b5cf6','#ec4899','#06b6d4','#ef4444','#64748b'];
+
+  new Chart(document.getElementById('toolsChart'), {
+    type: 'bar',
+    data: {
+      labels: toolLabels,
+      datasets: [{
+        data: toolValues,
+        backgroundColor: toolColors.slice(0, toolLabels.length),
+        ...chartDefaults,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+
+  // Signup method doughnut
+  new Chart(document.getElementById('signupChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Google OAuth', 'Email'],
+      datasets: [{
+        data: [<%= @google_users %>, <%= @email_users %>],
+        backgroundColor: ['#1f3dff', '#10b981'],
+        borderWidth: 0,
+        hoverOffset: 4,
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, cutout: '65%' }
+  });
+</script>

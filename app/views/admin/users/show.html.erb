@@ -1,0 +1,81 @@
+<% content_for :page_title, @user.email %>
+
+<div class="grid lg:grid-cols-3 gap-6">
+
+  <!-- User profile card -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black mx-auto mb-3"
+           style="background:linear-gradient(135deg,#1f3dff,#0ea5e9);">
+        <%= @user.email[0].upcase %>
+      </div>
+      <div class="font-bold text-slate-900 text-sm truncate"><%= @user.email %></div>
+      <div class="text-xs text-slate-400 mt-1">Joined <%= @user.created_at.strftime("%B %d, %Y") %></div>
+    </div>
+    <div class="space-y-3 text-sm">
+      <div class="flex justify-between items-center py-2 border-b border-slate-100">
+        <span class="text-slate-500">Plan</span>
+        <span class="font-bold <%= @user.pro? ? 'text-purple-600' : 'text-slate-700' %>"><%= @user.plan.capitalize %></span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-slate-100">
+        <span class="text-slate-500">Auth method</span>
+        <span class="font-medium"><%= @user.provider == "google_oauth2" ? "Google OAuth" : "Email" %></span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-slate-100">
+        <span class="text-slate-500">Email confirmed</span>
+        <% if @user.confirmed? %>
+          <span class="font-medium text-green-600">✓ <%= @user.confirmed_at.strftime("%b %d, %Y") %></span>
+        <% else %>
+          <span class="font-medium text-amber-600">Pending</span>
+        <% end %>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-slate-100">
+        <span class="text-slate-500">Total conversions</span>
+        <span class="font-bold text-slate-900"><%= @user.conversions_count %></span>
+      </div>
+      <div class="flex justify-between items-center py-2">
+        <span class="text-slate-500">Admin</span>
+        <span class="font-medium <%= @user.admin? ? 'text-purple-600' : 'text-slate-400' %>"><%= @user.admin? ? "Yes" : "No" %></span>
+      </div>
+    </div>
+
+    <!-- Toggle admin -->
+    <div class="mt-6 pt-4 border-t border-slate-100">
+      <%= button_to toggle_admin_admin_user_path(@user),
+          method: :patch,
+          class: "w-full py-2 rounded-xl text-sm font-bold border transition-colors #{@user.admin? ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}" do %>
+        <%= @user.admin? ? "Revoke admin" : "Make admin" %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Recent conversions -->
+  <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900">Recent conversions (<%= @conversions.size %>)</h3>
+    </div>
+    <% if @conversions.any? %>
+      <div class="divide-y divide-slate-100">
+        <% @conversions.each do |c| %>
+          <div class="px-6 py-3 flex items-center justify-between hover:bg-slate-50">
+            <div>
+              <div class="text-sm font-semibold text-slate-900"><%= c.tool_name&.humanize %></div>
+              <div class="text-xs text-slate-400"><%= c.created_at.strftime("%b %d, %Y at %H:%M") %></div>
+            </div>
+            <% status_styles = { "completed" => "bg-green-50 text-green-600", "failed" => "bg-red-50 text-red-600", "processing" => "bg-blue-50 text-blue-600", "pending" => "bg-slate-100 text-slate-500" } %>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full <%= status_styles[c.status] || 'bg-slate-100 text-slate-500' %>">
+              <%= c.status.capitalize %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-6 py-12 text-center text-slate-400 text-sm">No conversions yet</div>
+    <% end %>
+  </div>
+
+</div>
+
+<div class="mt-4">
+  <%= link_to "← Back to users", admin_users_path, class: "text-sm text-[#1f3dff] font-medium hover:underline" %>
+</div>

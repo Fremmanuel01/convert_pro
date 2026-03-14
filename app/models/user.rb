@@ -3,6 +3,7 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
+         :confirmable,
          :omniauthable, omniauth_providers: [:google_oauth2]
 
   def self.from_omniauth(auth)
@@ -12,12 +13,15 @@ class User < ApplicationRecord
     if user
       # Link the Google provider to the existing account
       user.update(provider: auth.provider, uid: auth.uid)
+      user.skip_confirmation! unless user.confirmed?
+      user.save if user.changed?
       user
     else
-      # Create a brand new user
+      # Create a brand new user — auto-confirm Google OAuth users
       where(provider: auth.provider, uid: auth.uid).first_or_create do |new_user|
-        new_user.email = auth.info.email
+        new_user.email    = auth.info.email
         new_user.password = Devise.friendly_token[0, 20]
+        new_user.skip_confirmation!
       end
     end
   end

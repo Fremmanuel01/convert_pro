@@ -93,3 +93,4 @@ gem "cloudinary", "~> 2.4"
 gem "aws-sdk-s3", "~> 1.177", require: false
 
 gem "prawn", "~> 2.4"
+gem "kaminari", "~> 1.2"
