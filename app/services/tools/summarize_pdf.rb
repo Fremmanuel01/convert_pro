@@ -39,8 +39,12 @@ module Tools
       # ~100k characters is a safe limit for GPT-4o-mini
       extracted_text = extracted_text[0..100000]
 
-      # 2. Call OpenAI API for Summarization
-      summary_markdown = generate_ai_summary(extracted_text)
+      # 2. Call AI API for Summarization
+      opts       = @conversion.try(:options) || {}
+      tone       = opts['tone'].presence || 'professional'
+      page_count = opts['page_count'].to_i
+      page_count = 3 if page_count < 1
+      summary_markdown = generate_ai_summary(extracted_text, tone: tone, page_count: page_count)
 
       # 3. Generate PDF using Prawn
       create_summary_pdf(summary_markdown, File.basename(input_path), expected_output_path)
@@ -73,18 +77,32 @@ module Tools
       raise ExecutionError, "Failed to extract text from PDF: #{e.message}"
     end
 
-    def generate_ai_summary(text)
+    def generate_ai_summary(text, tone: 'professional', page_count: 3)
       api_key = ENV['GROQ_API_KEY']
 
       if api_key.blank?
         raise ExecutionError, "Groq API Key is missing! Please configure GROQ_API_KEY."
       end
 
+      length_guide = case page_count
+                     when 1 then "Write a concise summary (approximately 300 words)."
+                     when 5 then "Write a detailed summary (approximately 1200 words)."
+                     else        "Write a standard summary (approximately 600–800 words)."
+                     end
+
+      tone_guide = case tone
+                   when 'academic'   then "Use formal academic language with precise terminology."
+                   when 'simple'     then "Use plain, simple language that anyone can understand."
+                   when 'executive'  then "Write in a sharp executive briefing style — key decisions and bottom-line impact first."
+                   else                   "Use professional, clear business language."
+                   end
+
       begin
         prompt = <<~PROMPT
-          You are an expert executive assistant. Summarize the following document accurately and concisely.
-          Format your output strictly in Markdown. Use headers, bullet points for key takeaways, and bold text for important terms.
-          Keep the summary comprehensive but readable.
+          You are an expert document analyst. Summarize the following document accurately.
+          #{tone_guide}
+          #{length_guide}
+          Format your output strictly in Markdown. Use headers (##), bullet points for key takeaways, and **bold** for important terms.
 
           --- DOCUMENT TEXT ---
           #{text}

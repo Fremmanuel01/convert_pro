@@ -111,23 +111,25 @@
           has_translate      = @tool[:id] == 'ai_translate_pdf'
           has_pptx_opts      = @tool[:id] == 'ai_generate_pptx'
           has_docx_opts      = @tool[:id] == 'ai_generate_docx'
-          has_any_options    = has_page_layout || has_password || has_quality || has_dpi || has_ocr_lang || has_rotation || has_watermark || has_translate || has_pptx_opts || has_docx_opts
+          has_split_range    = @tool[:id] == 'split_pdf'
+          has_summarize_opts = @tool[:id] == 'summarize_pdf'
+          has_image_quality  = %w[jpg_to_png png_to_jpg heic_to_jpg webp_to_jpg].include?(@tool[:id])
+          has_merge_opts     = @tool[:id] == 'merge_pdf'
         %>
 
-        <% if has_any_options %>
         <div class="rounded-2xl border border-slate-200 dark:border-slate-700/50 overflow-hidden">
           <!-- Options Header (toggle) -->
           <button type="button" id="options-toggle" onclick="toggleOptions()" class="w-full flex items-center justify-between px-5 py-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left">
             <div class="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
               <span class="material-symbols-outlined text-[18px] text-primary">tune</span>
               Document Options
-              <span class="text-xs font-normal text-slate-400 ml-1">— page size, orientation & more</span>
+              <span class="text-xs font-normal text-slate-400 ml-1">— customise output settings</span>
             </div>
-            <span id="options-chevron" class="material-symbols-outlined text-slate-400 transition-transform duration-200">expand_more</span>
+            <span id="options-chevron" class="material-symbols-outlined text-slate-400 transition-transform duration-200 rotate-180">expand_more</span>
           </button>
 
-          <!-- Options Body -->
-          <div id="options-body" class="px-5 pb-5 pt-4 bg-white/50 dark:bg-slate-900/30 space-y-5 hidden">
+          <!-- Options Body (open by default) -->
+          <div id="options-body" class="px-5 pb-5 pt-4 bg-white/50 dark:bg-slate-900/30 space-y-5">
 
             <!-- Page Layout (size + orientation) -->
             <% if has_page_layout %>
@@ -369,9 +371,94 @@
             </div>
             <% end %>
 
+            <!-- Split PDF: page range -->
+            <% if has_split_range %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">content_cut</span> Page Range
+              </p>
+              <p class="text-xs text-slate-400 mb-3">Leave blank to split all pages. Specify a range to extract only those pages.</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">From Page</label>
+                  <%= f.number_field :from_page, placeholder: '1', min: 1,
+                      class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400" %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">To Page</label>
+                  <%= f.number_field :to_page, placeholder: 'Last', min: 1,
+                      class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400" %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Summarize PDF: length + focus -->
+            <% if has_summarize_opts %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">summarize</span> Summary Settings
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Summary Length</label>
+                  <%= f.select :page_count,
+                    [['Brief (1 page)', '1'], ['Standard (2–3 pages)', '3'], ['Detailed (5 pages)', '5']],
+                    { selected: '3' },
+                    class: select_class %>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Tone</label>
+                  <%= f.select :tone,
+                    [['Professional', 'professional'], ['Academic', 'academic'], ['Simple & Clear', 'simple'], ['Executive Briefing', 'executive']],
+                    { selected: 'professional' },
+                    class: select_class %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Image conversion quality -->
+            <% if has_image_quality %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">high_quality</span> Output Quality
+              </p>
+              <%= f.select :quality,
+                [['Maximum quality (largest file)', '100'], ['High quality (default)', '90'], ['Balanced (75)', '75'], ['Compressed (60)', '60']],
+                { selected: '90' },
+                class: select_class %>
+              <p class="text-xs text-slate-400 mt-1.5">Higher quality produces larger file sizes.</p>
+            </div>
+            <% end %>
+
+            <!-- Merge PDF output options -->
+            <% if has_merge_opts %>
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">merge</span> Merge Options
+              </p>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Output Page Size</label>
+                <%= f.select :page_size,
+                  [['Keep original sizes', ''], ['Standardise to A4', 'A4'], ['Standardise to US Letter', 'Letter']],
+                  { selected: '' },
+                  class: select_class %>
+                <p class="text-xs text-slate-400 mt-1.5">Choose a size to normalise all pages in the merged output.</p>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Generic notice for tools with no specific options -->
+            <% unless has_page_layout || has_password || has_quality || has_dpi || has_ocr_lang || has_rotation || has_watermark || has_translate || has_pptx_opts || has_docx_opts || has_split_range || has_summarize_opts || has_image_quality || has_merge_opts %>
+            <div class="flex items-center gap-3 py-2 text-slate-400">
+              <span class="material-symbols-outlined text-[20px]">check_circle</span>
+              <p class="text-sm">This tool runs with optimal defaults — no additional settings required.</p>
+            </div>
+            <% end %>
+
           </div>
         </div>
-        <% end %>
 
         <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4",
             data: {
@@ -400,6 +487,11 @@
     const hidden = body.classList.toggle('hidden');
     chevron.style.transform = hidden ? 'rotate(0deg)' : 'rotate(180deg)';
   }
+  // Panel is open by default — ensure chevron reflects that on load
+  document.addEventListener('DOMContentLoaded', function() {
+    const chevron = document.getElementById('options-chevron');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  });
 
   // Simple script to display selected file names if files are chosen
   const fileInput = document.getElementById('file_input');

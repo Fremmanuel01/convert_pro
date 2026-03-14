@@ -21,7 +21,8 @@ class ToolsController < ApplicationController
         :page_size, :page_orientation, :fit_mode, :margin,
         :quality, :dpi, :image_format,
         :slide_count, :tone, :audience,
-        :doc_type, :page_count
+        :doc_type, :page_count,
+        :from_page, :to_page
       ).to_h
       runner = ToolRunner.new(current_user, @tool[:id], params[:files], options)
       conversion = runner.run!

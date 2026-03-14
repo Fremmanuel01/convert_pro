@@ -11,7 +11,10 @@ module Tools
       output_filename = File.basename(input_path, ".*") + ".png"
       output_path = tmp_path(output_filename)
 
-      command = ["magick", input_path, output_path]
+      opts    = @conversion.try(:options) || {}
+      quality = opts['quality'].to_i
+      quality = 90 if quality < 1 || quality > 100
+      command = ["magick", input_path, "-quality", quality.to_s, output_path]
 
       require 'open3'
       stdout, stderr, status = Open3.capture3(*command)

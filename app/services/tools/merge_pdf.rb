@@ -1,4 +1,5 @@
 require 'combine_pdf'
+require 'open3'
 
 module Tools
   class MergePdf < BaseTool
@@ -22,10 +23,24 @@ module Tools
 
       output_path = tmp_path("merged_output.pdf")
       combined.save(output_path)
-      
-      # Confirm output generated
+
       unless File.exist?(output_path)
         raise ExecutionError, "Merge failed to produce an output file."
+      end
+
+      # Optional: re-paginate to a standard page size via Ghostscript
+      opts      = @conversion.try(:options) || {}
+      page_size = opts['page_size'].presence
+      if page_size.present?
+        gs_size   = { 'A4' => 'a4', 'Letter' => 'letter' }[page_size]
+        if gs_size
+          resized = tmp_path("merged_resized.pdf")
+          cmd = ['gs', '-sDEVICE=pdfwrite', '-dNOPAUSE', '-dBATCH', '-dQUIET',
+                 '-dFIXEDMEDIA', '-dPDFFitPage', "-sPAPERSIZE=#{gs_size}",
+                 "-sOutputFile=#{resized}", output_path]
+          _out, _err, status = Open3.capture3(*cmd)
+          output_path = resized if status.success? && File.exist?(resized)
+        end
       end
 
       output_path

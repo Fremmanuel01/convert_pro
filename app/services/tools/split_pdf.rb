@@ -22,13 +22,22 @@ module Tools
         raise ExecutionError, "PDF must have at least 2 pages to split."
       end
 
-      # 1. Write individual pages to tmp dir
+      opts       = @conversion.try(:options) || {}
+      from_page  = opts['from_page'].to_i
+      to_page    = opts['to_page'].to_i
+      total      = pdf.pages.size
+
+      from_page = 1       if from_page < 1 || from_page > total
+      to_page   = total   if to_page   < 1 || to_page   > total
+      from_page, to_page  = to_page, from_page if from_page > to_page
+
+      # 1. Write individual pages to tmp dir (within selected range)
       page_paths = []
-      pdf.pages.each_with_index do |page, index|
+      pdf.pages[(from_page - 1)..(to_page - 1)].each_with_index do |page, index|
         single_page_pdf = CombinePDF.new
         single_page_pdf << page
-        
-        page_path = tmp_path("page_#{index + 1}.pdf")
+
+        page_path = tmp_path("page_#{from_page + index}.pdf")
         single_page_pdf.save(page_path)
         page_paths << page_path
       end

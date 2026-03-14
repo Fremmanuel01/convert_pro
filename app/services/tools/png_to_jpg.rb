@@ -11,8 +11,11 @@ module Tools
       output_filename = File.basename(input_path, ".*") + ".jpg"
       output_path = tmp_path(output_filename)
 
+      opts    = @conversion.try(:options) || {}
+      quality = opts['quality'].to_i
+      quality = 90 if quality < 1 || quality > 100
       # Flatten to white background to handle transparency before converting to JPG
-      command = ["magick", input_path, "-background", "white", "-flatten", output_path]
+      command = ["magick", input_path, "-background", "white", "-flatten", "-quality", quality.to_s, output_path]
 
       require 'open3'
       stdout, stderr, status = Open3.capture3(*command)
