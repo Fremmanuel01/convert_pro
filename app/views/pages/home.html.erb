@@ -265,8 +265,8 @@
 </section>
 
 <!-- ══════════════════ MARQUEE STRIP ══════════════════ -->
-<div class="relative w-full overflow-hidden py-3.5 border-y border-slate-200/60 dark:border-slate-800/60"
-     style="background:rgba(248,250,252,.7);">
+<div class="relative w-full overflow-hidden py-3.5 border-y border-slate-200"
+     style="background:#ffffff;">
   <div class="flex">
     <% strip_tools = [
       {icon:"picture_as_pdf",label:"PDF to Word",    c:"#EF4444"},
@@ -289,8 +289,8 @@
         <% strip_tools.each do |t| %>
           <div class="inline-flex items-center gap-2.5 px-7 py-1 flex-shrink-0">
             <span class="material-symbols-outlined text-xl" style="color:<%= t[:c] %>;"><%= t[:icon] %></span>
-            <span class="text-sm font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap"><%= t[:label] %></span>
-            <span class="text-slate-300 dark:text-slate-700 ml-3">·</span>
+            <span class="text-sm font-semibold whitespace-nowrap" style="color:#1f3dff;"><%= t[:label] %></span>
+            <span class="ml-3" style="color:#1f3dff;opacity:0.3;">·</span>
           </div>
         <% end %>
       </div>
