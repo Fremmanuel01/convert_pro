@@ -33,7 +33,28 @@
             client_tool_target: "form"
           } do |f| %>
         
-        <% if @tool[:accepted_types].empty? %>
+        <% if @tool[:input_type] == :prompt %>
+          <!-- AI Prompt Input -->
+          <div class="p-8 border-2 border-dashed border-primary/40 rounded-3xl bg-primary/5 dark:bg-primary/10">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="size-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-2xl">auto_awesome</span>
+              </div>
+              <div>
+                <h5 class="text-lg font-bold text-slate-900 dark:text-white">Describe what you want</h5>
+                <p class="text-sm text-slate-500">Claude AI will generate your <%= @tool[:id].include?('pptx') ? 'presentation' : 'document' %> in seconds.</p>
+              </div>
+            </div>
+            <%= f.text_area :prompt,
+                rows: 4,
+                required: true,
+                placeholder: @tool[:id].include?('pptx') ?
+                  "e.g. A 10-slide presentation on the future of renewable energy for a board meeting" :
+                  "e.g. A comprehensive business proposal for a SaaS startup targeting the healthcare industry",
+                class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400 resize-none" %>
+            <p class="text-xs text-slate-400 mt-2">Be specific — the more detail you provide, the better the output.</p>
+          </div>
+        <% elsif @tool[:accepted_types].empty? %>
           <!-- URL Input for Webpage to PDF -->
           <div class="p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
             <div class="size-16 mx-auto bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -97,13 +118,53 @@
           </div>
         <% end %>
 
-        <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4", 
-            data: { 
+        <% if @tool[:id] == 'rotate_pdf' %>
+          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <span class="material-symbols-outlined text-[16px] align-middle mr-1">rotate_right</span>
+              Rotation Angle
+            </label>
+            <%= f.select :rotation, [['90° Clockwise', '90'], ['180°', '180'], ['270° Clockwise (90° Counter-clockwise)', '270']], {}, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
+          </div>
+        <% end %>
+
+        <% if @tool[:id] == 'watermark_pdf' %>
+          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <span class="material-symbols-outlined text-[16px] align-middle mr-1">branding_watermark</span>
+              Watermark Text
+            </label>
+            <%= f.text_field :watermark, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400", placeholder: "e.g. CONFIDENTIAL, DRAFT, INTERNAL", value: "CONFIDENTIAL" %>
+          </div>
+        <% end %>
+
+        <% if @tool[:id] == 'ai_translate_pdf' %>
+          <div class="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <span class="material-symbols-outlined text-[16px] align-middle mr-1">translate</span>
+              Translate to
+            </label>
+            <%= f.select :target_language, [
+              ['Spanish', 'es'], ['French', 'fr'], ['German', 'de'], ['Portuguese', 'pt'],
+              ['Italian', 'it'], ['Dutch', 'nl'], ['Polish', 'pl'], ['Russian', 'ru'],
+              ['Chinese (Simplified)', 'zh'], ['Japanese', 'ja'], ['Arabic', 'ar'],
+              ['Hindi', 'hi'], ['Korean', 'ko'], ['Turkish', 'tr'], ['English', 'en']
+            ], {}, class: "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
+          </div>
+        <% end %>
+
+        <%= f.button type: "submit", class: "w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2 relative z-20 mt-4",
+            data: {
               client_tool_target: "submitButton",
-              disable_with: "Uploading..." 
+              disable_with: @tool[:input_type] == :prompt ? "Generating with AI..." : "Uploading..."
             } do %>
-          Process Document
-          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+          <% if @tool[:input_type] == :prompt %>
+            <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+            Generate with Claude AI
+          <% else %>
+            Process Document
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+          <% end %>
         <% end %>
       <% end %>
 

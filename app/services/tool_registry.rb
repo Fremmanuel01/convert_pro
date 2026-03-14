@@ -171,6 +171,114 @@ class ToolRegistry
       accepts_multiple: false,
       accepted_types: ['image/webp'],
       class_name: 'Tools::WebpToPng'
+    },
+    {
+      id: 'xlsx_to_pdf',
+      name: 'Excel to PDF',
+      description: 'Convert Excel spreadsheets (.xlsx, .xls) to PDF documents.',
+      category: 'PDF Tools',
+      icon: 'table_chart',
+      accepts_multiple: false,
+      accepted_types: [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ],
+      class_name: 'Tools::XlsxToPdf'
+    },
+    {
+      id: 'pptx_to_pdf',
+      name: 'PowerPoint to PDF',
+      description: 'Convert PowerPoint presentations (.pptx, .ppt) to PDF documents.',
+      category: 'PDF Tools',
+      icon: 'slideshow',
+      accepts_multiple: false,
+      accepted_types: [
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-powerpoint'
+      ],
+      class_name: 'Tools::PptxToPdf'
+    },
+    {
+      id: 'rotate_pdf',
+      name: 'Rotate PDF',
+      description: 'Rotate all pages in a PDF by 90, 180, or 270 degrees.',
+      category: 'PDF Tools',
+      icon: 'rotate_right',
+      accepts_multiple: false,
+      accepted_types: ['application/pdf'],
+      class_name: 'Tools::RotatePdf'
+    },
+    {
+      id: 'jpg_to_png',
+      name: 'JPG to PNG',
+      description: 'Convert JPG/JPEG images to PNG format with full quality.',
+      category: 'Image Tools',
+      icon: 'image',
+      accepts_multiple: false,
+      accepted_types: ['image/jpeg'],
+      class_name: 'Tools::JpgToPng'
+    },
+    {
+      id: 'png_to_jpg',
+      name: 'PNG to JPG',
+      description: 'Convert PNG images to JPG format, flattening transparency.',
+      category: 'Image Tools',
+      icon: 'image',
+      accepts_multiple: false,
+      accepted_types: ['image/png'],
+      class_name: 'Tools::PngToJpg'
+    },
+    {
+      id: 'pdf_to_text',
+      name: 'PDF to Text',
+      description: 'Extract all text content from a PDF into a plain .txt file.',
+      category: 'PDF Tools',
+      icon: 'text_snippet',
+      accepts_multiple: false,
+      accepted_types: ['application/pdf'],
+      class_name: 'Tools::PdfToText'
+    },
+    {
+      id: 'ai_generate_pptx',
+      name: 'AI Generate Presentation',
+      description: 'Describe any topic and Claude AI will create a complete, beautifully styled PowerPoint presentation.',
+      category: 'AI Tools',
+      icon: 'slideshow',
+      accepts_multiple: false,
+      accepted_types: [],
+      input_type: :prompt,
+      class_name: 'Tools::AiGeneratePptx'
+    },
+    {
+      id: 'ai_generate_docx',
+      name: 'AI Generate Document',
+      description: 'Describe any topic and Claude AI will write a fully structured professional Word document.',
+      category: 'AI Tools',
+      icon: 'edit_document',
+      accepts_multiple: false,
+      accepted_types: [],
+      input_type: :prompt,
+      class_name: 'Tools::AiGenerateDocx'
+    },
+    {
+      id: 'watermark_pdf',
+      name: 'Watermark PDF',
+      description: 'Add a custom diagonal text watermark (e.g. CONFIDENTIAL, DRAFT) to every page.',
+      category: 'PDF Tools',
+      icon: 'branding_watermark',
+      accepts_multiple: false,
+      accepted_types: ['application/pdf'],
+      class_name: 'Tools::WatermarkPdf'
+    },
+    {
+      id: 'ai_translate_pdf',
+      name: 'AI Translate PDF',
+      description: 'Translate a PDF document into 15 languages using Claude AI, preserving structure.',
+      category: 'AI Tools',
+      icon: 'translate',
+      accepts_multiple: false,
+      accepted_types: ['application/pdf'],
+      class_name: 'Tools::AiTranslatePdf'
     }
   ]
 
