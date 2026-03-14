@@ -64,12 +64,30 @@ module Tools
     def attach_output(output_path)
       return unless File.exist?(output_path)
 
-      filename = File.basename(output_path)
+      # Guard: reject suspiciously small files (< 50 bytes = almost certainly empty)
+      file_size = File.size(output_path)
+      if file_size < 50
+        raise ExecutionError,
+          "Processing produced an empty or corrupt output file (#{file_size} bytes). " \
+          "The input may be blank, password-protected, image-only, or in an unsupported format."
+      end
+
+      # Build a human-friendly filename: <original_basename>_converted.<ext>
+      input_filename = @conversion.input_files.first&.filename&.to_s
+      if input_filename.present?
+        input_base = File.basename(input_filename, File.extname(input_filename))
+                         .gsub(/[^\w\-]/, "_").squeeze("_").truncate(50, omission: "")
+        ext      = File.extname(output_path)
+        filename = "#{input_base}_converted#{ext}"
+      else
+        filename = File.basename(output_path)
+      end
+
       content_type = Marcel::MimeType.for(Pathname.new(output_path))
-      
+
       @conversion.output_file.attach(
-        io: File.open(output_path),
-        filename: filename,
+        io:           File.open(output_path),
+        filename:     filename,
         content_type: content_type
       )
     end

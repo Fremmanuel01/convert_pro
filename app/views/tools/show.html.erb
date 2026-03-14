@@ -171,18 +171,19 @@
                 <div>
                   <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Page Size</label>
                   <%= f.select :page_size,
-                    [['A4 (International)', 'A4'], ['A3 (Large)', 'A3'], ['US Letter', 'Letter'], ['US Legal', 'Legal']],
-                    { selected: 'A4' },
+                    [['Keep original', ''], ['A4 (International)', 'A4'], ['A3 (Large)', 'A3'], ['US Letter', 'Letter'], ['US Legal', 'Legal']],
+                    { selected: '' },
                     class: select_class %>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Orientation</label>
                   <%= f.select :page_orientation,
-                    [['Portrait ↕', 'portrait'], ['Landscape ↔', 'landscape']],
-                    { selected: 'portrait' },
+                    [['Keep original', ''], ['Portrait ↕', 'portrait'], ['Landscape ↔', 'landscape']],
+                    { selected: '' },
                     class: select_class %>
                 </div>
               </div>
+              <p class="text-xs text-slate-400 mt-1.5">Leave as "Keep original" to preserve the document's existing layout.</p>
             </div>
             <% end %>
 

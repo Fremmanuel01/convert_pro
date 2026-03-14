@@ -81,26 +81,33 @@ class ConversionsController < ApplicationController
       return redirect_to conversion_path(@conversion), alert: "File is not ready for download yet."
     end
 
-    blob     = @conversion.output_file.blob
-    filename = blob.filename.to_s
-    # Ensure the filename has an extension so the browser knows the file type
-    if File.extname(filename).blank?
-      filename += ".pdf"
-    end
-    content_type = blob.content_type.presence || "application/octet-stream"
+    blob          = @conversion.output_file.blob
+    safe_filename = clean_download_filename(blob.filename.to_s)
 
-    # Stream the file bytes through Rails with explicit Content-Disposition so
-    # the browser always prompts a download with the correct filename/extension,
-    # regardless of where the file is stored (local disk, Cloudinary, etc.).
-    begin
-      file_data = blob.download
-      send_data file_data,
-        filename:    filename,
-        type:        content_type,
-        disposition: "attachment"
-    rescue => e
-      Rails.logger.error "Download stream failed for conversion #{@conversion.id}: #{e.message}"
-      redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
+    # Local disk (development / test) — Rails built-in blob path
+    unless blob.service_name == "cloudinary"
+      return redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
+    end
+
+    # Production: generate a signed Cloudinary URL that forces browser download
+    # with the correct filename. Try raw first (all new uploads), then image
+    # (legacy uploads stored before the resource_type fix).
+    key = blob.key
+    cloudinary_url = build_cloudinary_download_url(key, safe_filename)
+
+    if cloudinary_url
+      redirect_to cloudinary_url, allow_other_host: true
+    else
+      # Last-resort fallback: proxy through Rails
+      begin
+        send_data blob.download,
+          filename:    safe_filename,
+          type:        blob.content_type.presence || "application/octet-stream",
+          disposition: "attachment"
+      rescue => e
+        Rails.logger.error "Download fallback failed for conversion #{@conversion.id}: #{e.message}"
+        redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
+      end
     end
   end
 
@@ -132,5 +139,43 @@ class ConversionsController < ApplicationController
 
   def clear_guest_conversion(id)
     session[:guest_conversion_ids]&.delete(id)
+  end
+
+  # Returns a browser-safe filename with a guaranteed extension.
+  def clean_download_filename(raw)
+    name = raw.presence || "converted_output"
+    ext  = File.extname(name)
+    ext  = ".pdf" if ext.blank?
+    base = File.basename(name, ext)
+              .gsub(/[^\w\-]/, "_")   # replace anything non-word/hyphen
+              .squeeze("_")
+              .delete_prefix("_")
+              .truncate(60, omission: "")
+    "#{base}#{ext}"
+  end
+
+  # Generates a signed Cloudinary URL that forces the browser to download the
+  # file with the given filename.  Tries raw type first (all uploads after the
+  # resource_type fix), then image type (older uploads).
+  def build_cloudinary_download_url(key, filename)
+    ["raw", "image"].each do |resource_type|
+      begin
+        Cloudinary::Api.resource(key, resource_type: resource_type)
+        return Cloudinary::Utils.cloudinary_url(
+          key,
+          resource_type: resource_type,
+          type:          "upload",
+          secure:        true,
+          sign_url:      true,
+          flags:         "attachment:#{filename.gsub(' ', '_')}"
+        )
+      rescue Cloudinary::Api::NotFound
+        next
+      rescue => e
+        Rails.logger.warn "Cloudinary lookup (#{resource_type}) failed for #{key}: #{e.message}"
+        next
+      end
+    end
+    nil
   end
 end
