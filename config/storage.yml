@@ -18,8 +18,8 @@ amazon:
   bucket: <%= ENV.fetch("AWS_BUCKET", "officedoctools-files") %>
   endpoint: "https://c3b07ce336d11d2e349120d23d3ff4d4.r2.cloudflarestorage.com"
   force_path_style: true
-  upload_options:
-    checksum_algorithm: "crc32"
+  request_checksum_calculation: "when_required"
+  response_checksum_validation: "when_required"
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:
