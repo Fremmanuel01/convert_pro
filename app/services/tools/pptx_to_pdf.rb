@@ -20,7 +20,7 @@ module Tools
 
       profile_dir = tmp_path("lo_profile_#{Time.now.to_f}")
 
-      command = [
+      command = with_timeout(120,
         SOFFICE_BIN,
         "-env:UserInstallation=file://#{profile_dir}",
         "-env:JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1",
@@ -29,7 +29,7 @@ module Tools
         "--convert-to", "pdf:impress_pdf_Export",
         "--outdir", @tmp_dir,
         input_path
-      ]
+      )
 
       require 'open3'
       stdout, stderr, status = Open3.capture3(*command)
@@ -43,6 +43,7 @@ module Tools
       end
 
       apply_page_layout!(expected_output_path)
+      validate_pdf!(expected_output_path)
       expected_output_path
     end
 

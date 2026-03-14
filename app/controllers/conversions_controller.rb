@@ -84,30 +84,33 @@ class ConversionsController < ApplicationController
     blob          = @conversion.output_file.blob
     safe_filename = clean_download_filename(blob.filename.to_s)
 
-    # Local disk (development / test) — Rails built-in blob path
-    unless blob.service_name == "cloudinary"
-      return redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
-    end
+    begin
+      case blob.service_name
+      when "amazon"
+        # S3: Active Storage generates a presigned URL natively — direct, fast, no memory usage
+        url = blob.url(
+          expires_in:   10.minutes,
+          disposition:  "attachment; filename=\"#{safe_filename}\"",
+          content_type: blob.content_type.presence || "application/octet-stream"
+        )
+        redirect_to url, allow_other_host: true
 
-    # Production: generate a signed Cloudinary URL that forces browser download
-    # with the correct filename. Try raw first (all new uploads), then image
-    # (legacy uploads stored before the resource_type fix).
-    key = blob.key
-    cloudinary_url = build_cloudinary_download_url(key, safe_filename)
+      when "cloudinary"
+        # Cloudinary: try signed delivery URL with fl_attachment filename
+        cloudinary_url = build_cloudinary_download_url(blob.key, safe_filename)
+        if cloudinary_url
+          redirect_to cloudinary_url, allow_other_host: true
+        else
+          raise "Cloudinary resource not found for key: #{blob.key}"
+        end
 
-    if cloudinary_url
-      redirect_to cloudinary_url, allow_other_host: true
-    else
-      # Last-resort fallback: proxy through Rails
-      begin
-        send_data blob.download,
-          filename:    safe_filename,
-          type:        blob.content_type.presence || "application/octet-stream",
-          disposition: "attachment"
-      rescue => e
-        Rails.logger.error "Download fallback failed for conversion #{@conversion.id}: #{e.message}"
-        redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
+      else
+        # Local disk (development / test)
+        redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
       end
+    rescue => e
+      Rails.logger.error "Download failed for conversion #{@conversion.id}: #{e.message}"
+      redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
     end
   end
 

@@ -2,6 +2,10 @@ module Tools
   class BaseTool
     class ExecutionError < StandardError; end
 
+    # Hard limit: kill the whole job if it runs longer than this.
+    # LibreOffice and Ghostscript can occasionally hang on corrupt input.
+    JOB_TIMEOUT_SECONDS = 300 # 5 minutes
+
     attr_reader :conversion
 
     def initialize(conversion)
@@ -12,28 +16,33 @@ module Tools
       @conversion.update!(status: :processing)
       start_time = Time.current
 
-      Dir.mktmpdir("convertpro_#{conversion.id}") do |tmp_dir|
-        @tmp_dir = tmp_dir
-        
-        # Download input files locally for processing
-        input_paths = download_inputs
+      Timeout.timeout(JOB_TIMEOUT_SECONDS) do
+        Dir.mktmpdir("convertpro_#{conversion.id}") do |tmp_dir|
+          @tmp_dir = tmp_dir
 
-        # Process abstract method (implemented by subclass)
-        output_path = process(input_paths)
-
-        # Attach output
-        attach_output(output_path)
+          input_paths = download_inputs
+          output_path = process(input_paths)
+          attach_output(output_path)
+        end
       end
 
       elapsed = Time.current - start_time
       @conversion.update!(status: :completed, processing_time: elapsed)
+    rescue Timeout::Error
+      Rails.logger.error("Tool Timeout [#{self.class.name}] conversion #{@conversion.id}")
+      @conversion.update!(
+        status:        :failed,
+        error_message: "Processing timed out after #{JOB_TIMEOUT_SECONDS / 60} minutes. " \
+                       "The file may be too large, complex, or corrupt."
+      )
+      # Don't re-raise — a timed-out job should not be retried automatically
     rescue => e
       Rails.logger.error("Tool Failed [#{self.class.name}]: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
       @conversion.update!(
-        status: :failed, 
+        status:        :failed,
         error_message: e.message
       )
-      raise e # Reraise for Job retry handling
+      raise e # Re-raise so SolidQueue can retry transient failures
     end
 
     protected
@@ -61,12 +70,26 @@ module Tools
       paths
     end
 
+    # Returns a `timeout`-prefixed command array for shell tools.
+    # The OS-level timeout is more reliable than Ruby's Timeout for child processes.
+    def with_timeout(seconds, *cmd)
+      ['timeout', seconds.to_s, *cmd]
+    end
+
+    # Validates a PDF output file — raises ExecutionError if pages are missing or corrupt.
+    def validate_pdf!(path)
+      pdf = CombinePDF.load(path)
+      raise ExecutionError, "Output PDF has no pages — the conversion produced a blank document." if pdf.pages.empty?
+    rescue CombinePDF::PDFException => e
+      raise ExecutionError, "Output PDF is corrupt: #{e.message}"
+    end
+
     def attach_output(output_path)
       return unless File.exist?(output_path)
 
-      # Guard: reject suspiciously small files (< 50 bytes = almost certainly empty)
+      # Guard: reject suspiciously small files (< 100 bytes = almost certainly empty)
       file_size = File.size(output_path)
-      if file_size < 50
+      if file_size < 100
         raise ExecutionError,
           "Processing produced an empty or corrupt output file (#{file_size} bytes). " \
           "The input may be blank, password-protected, image-only, or in an unsupported format."

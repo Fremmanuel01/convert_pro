@@ -2,11 +2,18 @@ default: &default
   dispatchers:
     - polling_interval: 1
       batch_size: 500
+      concurrency_maintenance_interval: 600
   workers:
-    - queues: "*"
-      threads: 3
-      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+    # Priority queue: pro users get a dedicated fast-path worker
+    - queues: [priority]
+      threads: 2
+      processes: 1
       polling_interval: 0.1
+    # Default queue: free users share a separate worker pool
+    - queues: [default]
+      threads: 2
+      processes: 1
+      polling_interval: 0.5
 
 development:
   <<: *default
@@ -16,3 +23,12 @@ test:
 
 production:
   <<: *default
+  workers:
+    - queues: [priority]
+      threads: 3
+      processes: 1
+      polling_interval: 0.1
+    - queues: [default]
+      threads: 3
+      processes: 1
+      polling_interval: 0.5
