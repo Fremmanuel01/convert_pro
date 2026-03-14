@@ -318,7 +318,7 @@
        t:"Download Instantly", d:"Your file is ready in seconds. Download directly — all files are automatically deleted after processing."},
     ].each_with_index do |s,i| %>
       <div class="reveal flex flex-col items-center text-center p-8 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative z-10"
-           style="transition-delay:<%= i*.12 %>s;">
+           style="transition-delay:<%= i*0.12 %>s;">
         <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center mb-5 shadow-lg"
              style="background:linear-gradient(135deg,<%= s[:g1] %>,<%= s[:g2] %>);">
           <span class="material-symbols-outlined text-2xl text-white"><%= s[:icon] %></span>
@@ -421,7 +421,7 @@
       {ic:"high_quality", g1:"#f59e0b",g2:"#ef6c00", t:"High Fidelity",    d:"Preserves fonts, tables, images, and layouts with high accuracy."},
     ].each_with_index do |f,i| %>
       <div class="reveal p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-           style="transition-delay:<%= i*.1 %>s;">
+           style="transition-delay:<%= i*0.1 %>s;">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 shadow-lg"
              style="background:linear-gradient(135deg,<%= f[:g1] %>,<%= f[:g2] %>);">
           <span class="material-symbols-outlined text-white text-[22px]"><%= f[:ic] %></span>
