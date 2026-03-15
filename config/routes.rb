@@ -36,7 +36,7 @@ Rails.application.routes.draw do
   namespace :admin do
     root to: "dashboard#index"
     get "dashboard", to: "dashboard#index"
-    resources :users, only: [:index, :show] do
+    resources :users, only: [:index, :show, :destroy] do
       member { patch :toggle_admin }
     end
   end

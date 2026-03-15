@@ -52,7 +52,14 @@
               <% end %>
             </td>
             <td class="px-6 py-3 text-right">
-              <%= link_to "View", admin_user_path(user), class: "text-xs font-semibold text-[#1f3dff] hover:underline" %>
+              <div class="flex items-center justify-end gap-3">
+                <%= link_to "View", admin_user_path(user), class: "text-xs font-semibold text-[#1f3dff] hover:underline" %>
+                <% unless user == current_user %>
+                  <%= button_to "Delete", admin_user_path(user), method: :delete,
+                      form: { data: { turbo_confirm: "Delete #{user.email}? This cannot be undone." } },
+                      class: "text-xs font-semibold text-red-500 hover:text-red-700 hover:underline bg-transparent border-0 p-0 cursor-pointer" %>
+                <% end %>
+              </div>
             </td>
           </tr>
         <% end %>

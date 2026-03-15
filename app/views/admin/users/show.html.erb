@@ -76,6 +76,11 @@
 
 </div>
 
-<div class="mt-4">
+<div class="mt-4 flex items-center justify-between">
   <%= link_to "← Back to users", admin_users_path, class: "text-sm text-[#1f3dff] font-medium hover:underline" %>
+  <% unless @user == current_user %>
+    <%= button_to "Delete user", admin_user_path(@user), method: :delete,
+        form: { data: { turbo_confirm: "Permanently delete #{@user.email}? All their conversions will also be deleted. This cannot be undone." } },
+        class: "text-xs font-bold text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-4 py-2 rounded-lg bg-white transition-colors" %>
+  <% end %>
 </div>
