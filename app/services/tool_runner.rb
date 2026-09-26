@@ -2,6 +2,24 @@ class ToolRunner
   class InvalidRequestError < StandardError; end
   class LimitExceededError < StandardError; end
 
+  # Marcel sometimes reports the container/base type rather than the specific
+  # office format (OOXML files are zips; legacy Office files are OLE compound
+  # documents; HEIC is a HEIF variant). These are the ONLY relaxations to the
+  # authoritative magic-byte check, and only when the declared type matches too.
+  SIGNATURE_EQUIVALENTS = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"   => %w[application/zip],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"         => %w[application/zip],
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation" => %w[application/zip],
+    "application/msword"           => %w[application/x-ole-storage application/x-cfb],
+    "application/vnd.ms-excel"     => %w[application/x-ole-storage application/x-cfb],
+    "application/vnd.ms-powerpoint"=> %w[application/x-ole-storage application/x-cfb],
+    "image/heic"                   => %w[image/heif]
+  }.freeze
+
+  # Types that carry no usable signature — fall back to the secondary
+  # (declared content-type) check instead of hard-rejecting.
+  INCONCLUSIVE_TYPES = %w[application/octet-stream text/plain inode/x-empty].freeze
+
   def initialize(user, tool_id, uploaded_files, options = {})
     @user = user
     @tool_id = tool_id
@@ -12,15 +30,22 @@ class ToolRunner
 
   def run!
     validate_request!
-    validate_limits!
+    validate_size!
+    validate_concurrency!
 
     conversion = create_conversion_record!
+
+    # Atomically consume one quota unit BEFORE doing expensive work. On failure
+    # the record is removed so no orphan/quota leak remains.
+    limiter = ConversionLimiter.new(@user)
+    unless limiter.claim!
+      conversion.destroy
+      raise LimitExceededError, limiter.status_message
+    end
+    conversion.update!(usage_counted: metered_user?)
+
     attach_files!(conversion)
 
-    # Increment limiter usage
-    ConversionLimiter.new(@user).increment!
-
-    # Enqueue background job dynamically applying priority queue
     queue_name = (@user&.pro? && @user&.active?) ? :priority : :default
     ToolJob.set(queue: queue_name).perform_later(conversion.id)
     conversion
@@ -28,34 +53,87 @@ class ToolRunner
 
   private
 
+  # A free user actually consumes a countable unit; anonymous and active-Pro do not.
+  def metered_user?
+    @user.present? && @user.free?
+  end
+
   def validate_request!
     raise InvalidRequestError, "Unknown tool: #{@tool_id}" unless @tool_meta
-    
-    if @tool_meta[:accepted_types].empty?
-      # This tool relies on options (e.g. URLs), so files can be empty
-    else
-      raise InvalidRequestError, "No files uploaded" if @uploaded_files.empty?
-      raise InvalidRequestError, "Multiple files not supported for #{@tool_meta[:name]}" if @uploaded_files.size > 1 && !@tool_meta[:accepts_multiple]
 
-      @uploaded_files.each do |file|
-        content_type = file.content_type
-        unless @tool_meta[:accepted_types].include?(content_type)
-          raise InvalidRequestError, "Invalid file type: #{content_type}. Accepted: #{@tool_meta[:accepted_types].join(', ')}"
-        end
-      end
+    return if @tool_meta[:accepted_types].empty? # URL / prompt tools take no files
+
+    raise InvalidRequestError, "No files uploaded" if @uploaded_files.empty?
+    if @uploaded_files.size > 1 && !@tool_meta[:accepts_multiple]
+      raise InvalidRequestError, "Multiple files not supported for #{@tool_meta[:name]}"
+    end
+
+    @uploaded_files.each { |file| validate_file_type!(file) }
+  end
+
+  # Authoritative validation: inspect the actual bytes and confirm the detected
+  # type is permitted for this tool. The browser-supplied content-type and the
+  # filename extension are only used as a secondary signal when the bytes are
+  # inconclusive — never to override a mismatch.
+  def validate_file_type!(file)
+    detected = detected_mime(file)
+    accepted = @tool_meta[:accepted_types]
+
+    return if acceptable_signature?(detected, accepted)
+
+    if INCONCLUSIVE_TYPES.include?(detected)
+      # Secondary check: trust the declared type + extension only when the
+      # signature is genuinely uninformative.
+      return if accepted.include?(file.content_type) && extension_plausible?(file, accepted)
+    end
+
+    raise InvalidRequestError,
+      "\"#{file.original_filename}\" doesn't look like a supported file for #{@tool_meta[:name]}. " \
+      "Expected #{human_types(accepted)}."
+  end
+
+  def detected_mime(file)
+    io = file.tempfile
+    io.rewind
+    Marcel::MimeType.for(io, name: file.original_filename, declared_type: file.content_type)
+  ensure
+    file.tempfile.rewind rescue nil
+  end
+
+  def acceptable_signature?(detected, accepted)
+    return true if accepted.include?(detected)
+
+    accepted.any? { |type| Array(SIGNATURE_EQUIVALENTS[type]).include?(detected) }
+  end
+
+  def extension_plausible?(file, accepted)
+    ext = File.extname(file.original_filename.to_s).downcase.delete(".")
+    return true if ext.blank? # nothing to contradict
+    accepted.any? { |type| Array(Marcel::TYPE_EXTS[type]).include?(ext) } ||
+      Array(Marcel::TYPE_EXTS[file.content_type]).include?(ext)
+  end
+
+  def human_types(accepted)
+    accepted.filter_map { |t| Array(Marcel::TYPE_EXTS[t]).first&.upcase }.uniq.join(", ").presence ||
+      "a supported format"
+  end
+
+  def validate_size!
+    max_mb = AppLimits.max_upload_mb(@user)
+    total_size = @uploaded_files.sum(&:size)
+    if total_size > max_mb.megabytes
+      raise LimitExceededError, "File size limit exceeded. Your plan limit is #{max_mb}MB."
     end
   end
 
-  def validate_limits!
-    limiter = ConversionLimiter.new(@user)
-    raise LimitExceededError, limiter.status_message unless limiter.can_convert?
-
-    # Size limits based on plan
-    max_mb = @user&.pro? && @user&.active? ? 100 : 10
-    total_size = @uploaded_files.sum(&:size)
-
-    if total_size > max_mb.megabytes
-      raise LimitExceededError, "File size limit exceeded. Your plan limit is #{max_mb}MB."
+  # Cap concurrent in-flight jobs per user so expensive native processes can't
+  # be spawned without bound. Anonymous users are covered by IP rate limiting.
+  def validate_concurrency!
+    return if @user.nil?
+    in_flight = @user.conversions.where(status: [Conversion.statuses[:pending], Conversion.statuses[:processing]]).count
+    if in_flight >= AppLimits::MAX_CONCURRENT_JOBS_PER_USER
+      raise LimitExceededError,
+        "You have #{in_flight} conversions still processing. Please wait for them to finish before starting more."
     end
   end
 
@@ -69,8 +147,6 @@ class ToolRunner
   end
 
   def attach_files!(conversion)
-    @uploaded_files.each do |file|
-      conversion.input_files.attach(file)
-    end
+    @uploaded_files.each { |file| conversion.input_files.attach(file) }
   end
 end

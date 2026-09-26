@@ -4,8 +4,8 @@ require 'prawn'
 
 module Tools
   class AiTranslatePdf < BaseTool
-    CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-    CLAUDE_MODEL   = "claude-opus-4-6"
+    CLAUDE_API_URL = AiConfig::CLAUDE[:url]
+    CLAUDE_MODEL   = AiConfig::CLAUDE[:model]
 
     LANGUAGES = {
       'es' => 'Spanish',    'fr' => 'French',    'de' => 'German',
@@ -58,7 +58,7 @@ module Tools
     end
 
     def call_claude_api(text, lang_name)
-      api_key = ENV['ANTHROPIC_API_KEY']
+      api_key = AiConfig.claude_api_key
       raise ExecutionError, "Anthropic API key not configured (ANTHROPIC_API_KEY)." if api_key.blank?
 
       user_prompt = <<~PROMPT
@@ -79,7 +79,7 @@ module Tools
         headers: {
           'Content-Type'      => 'application/json',
           'x-api-key'         => api_key,
-          'anthropic-version' => '2023-06-01'
+          'anthropic-version' => AiConfig::CLAUDE[:version]
         },
         body: {
           model:      CLAUDE_MODEL,

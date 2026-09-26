@@ -6,32 +6,20 @@ class ConversionsController < ApplicationController
   end
 
   def show
-    if user_signed_in?
-      @conversion = current_user.conversions.find_by(id: params[:id])
-    end
-    
-    # Allow guests to view if in session
-    @conversion ||= Conversion.find_by(id: params[:id])
+    @conversion = authorized_conversion(params[:id])
+    return redirect_to root_path, alert: "Not authorized to view this conversion." if @conversion.nil?
 
-    if @conversion.nil? || (@conversion.user_id.nil? && !guest_owns_conversion?(@conversion.id))
-      return redirect_to root_path, alert: "Not authorized to view this conversion."
-    end
-
-    # Handle claim flow (post sign-up/sign-in auto-download)
-    if params[:claim] == 'true' && user_signed_in? && @conversion.user_id.nil? && guest_owns_conversion?(@conversion.id)
+    # Claim flow: a signed-in user adopting the guest conversion they just made.
+    if params[:claim] == "true" && user_signed_in? && @conversion.user_id.nil?
       limiter = ConversionLimiter.new(current_user)
-      if limiter.can_convert?
-        @conversion.update(user: current_user)
-        limiter.increment! # Count this guest conversion against the user's limit
+      if limiter.claim!
+        @conversion.update(user: current_user, usage_counted: current_user.free?)
         clear_guest_conversion(@conversion.id)
-        
-        # Send result email
         ConversionMailer.with(user: current_user, conversion: @conversion).result_email.deliver_later
-        
-        # Trigger auto-download on the view
         @auto_download = true
         flash.now[:notice] = "Welcome! Your conversion was successful and is downloading now."
       else
+        track_event(:quota_reached, tool_id: tool_id_for(@conversion), properties: { source: "claim" })
         return redirect_to upgrade_billing_path, alert: limiter.status_message
       end
     end
@@ -41,38 +29,28 @@ class ConversionsController < ApplicationController
 
   def download
     @conversion = Conversion.find_by(id: params[:id])
-    
-    if @conversion.nil?
-      return redirect_to root_path, alert: "Conversion not found."
-    end
-    
-    # If the file belongs to a user, but someone isn't signed in or isn't that user
-    if @conversion.user_id.present? && current_user&.id != @conversion.user_id
-      return redirect_to root_path, alert: "Not authorized."
-    end
+    return redirect_to root_path, alert: "Conversion not found." if @conversion.nil?
 
-    # If it's a guest conversion
-    if @conversion.user_id.nil?
-      unless guest_owns_conversion?(@conversion.id)
-        return redirect_to root_path, alert: "Not authorized."
-      end
+    # Owned by a user: only that user may download.
+    if @conversion.user_id.present?
+      return redirect_to root_path, alert: "Not authorized." unless current_user&.id == @conversion.user_id
+    else
+      # Unassigned (guest) conversion: must be owned by this browser session.
+      return redirect_to root_path, alert: "Not authorized." unless guest_owns_conversion?(@conversion.id)
 
-      # Force sign in/up to download
       unless user_signed_in?
-        # Store the show page with claim param instead of the direct download
         store_location_for(:user, conversion_path(@conversion, claim: true))
-        return redirect_to new_user_registration_path, notice: "Please create an account to download your file. You get 5 free conversions!"
+        return redirect_to new_user_registration_path,
+          notice: "Please create an account to download your file. You get 5 free conversions!"
       end
 
-      # User is signed in, associate conversion
       limiter = ConversionLimiter.new(current_user)
-      if limiter.can_convert?
-        @conversion.update(user: current_user)
-        limiter.increment! # Count this guest conversion against the user's limit
+      if limiter.claim!
+        @conversion.update(user: current_user, usage_counted: current_user.free?)
         clear_guest_conversion(@conversion.id)
-        # Send result email for users who just sign in directly and click download
         ConversionMailer.with(user: current_user, conversion: @conversion).result_email.deliver_later
       else
+        track_event(:quota_reached, tool_id: tool_id_for(@conversion), properties: { source: "download" })
         return redirect_to upgrade_billing_path, alert: limiter.status_message
       end
     end
@@ -81,60 +59,98 @@ class ConversionsController < ApplicationController
       return redirect_to conversion_path(@conversion), alert: "File is not ready for download yet."
     end
 
-    blob          = @conversion.output_file.blob
-    safe_filename = clean_download_filename(blob.filename.to_s)
-
-    begin
-      case blob.service_name
-      when "amazon"
-        # S3: Active Storage generates a presigned URL natively — direct, fast, no memory usage
-        url = blob.url(
-          expires_in:   10.minutes,
-          disposition:  "attachment; filename=\"#{safe_filename}\"",
-          content_type: blob.content_type.presence || "application/octet-stream"
-        )
-        redirect_to url, allow_other_host: true
-
-      when "cloudinary"
-        # Cloudinary: try signed delivery URL with fl_attachment filename
-        cloudinary_url = build_cloudinary_download_url(blob.key, safe_filename)
-        if cloudinary_url
-          redirect_to cloudinary_url, allow_other_host: true
-        else
-          raise "Cloudinary resource not found for key: #{blob.key}"
-        end
-
-      else
-        # Local disk (development / test)
-        redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
-      end
-    rescue => e
-      Rails.logger.error "Download failed for conversion #{@conversion.id}: #{e.message}"
-      redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
-    end
+    track_event(:result_downloaded, tool_id: tool_id_for(@conversion),
+                properties: { result_kind: File.extname(@conversion.output_file.blob.filename.to_s).delete(".") })
+    deliver_output(@conversion.output_file.blob)
+  rescue => e
+    Rails.logger.error "Download failed for conversion #{@conversion&.id}: #{e.message}"
+    redirect_to conversion_path(@conversion), alert: "Download failed — please try again."
   end
 
+  # Server-authoritative usage accounting for CLIENT-SIDE conversions.
+  #
+  # The browser calls this BEFORE running an in-browser conversion. It atomically
+  # consumes one quota unit and is idempotent per client operation id, so repeated
+  # or replayed posts never double-charge. CSRF protection (inherited) blocks
+  # cross-origin replay. If the caller is over quota it is refused with 402 and
+  # the browser must not proceed.
   def log
     tool = ToolRegistry.find(params[:tool_id])
-    return head :not_found unless tool
+    return render(json: { error: "unknown_tool" }, status: :not_found) unless tool
+
+    op_id = params[:operation_id].to_s.presence
+
+    # Idempotency: an operation we've already accounted for is simply acknowledged.
+    if op_id && (existing = Conversion.find_by(client_operation_id: op_id))
+      return render(json: { ok: true, already_counted: true, conversion_id: existing.id })
+    end
+
+    limiter = ConversionLimiter.new(current_user)
+    unless limiter.claim!
+      track_event(:quota_reached, tool_id: tool[:id], properties: { source: "client" })
+      return render(json: { ok: false, error: "quota_reached", upgrade_url: upgrade_billing_path },
+                    status: :payment_required)
+    end
 
     conversion = Conversion.create!(
       user: current_user,
       tool_name: tool[:class_name],
-      status: :completed
+      status: :completed,
+      client_operation_id: op_id,
+      usage_counted: current_user&.free? || false
     )
 
-    if current_user
-      ConversionLimiter.new(current_user).increment!
-    else
+    unless current_user
       session[:guest_conversion_ids] ||= []
       session[:guest_conversion_ids] << conversion.id
     end
 
-    head :ok
+    track_event(:conversion_started,   tool_id: tool[:id], properties: { path: "client" })
+    track_event(:conversion_succeeded, tool_id: tool[:id], properties: { path: "client" })
+
+    render json: { ok: true, conversion_id: conversion.id }
+  rescue ActiveRecord::RecordNotUnique
+    # Concurrent duplicate for the same operation id — treat as already counted.
+    render json: { ok: true, already_counted: true }
   end
 
   private
+
+  # Returns the conversion only if the requester is authorized to see it, else nil.
+  # Prevents IDOR: a signed-in user can never read another user's conversion by id.
+  def authorized_conversion(id)
+    conversion = Conversion.find_by(id: id)
+    return nil if conversion.nil?
+
+    if conversion.user_id.present?
+      (user_signed_in? && conversion.user_id == current_user.id) ? conversion : nil
+    else
+      guest_owns_conversion?(conversion.id) ? conversion : nil
+    end
+  end
+
+  def deliver_output(blob)
+    safe_filename = clean_download_filename(blob.filename.to_s)
+
+    case blob.service_name
+    when "amazon"
+      redirect_to blob.url(
+        expires_in:   10.minutes,
+        disposition:  "attachment; filename=\"#{safe_filename}\"",
+        content_type: blob.content_type.presence || "application/octet-stream"
+      ), allow_other_host: true
+    when "cloudinary"
+      cloudinary_url = build_cloudinary_download_url(blob.key, safe_filename)
+      raise "Cloudinary resource not found for key: #{blob.key}" unless cloudinary_url
+      redirect_to cloudinary_url, allow_other_host: true
+    else
+      redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
+    end
+  end
+
+  def tool_id_for(conversion)
+    ToolRegistry.tools.find { |t| t[:class_name] == conversion.tool_name }&.dig(:id)
+  end
 
   def guest_owns_conversion?(id)
     session[:guest_conversion_ids]&.include?(id)
@@ -150,16 +166,13 @@ class ConversionsController < ApplicationController
     ext  = File.extname(name)
     ext  = ".pdf" if ext.blank?
     base = File.basename(name, ext)
-              .gsub(/[^\w\-]/, "_")   # replace anything non-word/hyphen
+              .gsub(/[^\w\-]/, "_")
               .squeeze("_")
               .delete_prefix("_")
               .truncate(60, omission: "")
     "#{base}#{ext}"
   end
 
-  # Generates a signed Cloudinary URL that forces the browser to download the
-  # file with the given filename.  Tries raw type first (all uploads after the
-  # resource_type fix), then image type (older uploads).
   def build_cloudinary_download_url(key, filename)
     ["raw", "image"].each do |resource_type|
       begin

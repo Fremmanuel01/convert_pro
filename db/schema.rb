@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,7 +42,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_120000) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "analytics_events", force: :cascade do |t|
+    t.string "anonymous_id"
+    t.boolean "authenticated", default: false, null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.string "plan"
+    t.jsonb "properties", default: {}, null: false
+    t.string "tool_id"
+    t.bigint "user_id"
+    t.index ["created_at"], name: "index_analytics_events_on_created_at"
+    t.index ["name", "created_at"], name: "index_analytics_events_on_name_and_created_at"
+    t.index ["name"], name: "index_analytics_events_on_name"
+    t.index ["user_id"], name: "index_analytics_events_on_user_id"
+  end
+
   create_table "conversions", force: :cascade do |t|
+    t.string "client_operation_id"
     t.datetime "created_at", null: false
     t.text "error_message"
     t.jsonb "options"
@@ -50,7 +66,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_120000) do
     t.integer "status"
     t.string "tool_name"
     t.datetime "updated_at", null: false
+    t.boolean "usage_counted", default: false, null: false
     t.bigint "user_id"
+    t.index ["client_operation_id"], name: "index_conversions_on_client_operation_id", unique: true
     t.index ["user_id"], name: "index_conversions_on_user_id"
   end
 

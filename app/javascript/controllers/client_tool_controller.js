@@ -16,27 +16,32 @@ export default class extends Controller {
     }
     static targets = ["form", "fileInput", "submitButton", "passwordInput"]
 
-    process(event) {
+    async process(event) {
         const clientSideTools = [
             'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',
             'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'
         ]
 
-        if (clientSideTools.includes(this.toolIdValue)) {
-            event.preventDefault()
+        // Server-side tools submit the form normally (server does the metering).
+        if (!clientSideTools.includes(this.toolIdValue)) return
 
-            switch (this.toolIdValue) {
-                case 'images_to_pdf': this.processImagesToPdf(); break
-                case 'merge_pdf': this.processMergePdf(); break
-                case 'split_pdf': this.processSplitPdf(); break
-                case 'protect_pdf': this.processProtectPdf(); break
-                case 'unlock_pdf': this.processUnlockPdf(); break
-                case 'pdf_to_images': this.processPdfToImages(); break
-                case 'heic_to_jpg': this.processHeicTo('image/jpeg'); break
-                case 'heic_to_png': this.processHeicTo('image/png'); break
-                case 'webp_to_jpg': this.processWebpTo('image/jpeg'); break
-                case 'webp_to_png': this.processWebpTo('image/png'); break
-            }
+        event.preventDefault()
+
+        // Server-authoritative quota accounting BEFORE any in-browser work.
+        // If refused (over quota) we stop and send the user to upgrade.
+        const authorized = await this.authorizeConversion()
+        if (!authorized) return
+
+        switch (this.toolIdValue) {
+            case 'images_to_pdf': this.processImagesToPdf(); break
+            case 'merge_pdf': this.processMergePdf(); break
+            case 'split_pdf': this.processSplitPdf(); break
+            case 'unlock_pdf': this.processUnlockPdf(); break
+            case 'pdf_to_images': this.processPdfToImages(); break
+            case 'heic_to_jpg': this.processHeicTo('image/jpeg'); break
+            case 'heic_to_png': this.processHeicTo('image/png'); break
+            case 'webp_to_jpg': this.processWebpTo('image/jpeg'); break
+            case 'webp_to_png': this.processWebpTo('image/png'); break
         }
     }
 
@@ -56,7 +61,6 @@ export default class extends Controller {
                 pdf.addImage(imageData, 'auto', 0, 0, pdfWidth, pdfHeight)
             }
             pdf.save(`images_to_pdf_${Date.now()}.pdf`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -84,7 +88,6 @@ export default class extends Controller {
             }
             const pdfBytes = await mergedPdf.save()
             this.downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `merged_${Date.now()}.pdf`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -113,7 +116,6 @@ export default class extends Controller {
             }
             const zipped = zipSync(zipData)
             this.downloadBlob(new Blob([zipped], { type: 'application/zip' }), `split_${Date.now()}.zip`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -137,7 +139,6 @@ export default class extends Controller {
                 ownerPassword: password
             })
             this.downloadBlob(new Blob([encryptedBytes], { type: 'application/pdf' }), `protected_${Date.now()}.pdf`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -158,7 +159,6 @@ export default class extends Controller {
             const pdf = await PDFDocument.load(fileBytes, { password })
             const decryptedBytes = await pdf.save()
             this.downloadBlob(new Blob([decryptedBytes], { type: 'application/pdf' }), `unlocked_${Date.now()}.pdf`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -192,7 +192,6 @@ export default class extends Controller {
             }
             const zipped = zipSync(zipData)
             this.downloadBlob(new Blob([zipped], { type: 'application/zip' }), `images_${Date.now()}.zip`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -211,7 +210,6 @@ export default class extends Controller {
             const blob = await heic2any({ blob: files[0], toType: type })
             const extension = type === 'image/jpeg' ? 'jpg' : 'png'
             this.downloadBlob(blob, `converted_${Date.now()}.${extension}`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -237,7 +235,6 @@ export default class extends Controller {
             const blob = await new Promise(resolve => canvas.toBlob(resolve, type, 0.9))
             const extension = type === 'image/jpeg' ? 'jpg' : 'png'
             this.downloadBlob(blob, `converted_${Date.now()}.${extension}`)
-            this.reportActivity()
             this.formTarget.reset()
             this.resetUI()
         } catch (error) {
@@ -279,15 +276,35 @@ export default class extends Controller {
         }, 0)
     }
 
-    reportActivity() {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-        if (!this.logUrlValue) return
+    // Ask the server to account for (and authorize) this client-side conversion
+    // before we do the work in the browser. Returns true if allowed to proceed.
+    // Idempotent server-side via a per-operation UUID.
+    async authorizeConversion() {
+        if (!this.logUrlValue) return true
 
-        fetch(this.logUrlValue, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-            body: JSON.stringify({ tool_id: this.toolIdValue })
-        }).catch(e => console.error(e))
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+        const operationId = (window.crypto?.randomUUID?.() ) || `${Date.now()}-${Math.random()}`
+
+        try {
+            const res = await fetch(this.logUrlValue, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ tool_id: this.toolIdValue, operation_id: operationId })
+            })
+
+            if (res.status === 402) {
+                const data = await res.json().catch(() => ({}))
+                window.location.href = data.upgrade_url || '/billing/upgrade'
+                return false
+            }
+            return res.ok
+        } catch (e) {
+            // Network hiccup: fail open so a legitimate free conversion is not
+            // blocked. A determined client can bypass browser code regardless;
+            // enforcement here targets ordinary usage.
+            console.error(e)
+            return true
+        }
     }
 
     resetUI() {

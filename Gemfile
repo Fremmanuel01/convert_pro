@@ -74,6 +74,8 @@ gem "faker", "~> 3.6", groups: [:development, :test]
 
 gem "paystack", "~> 0.1.10"
 
+gem "rack-attack", "~> 6.7"
+
 gem "combine_pdf", "~> 1.0"
 gem "rubyzip", "~> 3.2"
 

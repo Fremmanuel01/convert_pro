@@ -32,8 +32,17 @@ class User < ApplicationRecord
   validates :conversions_count, numericality: { greater_than_or_equal_to: 0 }
   
   has_many :conversions, dependent: :destroy
+  has_many :analytics_events, dependent: :nullify
+
+  after_create_commit :track_signup
 
   def conversion_limit_per_day
     pro? && active? ? Float::INFINITY : 5
+  end
+
+  private
+
+  def track_signup
+    Analytics.track(:signup_completed, user: self, properties: { source: provider.presence || "email" })
   end
 end

@@ -28,21 +28,28 @@ module Tools
 
       elapsed = Time.current - start_time
       @conversion.update!(status: :completed, processing_time: elapsed)
+      track_conversion(:conversion_succeeded)
+    rescue ExecutionError => e
+      # PERMANENT failure: bad / unsupported / password-protected / corrupt input.
+      # Retrying would only burn worker capacity, so we do not re-raise. The quota
+      # unit is refunded so the user isn't charged for input we can't process.
+      Rails.logger.warn("Tool permanent failure [#{self.class.name}] conversion #{@conversion.id}: #{e.message}")
+      fail_conversion!(e.message, reason: "permanent")
     rescue Timeout::Error
+      # Treated as permanent — a timed-out job should not be retried automatically.
       Rails.logger.error("Tool Timeout [#{self.class.name}] conversion #{@conversion.id}")
-      @conversion.update!(
-        status:        :failed,
-        error_message: "Processing timed out after #{JOB_TIMEOUT_SECONDS / 60} minutes. " \
-                       "The file may be too large, complex, or corrupt."
+      fail_conversion!(
+        "Processing timed out after #{JOB_TIMEOUT_SECONDS / 60} minutes. " \
+        "The file may be too large, complex, or corrupt.",
+        reason: "timeout"
       )
-      # Don't re-raise — a timed-out job should not be retried automatically
     rescue => e
-      Rails.logger.error("Tool Failed [#{self.class.name}]: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
-      @conversion.update!(
-        status:        :failed,
-        error_message: e.message
-      )
-      raise e # Re-raise so SolidQueue can retry transient failures
+      # Possibly TRANSIENT (network, resource contention). Mark failed and re-raise
+      # so SolidQueue can retry. Quota is refunded only once retries are exhausted
+      # (ToolJob), never here, so a later successful retry stays correctly charged.
+      Rails.logger.error("Tool Failed [transient] [#{self.class.name}]: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+      @conversion.update!(status: :failed, error_message: e.message)
+      raise e
     end
 
     protected
@@ -56,6 +63,19 @@ module Tools
     end
 
     private
+
+    # Mark the conversion permanently failed and refund its quota unit (idempotent).
+    def fail_conversion!(message, reason:)
+      @conversion.update!(status: :failed, error_message: message)
+      @conversion.refund_usage!
+      track_conversion(:conversion_failed, reason: reason)
+    end
+
+    def track_conversion(event, extra = {})
+      tool_id = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }&.dig(:id)
+      Analytics.track(event, user: @conversion.user, tool_id: tool_id,
+                      properties: { path: "server" }.merge(extra))
+    end
 
     def download_inputs
       paths = []

@@ -18,23 +18,23 @@ class PaystackService
   end
 
   def initialize_subscription(user, callback_url:, plan: 'monthly')
-    chosen_plan_code = (plan.to_s == 'yearly') ? @yearly_plan_code : @monthly_plan_code
-    amount_in_kobo = (plan.to_s == 'yearly') ? 5_000_000 : 500_000 # 50k NGN vs 5k NGN
+    cycle = (plan.to_s == 'yearly') ? 'yearly' : 'monthly'
+
+    # Amount and plan code both come from the single BillingPlans source of truth,
+    # so the charge can never disagree with the price shown in the UI.
+    chosen_plan_code = BillingPlans.plan_code(cycle)
+    amount_minor     = BillingPlans.amount_minor(cycle)
 
     raise ConfigurationError, "Paystack credentials missing or Plan Code missing" unless @paystack && chosen_plan_code
 
     transactions = PaystackTransactions.new(@paystack)
-    
+
     # Generate a unique reference to track this checkout attempt
     reference = "sub_#{user.id}_#{Time.current.to_i}_#{SecureRandom.hex(4)}"
 
-    # Convert amount to KOBO/base unit. For a $5 equivalent mapped in Naira, say 5000 NGN = 500,000 kobo
-    # Note: Paystack usually handles the plan amount automatically if we pass plan_code, 
-    # but the transaction initialize endpoint requires an amount > 0 anyway.
-    
     payload = {
       email: user.email,
-      amount: amount_in_kobo,
+      amount: amount_minor,
       plan: chosen_plan_code,
       reference: reference,
       callback_url: callback_url

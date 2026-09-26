@@ -16,7 +16,7 @@ RSpec.describe ToolRunner do
   describe "Validations" do
     it "rejects unsupported file types for specific tools" do
       runner = ToolRunner.new(free_user, 'merge_pdf', [docx_file])
-      expect { runner.run! }.to raise_error(ToolRunner::InvalidRequestError, /Invalid file type/)
+      expect { runner.run! }.to raise_error(ToolRunner::InvalidRequestError, /doesn't look like a supported file/)
     end
 
     it "rejects multiple files if tool doesn't support it" do

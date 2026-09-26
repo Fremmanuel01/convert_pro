@@ -69,6 +69,7 @@ module Webhooks
         paystack_subscription_code: sub_code,
         paystack_email_token: email_token
       )
+      Analytics.track(:subscription_activated, user: user, properties: { source: "webhook_subscription_create" })
     end
 
     def handle_charge_success(data)
@@ -79,7 +80,9 @@ module Webhooks
       user = User.find_by(paystack_subscription_code: sub_code)
       return unless user
 
+      was_active = user.active?
       user.update!(subscription_status: :active, plan: :pro)
+      Analytics.track(:subscription_activated, user: user, properties: { source: "webhook_charge_success" }) unless was_active
     end
 
     def handle_subscription_cancel(data)

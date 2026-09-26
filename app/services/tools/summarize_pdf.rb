@@ -78,7 +78,7 @@ module Tools
     end
 
     def generate_ai_summary(text, tone: 'professional', page_count: 3)
-      api_key = ENV['GROQ_API_KEY']
+      api_key = AiConfig.groq_api_key
 
       if api_key.blank?
         raise ExecutionError, "Groq API Key is missing! Please configure GROQ_API_KEY."
@@ -108,7 +108,7 @@ module Tools
           #{text}
         PROMPT
 
-        url = "https://api.groq.com/openai/v1/chat/completions"
+        url = AiConfig::GROQ[:url]
 
         headers = {
           'Content-Type' => 'application/json',
@@ -116,7 +116,7 @@ module Tools
         }
 
         body = {
-          model: "llama-3.3-70b-versatile",
+          model: AiConfig::GROQ[:model],
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3
         }

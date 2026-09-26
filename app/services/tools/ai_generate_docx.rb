@@ -1,7 +1,7 @@
 module Tools
   class AiGenerateDocx < BaseTool
-    CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-    CLAUDE_MODEL   = "claude-opus-4-6"
+    CLAUDE_API_URL = AiConfig::CLAUDE[:url]
+    CLAUDE_MODEL   = AiConfig::CLAUDE[:model]
 
     def self.find_binary
       return "/Applications/LibreOffice.app/Contents/MacOS/soffice" unless Rails.env.production?
@@ -51,7 +51,7 @@ module Tools
     private
 
     def call_claude_api(topic)
-      api_key = ENV['ANTHROPIC_API_KEY']
+      api_key = AiConfig.claude_api_key
       raise ExecutionError, "Anthropic API key not configured (ANTHROPIC_API_KEY)." if api_key.blank?
 
       opts     = @conversion.try(:options) || {}
@@ -78,7 +78,7 @@ module Tools
         headers: {
           'Content-Type'      => 'application/json',
           'x-api-key'         => api_key,
-          'anthropic-version' => '2023-06-01'
+          'anthropic-version' => AiConfig::CLAUDE[:version]
         },
         body: {
           model:      CLAUDE_MODEL,

@@ -5,10 +5,12 @@ class BillingController < ApplicationController
   end
 
   def upgrade
+    track_event(:upgrade_viewed, properties: { billing_cycle: params[:plan] == 'yearly' ? 'yearly' : 'monthly' })
   end
 
   def create_subscription
     plan_type = params[:plan] == 'yearly' ? 'yearly' : 'monthly'
+    track_event(:checkout_started, properties: { billing_cycle: plan_type, currency: BillingPlans::CURRENCY })
     paystack = PaystackService.new
     url = paystack.initialize_subscription(current_user, callback_url: callback_billing_url, plan: plan_type)
 
@@ -34,12 +36,14 @@ class BillingController < ApplicationController
         customer_code = transaction_data.dig('customer', 'customer_code')
         sub_code = transaction_data.dig('plan_object', 'subscription_code') || transaction_data.dig('authorization', 'subscription_code')
         
+        was_active = current_user.active?
         current_user.update!(
           plan: :pro,
           subscription_status: :active,
           paystack_customer_code: customer_code,
           paystack_subscription_code: sub_code
         )
+        track_event(:subscription_activated, properties: { source: "callback" }) unless was_active
       end
     end
     
