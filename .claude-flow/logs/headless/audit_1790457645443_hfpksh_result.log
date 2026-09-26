@@ -1,0 +1,105 @@
+[2026-09-26T21:21:46.158Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "Based on my analysis of the codebase, here's the security vulnerability report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 4,\n      \"description\": \"FIREBASE_API_KEY hardcoded and committed to repository. Exposed API key can be used for unauthorized Firebase operations, potential data breach.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 14,\n      \"description\": \"PAYSTACK_SECRET_KEY hardcoded and committed to repository. Exposed secret key allows unauthorized payment processing and financial fraud.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 19,\n      \"description\": \"GROQ_API_KEY hardcoded and committed to repository. Can be used for unauthorized API calls, causing financial loss.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 20,\n      \"description\": \"GEMINI_API_KEY hardcoded and committed to repository. Exposed credential enables unauthorized API access and costs.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 21,\n      \"description\": \"ANTHROPIC_API_KEY hardcoded and committed to repository. Secret key can be exploited for unauthorized API calls and billing fraud.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 28,\n      \"description\": \"innerHTML used to set button content. While currently hardcoded, this is a potential XSS vector if error messages or dynamic content are rendered here.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/controllers/users/omniauth_callbacks_controller.rb\",\n      \"line\": 11,\n      \"description\": \"User validation error messages exposed in redirect alert. Information disclosure vulnerability - attackers can enumerate valid email patterns and user validation rules.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/client_tool_controller.js\",\n      \"line\": 166,\n      \"description\": \"PDF.js worker loaded from external CDN (https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs). Supply chain attack vector - CDN compromise could inject malicious code.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 1,\n      \"description\": \"No file type validation before processing files. Client-side file upload should validate MIME types and file extensions. Users could upload malicious files.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/services/tools/pptx_to_pdf.rb\",\n      \"line\": 1,\n      \"description\": \"System command execution with external binary detection. While hardcoded binary names are used, verify proper argument escaping to prevent command injection.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 41,\n      \"description\": \"Console error logging with detailed Firebase error messages. Error details exposed in browser console could reveal system architecture to attackers.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/mobile_menu_controller.js\",\n      \"line\": 6,\n      \"description\": \"Console logging in production code. Remove debug console.log() statements from production builds.\"\n    }\n  ],\n  \"riskScore\": 92,\n  \"recommendations\": [\n    \"URGENT: Move all API keys from .env to environment variables managed by deployment platform (Heroku, etc.). Rotate ALL exposed keys immediately in Firebase, Paystack, Groq, Gemini, and Anthropic consoles.\",\n    \"URGENT: Remove .env file from git history using `git-filter-repo` or `BFG Repo-Cleaner`. Add .env to .gitignore.\",\n    \"Add pre-commit hook to prevent committing secrets: install `git-secrets` or `detect-secrets` and configure in husky/pre-commit.\",\n    \"Replace all innerHTML assignments with textContent or createElement() to prevent XSS vulnerabilities.\",\n    \"Host PDF.js worker locally instead of loading from third-party CDN to eliminate supply chain attack vector.\",\n    \"Implement server-side file type validation using file magic numbers (MIME type checking), not just extensions.\",\n    \"Remove or sanitize validation error messages exposed to users. Log full errors server-side for debugging.\",\n    \"Remove all console.log(), console.error() statements from production code. Use a proper logging service.\",\n    \"Enable Content Security Policy (CSP) headers to mitigate XSS attacks.\",\n    \"Set secure cookie flags: HttpOnly, Secure, SameSite=Strict for session cookies.\",\n    \"Run `bundle exec bundle-audit` regularly to scan for vulnerable gems.\",\n    \"Run Brakeman static analysis on Rails code: `brakeman --no-summary` to catch security issues.\",\n    \"Implement request size limits on file uploads to prevent DoS attacks.\",\n    \"Add rate limiting to API endpoints to prevent abuse.\"\n  ]\n}\n```\n\n## Key Findings\n\n**🔴 CRITICAL: Secrets Committed to Repository**\nYour `.env` file containing real API keys (Firebase, Paystack, Groq, Gemini, Anthropic) is committed to version control. This is the highest-risk vulnerability—these credentials must be rotated immediately.\n\n**Supply Chain & XSS Risks**\nThe PDF.js worker loads from a third-party CDN, creating a supply chain attack vector. innerHTML usage in auth code opens XSS vulnerabilities if code changes allow dynamic content.\n\n**Information Disclosure**\nAuth error messages leak validation rules to attackers. Clean these up before production deployment.\n\n**Risk Score: 92/100** — Primarily due to exposed secrets in version control.\n",
+  "parsedOutput": {
+    "vulnerabilities": [
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 4,
+        "description": "FIREBASE_API_KEY hardcoded and committed to repository. Exposed API key can be used for unauthorized Firebase operations, potential data breach."
+      },
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 14,
+        "description": "PAYSTACK_SECRET_KEY hardcoded and committed to repository. Exposed secret key allows unauthorized payment processing and financial fraud."
+      },
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 19,
+        "description": "GROQ_API_KEY hardcoded and committed to repository. Can be used for unauthorized API calls, causing financial loss."
+      },
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 20,
+        "description": "GEMINI_API_KEY hardcoded and committed to repository. Exposed credential enables unauthorized API access and costs."
+      },
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 21,
+        "description": "ANTHROPIC_API_KEY hardcoded and committed to repository. Secret key can be exploited for unauthorized API calls and billing fraud."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 28,
+        "description": "innerHTML used to set button content. While currently hardcoded, this is a potential XSS vector if error messages or dynamic content are rendered here."
+      },
+      {
+        "severity": "high",
+        "file": "app/controllers/users/omniauth_callbacks_controller.rb",
+        "line": 11,
+        "description": "User validation error messages exposed in redirect alert. Information disclosure vulnerability - attackers can enumerate valid email patterns and user validation rules."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/client_tool_controller.js",
+        "line": 166,
+        "description": "PDF.js worker loaded from external CDN (https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs). Supply chain attack vector - CDN compromise could inject malicious code."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 1,
+        "description": "No file type validation before processing files. Client-side file upload should validate MIME types and file extensions. Users could upload malicious files."
+      },
+      {
+        "severity": "medium",
+        "file": "app/services/tools/pptx_to_pdf.rb",
+        "line": 1,
+        "description": "System command execution with external binary detection. While hardcoded binary names are used, verify proper argument escaping to prevent command injection."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 41,
+        "description": "Console error logging with detailed Firebase error messages. Error details exposed in browser console could reveal system architecture to attackers."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/mobile_menu_controller.js",
+        "line": 6,
+        "description": "Console logging in production code. Remove debug console.log() statements from production builds."
+      }
+    ],
+    "riskScore": 92,
+    "recommendations": [
+      "URGENT: Move all API keys from .env to environment variables managed by deployment platform (Heroku, etc.). Rotate ALL exposed keys immediately in Firebase, Paystack, Groq, Gemini, and Anthropic consoles.",
+      "URGENT: Remove .env file from git history using `git-filter-repo` or `BFG Repo-Cleaner`. Add .env to .gitignore.",
+      "Add pre-commit hook to prevent committing secrets: install `git-secrets` or `detect-secrets` and configure in husky/pre-commit.",
+      "Replace all innerHTML assignments with textContent or createElement() to prevent XSS vulnerabilities.",
+      "Host PDF.js worker locally instead of loading from third-party CDN to eliminate supply chain attack vector.",
+      "Implement server-side file type validation using file magic numbers (MIME type checking), not just extensions.",
+      "Remove or sanitize validation error messages exposed to users. Log full errors server-side for debugging.",
+      "Remove all console.log(), console.error() statements from production code. Use a proper logging service.",
+      "Enable Content Security Policy (CSP) headers to mitigate XSS attacks.",
+      "Set secure cookie flags: HttpOnly, Secure, SameSite=Strict for session cookies.",
+      "Run `bundle exec bundle-audit` regularly to scan for vulnerable gems.",
+      "Run Brakeman static analysis on Rails code: `brakeman --no-summary` to catch security issues.",
+      "Implement request size limits on file uploads to prevent DoS attacks.",
+      "Add rate limiting to API endpoints to prevent abuse."
+    ]
+  },
+  "durationMs": 60715,
+  "model": "haiku",
+  "sandboxMode": "strict",
+  "workerType": "audit",
+  "timestamp": "2026-09-26T21:21:46.158Z",
+  "executionId": "audit_1790457645443_hfpksh"
+}

@@ -72,5 +72,11 @@ RSpec.configure do |config|
   # config.filter_gems_from_backtrace("gem name")
 
   config.include Devise::Test::IntegrationHelpers, type: :request
+  config.include Devise::Test::IntegrationHelpers, type: :system
   config.include FactoryBot::Syntax::Methods
+
+  # System specs default to the rack_test driver: no external browser required,
+  # so CI stays fast and deterministic. Specs that genuinely need JavaScript can
+  # opt into a real browser with `driven_by(:selenium_chrome_headless)`.
+  config.before(:each, type: :system) { driven_by(:rack_test) }
 end

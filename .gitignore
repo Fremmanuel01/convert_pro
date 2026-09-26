@@ -7,8 +7,11 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore all environment files.
+# Ignore all environment files EXCEPT the committed test config,
+# which holds only non-secret dummy values so CI/test never reads
+# production credentials from a local .env.
 /.env*
+!/.env.test
 
 # Ignore all logfiles and tempfiles.
 /log/*

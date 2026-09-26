@@ -1,0 +1,890 @@
+[2026-09-26T20:47:34.309Z] PROMPT
+============================================================
+Analyze this codebase for security vulnerabilities:
+- Check for hardcoded secrets (API keys, passwords)
+- Identify SQL injection risks
+- Find XSS vulnerabilities
+- Check for insecure dependencies
+- Identify authentication/authorization issues
+
+Provide a JSON report with:
+{
+  "vulnerabilities": [{ "severity": "high|medium|low", "file": "...", "line": N, "description": "..." }],
+  "riskScore": 0-100,
+  "recommendations": ["..."]
+}
+
+## Codebase Context
+
+--- app/javascript/application.js ---
+// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
+import { setupFirebaseAuth } from "firebase_auth"
+import "controllers"
+
+// Initialize Firebase Auth if the config is present securely
+const firebaseConfigMeta = document.querySelector('meta[name="firebase-config"]')
+if (firebaseConfigMeta) {
+  const firebaseConfig = JSON.parse(firebaseConfigMeta.content)
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+  setupFirebaseAuth(firebaseConfig, csrfToken)
+}
+
+
+
+
+--- app/javascript/controllers/application.js ---
+import { Application } from "@hotwired/stimulus"
+
+const application = Application.start()
+
+// Configure Stimulus development experience
+application.debug = false
+window.Stimulus = application
+
+export { application }
+
+
+--- app/javascript/controllers/client_tool_controller.js (truncated) ---
+import { Controller } from "@hotwired/stimulus"
+import { jsPDF } from "jspdf"
+import { PDFDocument } from "pdf-lib"
+import { zipSync } from "fflate"
+import * as pdfjsDist from "pdfjs-dist"
+import heic2any from "heic2any"
+
+// Configure PDF.js worker
+pdfjsDist.GlobalWorkerOptions.workerSrc = `https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs`
+
+export default class extends Controller {
+    static values = {
+        toolId: String,
+        acceptsMultiple: Boolean,
+        logUrl: String
+    }
+    static targets = ["form", "fileInput", "submitButton", "passwordInput"]
+
+    process(event) {
+        const clientSideTools = [
+            'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',
+            'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'
+        ]
+
+        if (clientSideTools.includes(this.toolIdValue)) {
+            event.preventDefault()
+
+            switch (this.toolIdValue) {
+                case 'images_to_pdf': this.processImagesToPdf(); break
+                case 'merge_pdf': this.processMergePdf(); break
+                case 'split_pdf': this.processSplitPdf(); break
+                case 'protect_pdf': this.processProtectPdf(); break
+                case 'unlock_pdf': this.processUnlockPdf(); break
+                case 'pdf_to_images': this.processPdfToImages(); break
+                case 'heic_to_jpg': this.processHeicTo('image/jpeg'); break
+                case 'heic_to_png': this.processHeicTo('image/png'); break
+                case 'webp_to_jpg': this.processWebpTo('image/jpeg'); break
+                case 'webp_to_png': this.processWebpTo('image/png'); break
+            }
+        }
+    }
+
+    async processImagesToPdf() {
+        const files = this.fileInputTarget.files
+        if (files.length === 0) return
+        this.setProcessing(true)
+        try {
+            const pdf = new jsPDF()
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i]
+                const imageData = await this.readFileAsDataURL(file)
+                if (i > 0) pdf.addPage()
+                const imgProps = pdf.getImageProperties(imageData)
+                const pdfWidth = pdf.internal.pageSize.getWidth()
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+                pdf.addImage(imageData, 'auto', 0, 0, pdfWidth, pdfHeight)
+            }
+            pdf.save(`images_to_pdf_${Date.now()}.pdf`)
+            this.reportActivity()
+            this.formTarget.reset()
+            this.resetUI()
+        } catch (error) {
+            console.error(error)
+            alert("Failed to generate PDF.")
+        } finally {
+            this.setProcessing(false)
+        }
+    }
+
+    async processMergePdf() {
+        const files = this.fileInputTarget.files
+        if (files.length < 2) {
+            alert("Please select at least 2 PDF files.")
+            return
+        }
+        this.setProcessing(true)
+        try {
+            const mergedPdf = await PDFDocument.create()
+            for (const file of files) {
+                const fileBytes = await this.readFileAsArrayBuffer(file)
+                const pdf = await PDFDocument.load(fileBytes)
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices())
+                copiedPages.forEach((page) => mergedPdf.addPage(page))
+            }
+            const pdfBytes = await mergedPdf.save()
+            this.downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `merged_${Date.now()}.pdf`)
+            this.reportActivity()
+            this.formTarget.reset()
+            this.resetUI()
+        } catch (error) {
+            console.error(error)
+            alert("Failed to merge PDFs.")
+        } finally {
+            this.setProcessing(false)
+        }
+    }
+
+    async processSplitPdf() {
+        const files = this.fileInputTarget.files
+        if (files.length === 0) return
+        this.setProcessing(true)
+        try {
+            const file = files[0]
+            const fileBytes = await this.readFileAsArrayBuffer(file)
+            const pdf = await PDFDocument.load(fileBytes)
+            const zipData = {}
+            for (let i = 0; i < pdf.getPageCount(); i++) {
+                const newPdf = await PDFDocument.create()
+                const [copiedPage] = await newPdf.copyPages(pdf, [i])
+                newPdf.addPage(copiedPage)
+                const newPdfBytes = await newPdf.save()
+                zipData[`page_${i + 1}.pdf`] = new Uint8Array(newPdfBytes)
+            }
+            const zipped = zipSync(zipData)
+            this.downloadBlob(new Blob([zipped], { type: 'application/zip' }), `split_${Date.now()}.zip`)
+            this.reportActivity()
+            this.formTarget.reset()
+            this.resetUI()
+        } catch (error) {
+            console.error(error)
+            alert("Failed to split PDF.")
+        } finally {
+            this.setProcessing(false)
+        }
+    }
+
+    async processProtectPdf() {
+        const fil
+
+--- app/javascript/controllers/dropdown_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+    static targets = ["menu"]
+
+    toggle(event) {
+        if (event) event.stopPropagation()
+        this.menuTarget.classList.toggle("opacity-0")
+        this.menuTarget.classList.toggle("invisible")
+        this.menuTarget.classList.toggle("translate-y-2")
+    }
+
+    hide(event) {
+        if (!this.element.contains(event.target)) {
+            this.menuTarget.classList.add("opacity-0", "invisible", "translate-y-2")
+        }
+    }
+}
+
+
+--- app/javascript/controllers/index.js ---
+import { application } from "controllers/application"
+
+import MobileMenuController from "controllers/mobile_menu_controller"
+application.register("mobile-menu", MobileMenuController)
+
+import SidebarController from "controllers/sidebar_controller"
+application.register("sidebar", SidebarController)
+
+import ThemeController from "controllers/theme_controller"
+application.register("theme", ThemeController)
+
+import DropdownController from "controllers/dropdown_controller"
+application.register("dropdown", DropdownController)
+
+import ClientToolController from "controllers/client_tool_controller"
+application.register("client-tool", ClientToolController)
+
+
+
+--- app/javascript/controllers/mobile_menu_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+    static targets = ["menu", "icon"]
+
+    connect() {
+        console.log("Mobile menu controller connected!")
+    }
+
+    toggle() {
+        if (this.menuTarget.classList.contains('hidden')) {
+            this.menuTarget.classList.remove('hidden')
+            this.menuTarget.classList.add('flex')
+            this.iconTarget.textContent = 'close'
+            document.body.style.overflow = 'hidden'
+        } else {
+            this.menuTarget.classList.add('hidden')
+            this.menuTarget.classList.remove('flex')
+            this.iconTarget.textContent = 'menu'
+            document.body.style.overflow = ''
+        }
+    }
+}
+
+
+--- app/javascript/controllers/sidebar_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+    static targets = ["sidebar", "overlay"]
+
+    connect() {
+        console.log("Sidebar controller connected!")
+    }
+
+    toggle() {
+        const isHidden = this.sidebarTarget.classList.contains("-translate-x-full")
+        if (isHidden) {
+            this.sidebarTarget.classList.remove("-translate-x-full")
+            this.overlayTarget.classList.remove("hidden")
+            document.body.style.overflow = "hidden"
+        } else {
+            this.sidebarTarget.classList.add("-translate-x-full")
+            this.overlayTarget.classList.add("hidden")
+            document.body.style.overflow = ""
+        }
+    }
+}
+
+
+--- app/javascript/controllers/theme_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+    toggle() {
+        document.documentElement.classList.toggle("dark")
+        if (document.documentElement.classList.contains("dark")) {
+            localStorage.setItem("theme", "dark")
+        } else {
+            localStorage.setItem("theme", "light")
+        }
+    }
+}
+
+
+--- app/javascript/firebase_auth.js ---
+import { initializeApp } from "firebase/app"
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth"
+
+// Initialize Firebase using environment variables (populated in the view or .env)
+const setupFirebaseAuth = (firebaseConfig, csrfToken) => {
+    const app = initializeApp(firebaseConfig)
+    const auth = getAuth(app)
+    const provider = new GoogleAuthProvider()
+
+    const googleBtn = document.getElementById('google-signin-btn')
+    const errorAlert = document.getElementById('firebase-auth-error')
+
+    if (!googleBtn) return
+
+    googleBtn.addEventListener('click', async (e) => {
+        e.preventDefault()
+
+        // UI Loading state
+        const originalText = googleBtn.innerHTML
+        googleBtn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2">refresh</span> Connecting...'
+        googleBtn.disabled = true
+        if (errorAlert) errorAlert.classList.add('hidden')
+
+        try {
+            // 1. Authenticate with Google via Firebase
+            const result = await signInWithPopup(auth, provider)
+
+            // 2. Get the secure JWT token
+            const idToken = await result.user.getIdToken()
+
+            // 3. Submit a hidden form so the browser handles the session cookie
+            //    naturally via a full page POST + redirect (fetch breaks cookie persistence)
+            const form = document.createElement('form')
+            form.method = 'POST'
+            form.action = '/users/auth/firebase'
+
+            const fields = { token: idToken, authenticity_token: csrfToken }
+            Object.entries(fields).forEach(([name, value]) => {
+                const input = document.createElement('input')
+                input.type = 'hidden'
+                input.name = name
+                input.value = value
+                form.appendChild(input)
+            })
+
+            document.body.appendChild(form)
+            form.submit()
+
+        } catch (error) {
+            console.error("Firebase Auth Error:", error)
+
+            // UI Error state
+            if (errorAlert) {
+                errorAlert.textContent = `Authentication failed: ${error.message}`
+                errorAlert.classList.remove('hidden')
+            }
+
+            googleBtn.innerHTML = originalText
+            googleBtn.disabled = false
+        }
+    })
+}
+
+export { setupFirebaseAuth }
+
+
+--- app/views/pwa/service-worker.js ---
+// Add a service worker for processing Web Push notifications:
+//
+// self.addEventListener("push", async (event) => {
+//   const { title, options } = await event.data.json()
+//   event.waitUntil(self.registration.showNotification(title, options))
+// })
+//
+// self.addEventListener("notificationclick", function(event) {
+//   event.notification.close()
+//   event.waitUntil(
+//     clients.matchAll({ type: "window" }).then((clientList) => {
+//       for (let i = 0; i < clientList.length; i++) {
+//         let client = clientList[i]
+//         let clientPath = (new URL(client.url)).pathname
+//
+//         if (clientPath == event.notification.data.path && "focus" in client) {
+//           return client.focus()
+//         }
+//       }
+//
+//       if (clients.openWindow) {
+//         return clients.openWindow(event.notification.data.path)
+//       }
+//     })
+//   )
+// })
+
+
+--- vendor/javascript/@babel--runtime--helpers--asyncToGenerator.js ---
+// @babel/runtime/helpers/asyncToGenerator@7.28.6 downloaded from https://unpkg.com/@babel/runtime@7.28.6/helpers/esm/asyncToGenerator.js
+
+function asyncGeneratorStep(n, t, e, r, o, a, c) {
+  try {
+    var i = n[a](c),
+      u = i.value;
+  } catch (n) {
+    return void e(n);
+  }
+  i.done ? t(u) : Promise.resolve(u).then(r, o);
+}
+function _asyncToGenerator(n) {
+  return function () {
+    var t = this,
+      e = arguments;
+    return new Promise(function (r, o) {
+      var a = n.apply(t, e);
+      function _next(n) {
+        asyncGeneratorStep(a, r, o, _next, _throw, "next", n);
+      }
+      function _throw(n) {
+        asyncGeneratorStep(a, r, o, _next, _throw, "throw", n);
+      }
+      _next(void 0);
+    });
+  };
+}
+export { _asyncToGenerator as default };
+
+--- vendor/javascript/@babel--runtime--helpers--defineProperty.js ---
+// @babel/runtime/helpers/defineProperty@7.28.6 downloaded from https://unpkg.com/@babel/runtime@7.28.6/helpers/esm/defineProperty.js
+
+import toPropertyKey from "./toPropertyKey.js";
+function _defineProperty(e, r, t) {
+  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: !0,
+    configurable: !0,
+    writable: !0
+  }) : e[r] = t, e;
+}
+export { _defineProperty as default };
+
+--- vendor/javascript/@babel--runtime--helpers--slicedToArray.js ---
+// @babel/runtime/helpers/slicedToArray@7.28.6 downloaded from https://unpkg.com/@babel/runtime@7.28.6/helpers/esm/slicedToArray.js
+
+import arrayWithHoles from "./arrayWithHoles.js";
+import iterableToArrayLimit from "./iterableToArrayLimit.js";
+import unsupportedIterableToArray from "./unsupportedIterableToArray.js";
+import nonIterableRest from "./nonIterableRest.js";
+function _slicedToArray(r, e) {
+  return arrayWithHoles(r) || iterableToArrayLimit(r, e) || unsupportedIterableToArray(r, e) || nonIterableRest();
+}
+export { _slicedToArray as default };
+
+--- vendor/javascript/@babel--runtime--helpers--typeof.js ---
+// @babel/runtime/helpers/typeof@7.28.6 downloaded from https://unpkg.com/@babel/runtime@7.28.6/helpers/esm/typeof.js
+
+function _typeof(o) {
+  "@babel/helpers - typeof";
+
+  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+    return typeof o;
+  } : function (o) {
+    return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+  }, _typeof(o);
+}
+export { _typeof as default };
+
+--- vendor/javascript/@firebase--app.js (truncated) ---
+// @firebase/app@0.14.8 downloaded from https://ga.jspm.io/npm:@firebase/app@0.14.8/dist/esm/index.esm.js
+
+import{Component as e,ComponentContainer as t}from"@firebase/component";import{Logger as a,setUserLogHandler as r,setLogLevel as n}from"@firebase/logger";import{ErrorFactory as i,base64Decode as s,getDefaultAppConfig as o,deepEqual as c,isBrowser as h,isWebWorker as l,FirebaseError as p,base64urlEncodeWithoutPadding as f,isIndexedDBAvailable as d,validateIndexedDBOpenable as u}from"@firebase/util";export{FirebaseError}from"@firebase/util";import{openDB as b}from"idb";
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */class PlatformLoggerServiceImpl{constructor(e){this.container=e}getPlatformInfoString(){const e=this.container.getProviders();return e.map((e=>{if(m(e)){const t=e.getImmediate();return`${t.library}/${t.version}`}return null})).filter((e=>e)).join(" ")}}
+/**
+ *
+ * @param provider check if this provider provides a VersionService
+ *
+ * NOTE: Using Provider<'app-version'> is a hack to indicate that the provider
+ * provides VersionService. The provider is not necessarily a 'app-version'
+ * provider.
+ */function m(e){const t=e.getComponent();return t?.type==="VERSION"}const g="@firebase/app";const v="0.14.8";
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */const w=new a("@firebase/app");const C="@firebase/app-compat";const _="@firebase/analytics-compat";const D="@firebase/analytics";const y="@firebase/app-check-compat";const S="@firebase/app-check";const I="@firebase/auth";const E="@firebase/auth-compat";const k="@firebase/database";const A="@firebase/data-connect";const F="@firebase/database-compat";const O="@firebase/functions";const $="@firebase/functions-compat";const N="@firebase/installations";const P="@firebase/installations-compat";const x="@firebase/messaging";const R="@firebase/messaging-compat";const T="@firebase/performance";const H="@firebase/performance-compat";const M="@firebase/remote-config";const z="@firebase/remote-config-compat";const B="@firebase/storage";const j="@firebase/storage-compat";const L="@firebase/firestore";const U="@firebase/ai";const J="@firebase/firestore-compat";const V="firebase";const K="12.9.0";
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */const Y="[DEFAULT]";const q={[g]:"fire-core",[C]:"fire-core-compat",[D]:"fire-analytics",[_]:"fire-analytics-compat",[S]:"fire-app-check",[y]:"fire-app-check-compat",[I]:"fire-auth",[E]:"fire-auth-compat",[k]:"fire-rtdb",[A]:"fire-data-connect",[F]:"fire-rtdb-compat",[O]:"fire-fn",[$]:"fire-fn-compat",[N]:"fire-iid",[P]:"fire-iid-compat",[x]:"fire-fcm",[R]:"fire-fcm-compat",[T]:"fire-perf",[H]:"fire-perf-compat",[M]:"fire-rc",[z]:"fire-rc-compat",[B]:"fire-gcs",[j]:"fire-gcs-compat",[L]:"fire-fst",[J]:"fire-fst-compat",[U]:"fire-vertex","fire-js":"fire-js",[V]:"fire-js-all"};
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for
+
+--- vendor/javascript/@firebase--auth.js ---
+// @firebase/auth@1.12.0 downloaded from https://ga.jspm.io/npm:@firebase/auth@1.12.0/dist/esm/index.js
+
+export{A as ActionCodeOperation,a as ActionCodeURL,b as AuthCredential,c as AuthErrorCodes,E as EmailAuthCredential,d as EmailAuthProvider,F as FacebookAuthProvider,e as FactorId,G as GithubAuthProvider,f as GoogleAuthProvider,O as OAuthCredential,g as OAuthProvider,h as OperationType,P as PhoneAuthCredential,i as PhoneAuthProvider,j as PhoneMultiFactorGenerator,k as ProviderId,R as RecaptchaVerifier,S as SAMLAuthProvider,l as SignInMethod,T as TotpMultiFactorGenerator,m as TotpSecret,n as TwitterAuthProvider,o as applyActionCode,p as beforeAuthStateChanged,q as browserCookiePersistence,r as browserLocalPersistence,s as browserPopupRedirectResolver,t as browserSessionPersistence,u as checkActionCode,v as confirmPasswordReset,w as connectAuthEmulator,x as createUserWithEmailAndPassword,y as debugErrorMap,z as deleteUser,B as fetchSignInMethodsForEmail,C as getAdditionalUserInfo,D as getAuth,H as getIdToken,I as getIdTokenResult,J as getMultiFactorResolver,K as getRedirectResult,L as inMemoryPersistence,M as indexedDBLocalPersistence,N as initializeAuth,Q as initializeRecaptchaConfig,U as isSignInWithEmailLink,V as linkWithCredential,W as linkWithPhoneNumber,X as linkWithPopup,Y as linkWithRedirect,Z as multiFactor,_ as onAuthStateChanged,$ as onIdTokenChanged,a0 as parseActionCodeURL,a1 as prodErrorMap,a2 as reauthenticateWithCredential,a3 as reauthenticateWithPhoneNumber,a4 as reauthenticateWithPopup,a5 as reauthenticateWithRedirect,a6 as reload,a7 as revokeAccessToken,a8 as sendEmailVerification,a9 as sendPasswordResetEmail,aa as sendSignInLinkToEmail,ab as setPersistence,ac as signInAnonymously,ad as signInWithCredential,ae as signInWithCustomToken,af as signInWithEmailAndPassword,ag as signInWithEmailLink,ah as signInWithPhoneNumber,ai as signInWithPopup,aj as signInWithRedirect,ak as signOut,al as unlink,am as updateCurrentUser,an as updateEmail,ao as updatePassword,ap as updatePhoneNumber,aq as updateProfile,ar as useDeviceLanguage,as as validatePassword,at as verifyBeforeUpdateEmail,au as verifyPasswordResetCode}from"../../_/KD0rQcBY.js";import"@firebase/app";import"@firebase/util";import"@firebase/logger";import"@firebase/component";
+
+
+
+--- vendor/javascript/@firebase--component.js (truncated) ---
+// @firebase/component@0.7.0 downloaded from https://ga.jspm.io/npm:@firebase/component@0.7.0/dist/esm/index.esm.js
+
+import{Deferred as t}from"@firebase/util";class Component{
+/**
+     *
+     * @param name The public service name, e.g. app, auth, firestore, database
+     * @param instanceFactory Service factory responsible for creating the public interface
+     * @param type whether the service provided by the component is public or private
+     */
+constructor(t,e,n){this.name=t;this.instanceFactory=e;this.type=n;this.multipleInstances=false;this.serviceProps={};this.instantiationMode="LAZY";this.onInstanceCreated=null}setInstantiationMode(t){this.instantiationMode=t;return this}setMultipleInstances(t){this.multipleInstances=t;return this}setServiceProps(t){this.serviceProps=t;return this}setInstanceCreatedCallback(t){this.onInstanceCreated=t;return this}}
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */const e="[DEFAULT]";
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */class Provider{constructor(t,e){this.name=t;this.container=e;this.component=null;this.instances=new Map;this.instancesDeferred=new Map;this.instancesOptions=new Map;this.onInitCallbacks=new Map}
+/**
+     * @param identifier A provider can provide multiple instances of a service
+     * if this.component.multipleInstances is true.
+     */get(e){const n=this.normalizeInstanceIdentifier(e);if(!this.instancesDeferred.has(n)){const e=new t;this.instancesDeferred.set(n,e);if(this.isInitialized(n)||this.shouldAutoInitialize())try{const t=this.getOrInitializeService({instanceIdentifier:n});t&&e.resolve(t)}catch(t){}}return this.instancesDeferred.get(n).promise}getImmediate(t){const e=this.normalizeInstanceIdentifier(t?.identifier);const n=t?.optional??false;if(!this.isInitialized(e)&&!this.shouldAutoInitialize()){if(n)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:e})}catch(t){if(n)return null;throw t}}getComponent(){return this.component}setComponent(t){if(t.name!==this.name)throw Error(`Mismatching Component ${t.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);this.component=t;if(this.shouldAutoInitialize()){if(i(t))try{this.getOrInitializeService({instanceIdentifier:e})}catch(t){}for(const[t,e]of this.instancesDeferred.entries()){const n=this.normalizeInstanceIdentifier(t);try{const t=this.getOrInitializeService({instanceIdentifier:n});e.resolve(t)}catch(t){}}}}clearInstance(t=e){this.instancesDeferred.delete(t);this.instancesOptions.delete(t);this.instances.delete(t)}async delete(){const t=Array.from(this.instances.values());await Promise.all([...t.filter((t=>"INTERNAL"in t)).map((t=>t.INTERNAL.delete())),...t.filter((t=>"_delete"in t)).map((t=>t._delete()))])}isComponentSet(){return this.component!=null}isInitialized(t=e){return this.instances.has(t)}getOptions(t=e){return this.instancesOptions.get(t)||{}}initialize(t={}){const{options:e={}}=t;const n=this.normalizeInstanceIdentifier(t.instanceIdentifier);if(this.isInitialized(n))throw Error(`${this.name}(${n}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);const i=this.getOrInitializeService({instanceIdentifier:n,options:e});for(const[t,e]of this.instancesDeferred.entries()){const s=this.normalizeInstanceIdentifier(t);n===s&&e.resolve(i)}return i}
+/**
+     *
+     * @param callback - a function that will be invoked  after the provider has been initialized by calling provider.initialize().
+     * The function is invoked SYNCHRONOUSLY, so it should not execute any longrunning tasks in order to not block the program.
+     *
+     * @param identifier An optional instance identifier
+     * @returns a function to unregister the callback
+     */onInit(t,e){const n=this.normalizeInstanceIdent
+
+--- vendor/javascript/@firebase--logger.js ---
+// @firebase/logger@0.5.0 downloaded from https://ga.jspm.io/npm:@firebase/logger@0.5.0/dist/esm/index.esm.js
+
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+const e=[];var r;(function(e){e[e.DEBUG=0]="DEBUG";e[e.VERBOSE=1]="VERBOSE";e[e.INFO=2]="INFO";e[e.WARN=3]="WARN";e[e.ERROR=4]="ERROR";e[e.SILENT=5]="SILENT"})(r||(r={}));const t={debug:r.DEBUG,verbose:r.VERBOSE,info:r.INFO,warn:r.WARN,error:r.ERROR,silent:r.SILENT};const o=r.INFO;const n={[r.DEBUG]:"log",[r.VERBOSE]:"log",[r.INFO]:"info",[r.WARN]:"warn",[r.ERROR]:"error"};const l=(e,r,...t)=>{if(r<e.logLevel)return;const o=(new Date).toISOString();const l=n[r];if(!l)throw new Error(`Attempted to log a message with an invalid logType (value: ${r})`);console[l](`[${o}]  ${e.name}:`,...t)};class Logger{
+/**
+     * Gives you an instance of a Logger to capture messages according to
+     * Firebase's logging scheme.
+     *
+     * @param name The name that the logs will be associated with
+     */
+constructor(r){this.name=r;this._logLevel=o;this._logHandler=l;this._userLogHandler=null;e.push(this)}get logLevel(){return this._logLevel}set logLevel(e){if(!(e in r))throw new TypeError(`Invalid value "${e}" assigned to \`logLevel\``);this._logLevel=e}setLogLevel(e){this._logLevel=typeof e==="string"?t[e]:e}get logHandler(){return this._logHandler}set logHandler(e){if(typeof e!=="function")throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=e}get userLogHandler(){return this._userLogHandler}set userLogHandler(e){this._userLogHandler=e}debug(...e){this._userLogHandler&&this._userLogHandler(this,r.DEBUG,...e);this._logHandler(this,r.DEBUG,...e)}log(...e){this._userLogHandler&&this._userLogHandler(this,r.VERBOSE,...e);this._logHandler(this,r.VERBOSE,...e)}info(...e){this._userLogHandler&&this._userLogHandler(this,r.INFO,...e);this._logHandler(this,r.INFO,...e)}warn(...e){this._userLogHandler&&this._userLogHandler(this,r.WARN,...e);this._logHandler(this,r.WARN,...e)}error(...e){this._userLogHandler&&this._userLogHandler(this,r.ERROR,...e);this._logHandler(this,r.ERROR,...e)}}function s(r){e.forEach((e=>{e.setLogLevel(r)}))}function i(o,n){for(const l of e){let e=null;n&&n.level&&(e=t[n.level]);l.userLogHandler=o===null?null:(t,n,...l)=>{const s=l.map((e=>{if(e==null)return null;if(typeof e==="string")return e;if(typeof e==="number"||typeof e==="boolean")return e.toString();if(e instanceof Error)return e.message;try{return JSON.stringify(e)}catch(e){return null}})).filter((e=>e)).join(" ");n>=(e??t.logLevel)&&o({level:r[n].toLowerCase(),message:s,args:l,type:t.name})}}}export{r as LogLevel,Logger,s as setLogLevel,i as setUserLogHandler};
+
+
+
+--- vendor/javascript/@firebase--util.js (truncated) ---
+// @firebase/util@1.13.0 downloaded from https://ga.jspm.io/npm:@firebase/util@1.13.0/dist/index.esm.js
+
+import{g as t}from"../_/ixVQ85Ds.js";
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */const e={NODE_CLIENT:false,NODE_ADMIN:false,SDK_VERSION:"${JSCORE_VERSION}"};
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */const n=function(t,e){if(!t)throw r(e)};const r=function(t){return new Error("Firebase Database ("+e.SDK_VERSION+") INTERNAL ASSERT FAILED: "+t)};
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */const o=function(t){const e=[];let n=0;for(let r=0;r<t.length;r++){let o=t.charCodeAt(r);if(o<128)e[n++]=o;else if(o<2048){e[n++]=o>>6|192;e[n++]=o&63|128}else if((o&64512)===55296&&r+1<t.length&&(t.charCodeAt(r+1)&64512)===56320){o=65536+((o&1023)<<10)+(t.charCodeAt(++r)&1023);e[n++]=o>>18|240;e[n++]=o>>12&63|128;e[n++]=o>>6&63|128;e[n++]=o&63|128}else{e[n++]=o>>12|224;e[n++]=o>>6&63|128;e[n++]=o&63|128}}return e};
+/**
+ * Turns an array of numbers into the string given by the concatenation of the
+ * characters to which the numbers correspond.
+ * @param bytes Array of numbers representing characters.
+ * @return Stringification of the array.
+ */const s=function(t){const e=[];let n=0,r=0;while(n<t.length){const o=t[n++];if(o<128)e[r++]=String.fromCharCode(o);else if(o>191&&o<224){const s=t[n++];e[r++]=String.fromCharCode((o&31)<<6|s&63)}else if(o>239&&o<365){const s=t[n++];const i=t[n++];const c=t[n++];const a=((o&7)<<18|(s&63)<<12|(i&63)<<6|c&63)-65536;e[r++]=String.fromCharCode(55296+(a>>10));e[r++]=String.fromCharCode(56320+(a&1023))}else{const s=t[n++];const i=t[n++];e[r++]=String.fromCharCode((o&15)<<12|(s&63)<<6|i&63)}}return e.join("")};const i={byteToCharMap_:null,charToByteMap_:null,byteToCharMapWebSafe_:null,charToByteMapWebSafe_:null,ENCODED_VALS_BASE:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",get ENCODED_VALS(){return this.ENCODED_VALS_BASE+"+/="},get ENCODED_VALS_WEBSAFE(){return this.ENCODED_VALS_BASE+"-_."},HAS_NATIVE_SUPPORT:typeof atob==="function",
+/**
+     * Base64-encode an array of bytes.
+     *
+     * @param input An array of bytes (numbers with
+     *     value in [0, 255]) to encode.
+     * @param webSafe Boolean indicating we should use the
+     *     alternative alphabet.
+     * @return The base64 encoded string.
+     */
+encodeByteArray(t,e){if(!Array.isArray(t))throw Error("encodeByteArray takes an array as a parameter");this.init_();const n=e?this.byteToCharMapWebSafe_:this.byteToCharMap_;const r=[];for(let e=0;e<t.length;e+=3){const o=t[e];const s=e+1<t.length;const i=s?t[e+1]:0;const c=e+2<t.length;const a=c?t[e+2]:0;const u=o>>2;const h=(o&3)<<4|i>>4;let f=(i&15)<<2|a>>6;let l=a&63;if(!c){l=64;s||(f=64)}r.push(n[u],n[h],n[f],n[l])}return r.join("")},
+/**
+     * Base64-encode a string.
+     *
+     * @param input A string to encode.
+     * @param webSafe If true, we should use the
+     *     alternative alphabet.
+     * @return The base64 encoded string.
+     */
+encodeString(t,e){return this.HAS_NATIVE_SUPPORT&&!e?btoa(t):this.encodeByteArray(o(t),e)},
+/**
+     * Base64-decode a string.
+     *
+     * @param input to decode.
+     * @param webSafe True if we should use the
+     *     alternative alphabet.
+     * @return string representing the decoded value.
+     */
+decodeString(t,e){return this.HAS_NATIVE_SUPPORT&&!e?atob(
+
+--- vendor/javascript/canvg.js (truncated) ---
+// canvg@3.0.11 downloaded from https://unpkg.com/canvg@3.0.11/lib/index.es.js
+
+import 'core-js/modules/es.promise.js';
+import _asyncToGenerator from '@babel/runtime/helpers/asyncToGenerator';
+import 'core-js/modules/es.string.match.js';
+import 'core-js/modules/es.string.replace.js';
+import 'core-js/modules/es.string.starts-with.js';
+import 'core-js/modules/es.array.iterator.js';
+import 'core-js/modules/web.dom-collections.iterator.js';
+import _defineProperty from '@babel/runtime/helpers/defineProperty';
+import 'core-js/modules/es.array.reduce.js';
+import 'core-js/modules/es.string.ends-with.js';
+import 'core-js/modules/es.string.split.js';
+import requestAnimationFrame from 'raf';
+import 'core-js/modules/es.string.trim.js';
+import RGBColor from 'rgbcolor';
+import 'core-js/modules/es.array.index-of.js';
+import 'core-js/modules/es.string.includes.js';
+import 'core-js/modules/es.array.reverse.js';
+import { SVGPathData } from 'svg-pathdata';
+import 'core-js/modules/es.regexp.to-string.js';
+import { canvasRGBA } from 'stackblur-canvas';
+
+/**
+ * Options preset for `OffscreenCanvas`.
+ * @param config - Preset requirements.
+ * @param config.DOMParser - XML/HTML parser from string into DOM Document.
+ * @returns Preset object.
+ */
+function offscreen() {
+  var {
+    DOMParser: DOMParserFallback
+  } = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var preset = {
+    window: null,
+    ignoreAnimation: true,
+    ignoreMouse: true,
+    DOMParser: DOMParserFallback,
+
+    createCanvas(width, height) {
+      return new OffscreenCanvas(width, height);
+    },
+
+    createImage(url) {
+      return _asyncToGenerator(function* () {
+        var response = yield fetch(url);
+        var blob = yield response.blob();
+        var img = yield createImageBitmap(blob);
+        return img;
+      })();
+    }
+
+  };
+
+  if (typeof DOMParser !== 'undefined' || typeof DOMParserFallback === 'undefined') {
+    Reflect.deleteProperty(preset, 'DOMParser');
+  }
+
+  return preset;
+}
+
+/**
+ * Options preset for `node-canvas`.
+ * @param config - Preset requirements.
+ * @param config.DOMParser - XML/HTML parser from string into DOM Document.
+ * @param config.canvas - `node-canvas` exports.
+ * @param config.fetch - WHATWG-compatible `fetch` function.
+ * @returns Preset object.
+ */
+function node(_ref) {
+  var {
+    DOMParser,
+    canvas,
+    fetch
+  } = _ref;
+  return {
+    window: null,
+    ignoreAnimation: true,
+    ignoreMouse: true,
+    DOMParser,
+    fetch,
+    createCanvas: canvas.createCanvas,
+    createImage: canvas.loadImage
+  };
+}
+
+var index = /*#__PURE__*/Object.freeze({
+	__proto__: null,
+	offscreen: offscreen,
+	node: node
+});
+
+/**
+ * HTML-safe compress white-spaces.
+ * @param str - String to compress.
+ * @returns String.
+ */
+function compressSpaces(str) {
+  return str.replace(/(?!\u3000)\s+/gm, ' ');
+}
+/**
+ * HTML-safe left trim.
+ * @param str - String to trim.
+ * @returns String.
+ */
+
+function trimLeft(str) {
+  return str.replace(/^[\n \t]+/, '');
+}
+/**
+ * HTML-safe right trim.
+ * @param str - String to trim.
+ * @returns String.
+ */
+
+function trimRight(str) {
+  return str.replace(/[\n \t]+$/, '');
+}
+/**
+ * String to numbers array.
+ * @param str - Numbers string.
+ * @returns Numbers array.
+ */
+
+function toNumbers(str) {
+  var matches = (str || '').match(/-?(\d+(?:\.\d*(?:[eE][+-]?\d+)?)?|\.\d+)(?=\D|$)/gm) || [];
+  return matches.map(parseFloat);
+} // Microsoft Edge fix
+
+var allUppercase = /^[A-Z-]+$/;
+/**
+ * Normalize attribute name.
+ * @param name - Attribute name.
+ * @returns Normalized attribute name.
+ */
+
+function normalizeAttributeName(name) {
+  if (allUppercase.test(name)) {
+    return name.toLowerCase();
+  }
+
+  return name;
+}
+/**
+ * Parse external URL.
+ * @param url - CSS url string.
+ * @returns Parsed URL.
+ */
+
+function parseExternalUrl(url) {
+  //                      single quotes [2]
+  //                      v         double quotes [3]
+  //                      v         v         no quotes [4]
+  //                      v         v         v
+  var urlMatch = /url\(('([^']+)'|"([^"]+)"|([^'")]+))\)/.exec(url) || [];
+  return urlMatch[2] || urlMatch[3] || urlMatch[4];
+}
+/**
+ * Transform floats to integers in rgb colors.
+ * @param color - Color to normalize.
+ * @returns Normalized color.
+ */
+
+function normalizeColor(color) {
+  if (!color.startsWith('rgb')) {
+    return color;
+  }
+
+  var rgbParts = 3;
+  var normalizedColor = color.replace(/\d+(\.\d+)?/g, (num, isFloat) => rgbParts-- && isFloat ? String(Math.round(parseFloat(num))) : num);
+  return normalizedColor;
+}
+
+// slightly modified version of https://github.com/keeganstreet/specificity/blob/master/specificity.js
+var attributeRegex = /(\[[^\]]+\])/g;
+var idRegex = /(#[^\s+>~.[:]+)/g;
+var classRegex = /(\.[^\s+>~.[:]+)/g;
+var pseudoElementRegex = /(::[^\s+>~.[:]+|:first-line|:first-letter|:before|:after)/gi;
+var pseudoClassWithBracketsRegex = /(:[\w-]+\([^)]*\))/gi;
+var pseudoClassRegex = /(:[^\s+>~.[:]+)/g;
+var eleme
+
+## Instructions
+
+Analyze the above codebase context and provide your response following the format specified in the task.

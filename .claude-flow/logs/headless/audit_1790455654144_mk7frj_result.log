@@ -1,0 +1,94 @@
+[2026-09-26T20:49:10.636Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "Now I'll compile the comprehensive security analysis report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 4,\n      \"description\": \"Hardcoded production API secrets in version control. The .env file contains multiple live/test API keys for Firebase, Paystack, Anthropic, Groq, Gemini, and Cloudinary. These should never be committed to the repository. Attackers can use these keys to impersonate the application and access external services.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 12,\n      \"description\": \"PDF.js worker loaded from external CDN without Subresource Integrity (SRI). URL 'https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs' lacks integrity attribute, vulnerable to CDN compromise, man-in-the-middle attacks, and supply chain attacks. Missing: integrity='...' attribute.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 27,\n      \"description\": \"No client-side file type validation before processing. Files are accepted and processed (PDF merge, split, image conversion) without validating MIME type, file extension, or maximum file size. Malicious files could cause denial of service through memory exhaustion or buffer overflows.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \".env\",\n      \"line\": 12,\n      \"description\": \"Test API keys exposed in repository. Paystack test keys (pk_test_* and sk_test_*) are visible in .env. While test credentials have limited impact, they should not be in version control as they reveal system architecture and could be used for testing exploits.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/views/admin/dashboard/index.html.erb\",\n      \"line\": 1,\n      \"description\": \"Use of 'raw' helper with JSON output. While the JSON serialization (to_json) provides some protection, the 'raw' usage bypasses Rails' HTML escaping. If the underlying data contains user-controlled content, this could enable XSS attacks.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"config/environments/production.rb\",\n      \"line\": 62,\n      \"description\": \"Hardcoded email address in production config. The SMTP user 'fremmanuel@shanahanef.org' is hardcoded in the source code. Email credentials should be stored as environment variables, not in config files.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 48,\n      \"description\": \"Error messages from Firebase displayed directly to users without sanitization. Firebase error messages could potentially leak sensitive information. Exception: Firebase errors are generally safe, but the pattern should use generic error messages instead.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 51,\n      \"description\": \"Unhandled promise rejections logged to console with console.error(). Error details leaked to browser console which may be viewed by users or captured in error tracking systems. Could reveal internal implementation details.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/theme_controller.js\",\n      \"line\": 8,\n      \"description\": \"localStorage usage without input validation. While theme preference is low-risk, stored values should be validated against a whitelist of allowed values to prevent prototype pollution or other storage-based attacks.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/mobile_menu_controller.js\",\n      \"line\": 6,\n      \"description\": \"Debug console.log() left in production code. 'console.log(\\\"Mobile menu controller connected!\\\")' should be removed from production builds to avoid logging controller lifecycle events.\"\n    }\n  ],\n  \"riskScore\": 72,\n  \"recommendations\": [\n    \"IMMEDIATE: Remove .env file from git history using git-filter-repo or BFG Repo-Cleaner. Add .env to .gitignore. Rotate all exposed API keys immediately (Firebase, Paystack, Groq, Gemini, Anthropic, Cloudinary).\",\n    \"Add Subresource Integrity (SRI) to all external resources. For PDF.js: use `integrity='sha384-...'` attribute and verify the hash matches the CDN-hosted version.\",\n    \"Implement client-side file validation: validate MIME types against whitelist, enforce maximum file size (e.g., 50MB), and reject suspicious files before processing.\",\n    \"Move all hardcoded credentials to environment variables: email address, SMTP keys, and any other sensitive configuration should use ENV.fetch() with no defaults.\",\n    \"Implement Content-Security-Policy (CSP) header in production.rb to restrict resource loading, disable inline scripts, and prevent data exfiltration.\",\n    \"Replace generic alert() calls with a proper error UI component. Sanitize error messages or use generic messages ('An error occurred, please try again').\",\n    \"Remove debug console logging (console.log, console.error) from production builds or gate behind a debug flag.\",\n    \"Add file format validation on the server-side as well: verify file headers (magic bytes), validate file structure after upload.\",\n    \"Implement rate limiting on file processing endpoints (/conversions) to prevent abuse and DoS attacks.\",\n    \"Add X-Frame-Options, X-Content-Type-Options, X-XSS-Protection headers in production.rb for additional XSS/MIME-sniffing protection.\",\n    \"Run 'npm audit' and 'bundle audit' regularly to identify vulnerable dependencies. Current scan shows potential issues with older versions.\",\n    \"Implement proper error tracking (e.g., Sentry) with PII masking to capture production errors without exposing user data.\",\n    \"Enable HSTS (Strict-Transport-Security) with includeSubDomains and preload directives in production configuration.\",\n    \"Audit Firebase security rules to ensure proper access control on any backend resources.\",\n    \"Validate that all API keys in ENV variables are restricted to only necessary scopes/permissions in their respective services.\"\n  ]\n}\n```\n\n---\n\n## Summary\n\n**Risk Score: 72/100** — The application has **critical vulnerabilities** primarily around secrets management.\n\n### Top Issues:\n1. **Critical**: Live API keys (Firebase, Paystack, Groq, Gemini, Anthropic, Cloudinary) exposed in `.env` file in version control\n2. **High**: PDF.js worker loaded from CDN without integrity verification — supply chain risk\n3. **High**: No file validation before processing — DoS/buffer overflow risk\n\n### Key Strengths:\n✅ CSRF protection enabled (Rails default)  \n✅ SSL enforced in production  \n✅ Authentication guards on sensitive endpoints  \n✅ No SQL injection vulnerabilities detected  \n✅ Proper use of parameterized queries  \n\n**Action Required**: Immediately rotate all exposed credentials and remove `.env` from git history. The codebase is otherwise reasonably secure but needs hardening for production deployment.\n",
+  "parsedOutput": {
+    "vulnerabilities": [
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 4,
+        "description": "Hardcoded production API secrets in version control. The .env file contains multiple live/test API keys for Firebase, Paystack, Anthropic, Groq, Gemini, and Cloudinary. These should never be committed to the repository. Attackers can use these keys to impersonate the application and access external services."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 12,
+        "description": "PDF.js worker loaded from external CDN without Subresource Integrity (SRI). URL 'https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs' lacks integrity attribute, vulnerable to CDN compromise, man-in-the-middle attacks, and supply chain attacks. Missing: integrity='...' attribute."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 27,
+        "description": "No client-side file type validation before processing. Files are accepted and processed (PDF merge, split, image conversion) without validating MIME type, file extension, or maximum file size. Malicious files could cause denial of service through memory exhaustion or buffer overflows."
+      },
+      {
+        "severity": "medium",
+        "file": ".env",
+        "line": 12,
+        "description": "Test API keys exposed in repository. Paystack test keys (pk_test_* and sk_test_*) are visible in .env. While test credentials have limited impact, they should not be in version control as they reveal system architecture and could be used for testing exploits."
+      },
+      {
+        "severity": "medium",
+        "file": "app/views/admin/dashboard/index.html.erb",
+        "line": 1,
+        "description": "Use of 'raw' helper with JSON output. While the JSON serialization (to_json) provides some protection, the 'raw' usage bypasses Rails' HTML escaping. If the underlying data contains user-controlled content, this could enable XSS attacks."
+      },
+      {
+        "severity": "medium",
+        "file": "config/environments/production.rb",
+        "line": 62,
+        "description": "Hardcoded email address in production config. The SMTP user 'fremmanuel@shanahanef.org' is hardcoded in the source code. Email credentials should be stored as environment variables, not in config files."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 48,
+        "description": "Error messages from Firebase displayed directly to users without sanitization. Firebase error messages could potentially leak sensitive information. Exception: Firebase errors are generally safe, but the pattern should use generic error messages instead."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 51,
+        "description": "Unhandled promise rejections logged to console with console.error(). Error details leaked to browser console which may be viewed by users or captured in error tracking systems. Could reveal internal implementation details."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/theme_controller.js",
+        "line": 8,
+        "description": "localStorage usage without input validation. While theme preference is low-risk, stored values should be validated against a whitelist of allowed values to prevent prototype pollution or other storage-based attacks."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/mobile_menu_controller.js",
+        "line": 6,
+        "description": "Debug console.log() left in production code. 'console.log(\"Mobile menu controller connected!\")' should be removed from production builds to avoid logging controller lifecycle events."
+      }
+    ],
+    "riskScore": 72,
+    "recommendations": [
+      "IMMEDIATE: Remove .env file from git history using git-filter-repo or BFG Repo-Cleaner. Add .env to .gitignore. Rotate all exposed API keys immediately (Firebase, Paystack, Groq, Gemini, Anthropic, Cloudinary).",
+      "Add Subresource Integrity (SRI) to all external resources. For PDF.js: use `integrity='sha384-...'` attribute and verify the hash matches the CDN-hosted version.",
+      "Implement client-side file validation: validate MIME types against whitelist, enforce maximum file size (e.g., 50MB), and reject suspicious files before processing.",
+      "Move all hardcoded credentials to environment variables: email address, SMTP keys, and any other sensitive configuration should use ENV.fetch() with no defaults.",
+      "Implement Content-Security-Policy (CSP) header in production.rb to restrict resource loading, disable inline scripts, and prevent data exfiltration.",
+      "Replace generic alert() calls with a proper error UI component. Sanitize error messages or use generic messages ('An error occurred, please try again').",
+      "Remove debug console logging (console.log, console.error) from production builds or gate behind a debug flag.",
+      "Add file format validation on the server-side as well: verify file headers (magic bytes), validate file structure after upload.",
+      "Implement rate limiting on file processing endpoints (/conversions) to prevent abuse and DoS attacks.",
+      "Add X-Frame-Options, X-Content-Type-Options, X-XSS-Protection headers in production.rb for additional XSS/MIME-sniffing protection.",
+      "Run 'npm audit' and 'bundle audit' regularly to identify vulnerable dependencies. Current scan shows potential issues with older versions.",
+      "Implement proper error tracking (e.g., Sentry) with PII masking to capture production errors without exposing user data.",
+      "Enable HSTS (Strict-Transport-Security) with includeSubDomains and preload directives in production configuration.",
+      "Audit Firebase security rules to ensure proper access control on any backend resources.",
+      "Validate that all API keys in ENV variables are restricted to only necessary scopes/permissions in their respective services."
+    ]
+  },
+  "durationMs": 96492,
+  "model": "haiku",
+  "sandboxMode": "strict",
+  "workerType": "audit",
+  "timestamp": "2026-09-26T20:49:10.636Z",
+  "executionId": "audit_1790455654144_mk7frj"
+}

@@ -1,24 +1,22 @@
 require 'rails_helper'
 
+# Integration smoke test of the real server-side upload -> validate -> enqueue
+# path. Uses a server-side tool (Compress PDF) and the rack_test driver so it
+# runs without a browser and does not exercise the client-side JS interception.
 RSpec.describe "File Uploads", type: :system do
-  let(:user) { User.create!(email: "test_upload@example.com", password: "password") }
+  let(:user) { create(:user, confirmed_at: Time.current) }
 
-  before do
-    driven_by(:selenium_chrome_headless)
-    sign_in user
-  end
+  before { sign_in user }
 
-  it "successfully submits the tool form" do
-    visit tool_path("Tools::MergePdf")
-    
-    # Create the dummy file
-    File.write('tmp/test_upload.pdf', "%PDF-1.4 dummy content")
-    
-    attach_file('files[]', 'tmp/test_upload.pdf', make_visible: true)
-    
+  it "accepts a valid upload and redirects to the processing page" do
+    visit tool_path("compress_pdf")
+
+    path = Rails.root.join("tmp", "test_upload.pdf")
+    File.binwrite(path, "%PDF-1.4\n% valid enough for signature detection\n" + ("0" * 200))
+
+    attach_file "file_input", path.to_s
     click_button "Process Document"
-    
-    # Check if we were redirected to the processing page or an error page
-    expect(page).to have_content("Your files are being processed")
+
+    expect(page).to have_content("being processed")
   end
 end

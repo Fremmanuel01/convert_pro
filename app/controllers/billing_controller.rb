@@ -16,7 +16,8 @@ class BillingController < ApplicationController
   rescue PaystackService::ConfigurationError
     redirect_to upgrade_billing_path, alert: "Payment system not configured yet."
   rescue StandardError => e
-    redirect_to upgrade_billing_path, alert: "Paystack API Rejected Request: #{e.message}"
+    Rails.logger.error("Billing create_subscription failed for user #{current_user&.id}: #{e.message}")
+    redirect_to upgrade_billing_path, alert: "Unable to start checkout right now. Please try again in a moment."
   end
 
   def callback

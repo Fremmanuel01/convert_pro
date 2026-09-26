@@ -2,11 +2,14 @@ require 'rails_helper'
 
 RSpec.describe Tools::BaseTool do
   class DummyTool < Tools::BaseTool
+    # Must exceed BaseTool's 100-byte empty-output guard.
+    CONTENT = ("Processed content. " * 8).freeze
+
     protected
 
     def process(input_paths)
       output_path = tmp_path("test_output.txt")
-      File.write(output_path, "Processed content")
+      File.write(output_path, CONTENT)
       output_path
     end
   end
@@ -39,7 +42,7 @@ RSpec.describe Tools::BaseTool do
       expect(conversion.status).to eq("completed")
       expect(conversion.processing_time).to be > 0.0
       expect(conversion.output_file).to be_attached
-      expect(conversion.output_file.download).to eq("Processed content")
+      expect(conversion.output_file.download).to eq(DummyTool::CONTENT)
     end
 
     it "handles failures safely" do
