@@ -262,4 +262,4 @@ _Added 2026-09-28. The baseline findings above are unchanged; this section recor
 - **Unsafe reflection removed:** `ToolJob` uses a name→class lookup instead of `constantize` on a stored attribute.
 
 ## Still open (tracked for later sprints)
-Redact naming; progress UI; billing portal / cancellation; AI-egress disclosure copy; analytics reporting UI; residual non-High dependency advisories; the lifetime-vs-periodic free-cap decision; unused `GEMINI_API_KEY`.
+Redact naming; progress UI; billing portal / cancellation; AI-egress disclosure copy; analytics reporting UI; the lifetime-vs-periodic free-cap decision; unused `GEMINI_API_KEY`.

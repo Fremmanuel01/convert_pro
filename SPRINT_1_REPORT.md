@@ -105,7 +105,7 @@ Reproducible from a clean checkout: `bin/rails db:prepare && RAILS_ENV=test bin/
 
 **Brakeman 8.0.6:** `Security Warnings: 0` (7 findings ignored via `config/brakeman.ignore`, each documented — all are `Open3.capture3(*argv)` argv-form shell-outs with no shell interpretation; the previously-flagged `constantize` RCE was eliminated in code).
 
-**bundler-audit:** **0 High-severity** advisories after patching. A number of lower-severity (Medium/Low/Unknown) advisories remain only where the fix is a not-yet-released or out-of-constraint dependency bump; none is High. Re-run: `bundle exec bundler-audit check --update`.
+**bundler-audit:** **No vulnerabilities found** after patching (0 advisories at any severity). Re-run: `bundle exec bundler-audit check --update`.
 
 ---
 
