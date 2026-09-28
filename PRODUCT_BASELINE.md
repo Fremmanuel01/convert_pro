@@ -287,3 +287,24 @@ _Added 2026-09-28. Original baseline and Sprint 1 history above are unchanged. S
 
 ## Still open (tracked for Sprint 3)
 Tool-page monolith not yet migrated onto the reusable uploader; no file hand-off/workflow chaining; Turbo not adopted; auth pages not redesigned; analytics reporting UI; lifetime-vs-periodic free-cap decision; in-app billing cancellation (from Sprint 1).
+
+---
+
+# Sprint 2.5 Implementation Status
+
+_Added 2026-09-28. Original baseline + Sprint 1/2 history above unchanged. Sprint 2.5 = Design & Conversion System. Full detail in `SPRINT_2_5_REPORT.md`._
+
+**Verification:** suite **107 examples, 0 failures**; Brakeman **0 warnings**; bundler-audit **clean**; funnel surfaces boot 200.
+
+## What changed
+- **Design system** (`@layer components`: `odt-btn/card/input/badge/meter/eyebrow` + restrained motion) replaces per-page ad-hoc styling. De-slopped homepage (removed orbit/shimmer/float/marquee) and dashboard (removed glassmorphism/orbs).
+- **Homepage = conversion funnel:** upload-first hero → popular tasks → value → how-it-works → outcome-based Free/Pro → honest trust (+AI egress) → CTA.
+- **Pricing:** honest, outcome-based, config-driven; **removed dark patterns** ("Most Popular", "5 per day"); "No credit card required · cancel anytime" (test-enforced).
+- **Contextual upsell:** `LimitExceededError` carries a reason (size/quota/batch/ai); reusable `_upgrade_prompt`; upgrade page shows the specific reason — no generic modal everywhere.
+- **Result screen:** first-success respected; only a single quiet nudge at exactly 1 free conversion left.
+- **Dashboard:** quick-access tools + recent activity + honest usage meter + contextual prompt; no vanity charts.
+- **Config:** `BillingPlans` centralizes plan value/limits/upgrade-reasons (values stay config-driven).
+- **Research:** Mobbin-led (Vimeo/V7 upload-hero, Granola/Current free-vs-pro, Bonsai success, Clerk/Toggl "no credit card"). Refero/Magic UI MCPs unavailable → motion hand-built; Higgsfield deliberately not used (product-as-hero + CWV/trust).
+
+## Still open (Sprint 3)
+`tools/show` monolith not migrated onto the reusable uploader/design system; no file hand-off/workflow chaining; auth pages not redesigned; in-app subscription cancellation; analytics reporting UI; lifetime-vs-periodic free-cap decision; optional Higgsfield explainer asset.

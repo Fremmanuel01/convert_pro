@@ -28,7 +28,7 @@ RSpec.describe ToolRunner do
       # Mock the size
       allow(pdf_file).to receive(:size).and_return(11.megabytes)
       runner = ToolRunner.new(free_user, 'compress_pdf', [pdf_file])
-      expect { runner.run! }.to raise_error(ToolRunner::LimitExceededError, /File size limit exceeded/)
+      expect { runner.run! }.to raise_error(ToolRunner::LimitExceededError, /larger than your 10 MB limit/)
     end
   end
 

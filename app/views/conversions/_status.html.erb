@@ -68,6 +68,14 @@
           </div>
         </div>
       <% end %>
+
+      <%# Gentle, non-aggressive nudge — only for a signed-in Free user with 1 conversion left.
+          The success screen is not an ad: one quiet line, dismissible by simply ignoring it. %>
+      <% if user_signed_in? && current_user.free? && (ConversionLimiter::FREE_LIMIT - current_user.conversions_count) == 1 %>
+        <p class="mt-5 pt-4 border-t border-emerald-200/60 dark:border-emerald-800/40 text-center text-xs text-slate-500 dark:text-slate-400">
+          You have 1 free conversion left. <%= link_to "See Pro", pricing_path, class: "font-semibold text-primary hover:underline" %> for unlimited.
+        </p>
+      <% end %>
     </div>
 
   <% elsif conversion.failed? %>

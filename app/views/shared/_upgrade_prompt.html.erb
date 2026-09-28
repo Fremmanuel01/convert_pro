@@ -1,0 +1,44 @@
+<%#
+  Contextual upgrade prompt. locals:
+    reason: quota | size | batch | ai (defaults to generic)
+    cycle:  monthly | yearly (default monthly)
+    compact: boolean (smaller inline variant)
+  Honest, outcome-based, no dark patterns. Reads value + price from config.
+%>
+<% info  = BillingPlans.upgrade_reason(local_assigns[:reason])
+   cycle = local_assigns.fetch(:cycle, "monthly")
+   price = BillingPlans.display_price(cycle)
+   period = BillingPlans.fetch(cycle)[:cycle]
+   compact = local_assigns.fetch(:compact, false) %>
+
+<div class="odt-card p-6 <%= "sm:p-8" unless compact %>">
+  <div class="flex items-start gap-4">
+    <div class="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+      <span class="material-symbols-outlined">workspace_premium</span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <h3 class="text-base font-bold text-slate-900 dark:text-white"><%= info[:title] %></h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1"><%= info[:body] %></p>
+
+      <% unless compact %>
+        <ul class="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+          <% BillingPlans.pro_features.first(4).each do |f| %>
+            <li class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <span class="material-symbols-outlined text-[18px] text-primary"><%= f[:icon] %></span>
+              <%= f[:text] %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+
+      <div class="mt-5 flex flex-wrap items-center gap-3">
+        <% upgrade_target = user_signed_in? ? upgrade_billing_path(plan: cycle) : new_user_registration_path %>
+        <%= link_to upgrade_target, class: "odt-btn odt-btn--primary" do %>
+          <span class="material-symbols-outlined text-[18px]">bolt</span>
+          <%= user_signed_in? ? "Upgrade to Pro" : "Create account & upgrade" %>
+        <% end %>
+        <span class="text-sm text-slate-500 dark:text-slate-400"><%= price %>/<%= period %> · cancel anytime</span>
+      </div>
+    </div>
+  </div>
+</div>

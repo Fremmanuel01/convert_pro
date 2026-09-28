@@ -1,32 +1,48 @@
-<div class="w-full flex items-center justify-center min-h-[70vh] px-6">
-  <div class="glow-border w-full max-w-lg p-8 sm:p-12 rounded-3xl border border-primary/30 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md shadow-2xl relative text-center">
-    
-    <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gradient-to-tr from-amber-400 to-orange-500 p-4 rounded-2xl shadow-xl shadow-orange-500/30 text-white">
-      <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
-    </div>
+<div class="w-full flex items-center justify-center min-h-[70vh] px-6 py-10">
+  <div class="w-full max-w-lg">
+    <% cycle = params[:plan] == 'yearly' ? 'yearly' : 'monthly'
+       price = "#{BillingPlans.display_price(cycle)}/#{BillingPlans.fetch(cycle)[:cycle]}" %>
 
-    <div class="mt-8 mb-8">
-      <% cycle = params[:plan] == 'yearly' ? 'yearly' : 'monthly' %>
-      <% plan_type = cycle.capitalize %>
-      <% price = "#{BillingPlans.display_price(cycle)}/#{BillingPlans.fetch(cycle)[:cycle]}" %>
-      
-      <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white mb-4">Upgrade to Pro</h2>
-      <p class="text-base text-slate-500 dark:text-slate-400">
-        You are about to subscribe to the <strong class="text-slate-900 dark:text-white">OfficedocTools Pro <%= plan_type %> Plan</strong>. 
-        You will be billed <span class="font-bold text-emerald-500"><%= price %></span>. Upgrade to unlock unlimited file conversions, batch processing, and priority support.
+    <% if params[:reason].present? %>
+      <div class="mb-6">
+        <%= render "shared/upgrade_prompt", reason: params[:reason], cycle: cycle, compact: true %>
+      </div>
+    <% end %>
+
+    <div class="odt-card p-8 sm:p-10">
+      <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
+        <span class="material-symbols-outlined text-2xl" style="font-variation-settings:'FILL' 1;">workspace_premium</span>
+      </div>
+
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
+        OfficeDocTools Pro — <%= cycle.capitalize %>
+      </h1>
+      <p class="text-slate-500 dark:text-slate-400 mb-6">
+        You'll be billed <span class="font-semibold text-slate-900 dark:text-white"><%= price %></span>. Cancel anytime.
       </p>
-    </div>
 
-    <div class="space-y-4">
-      <%= button_to "Proceed to Paystack Checkout", create_subscription_billing_path(plan: params[:plan] == 'yearly' ? 'yearly' : 'monthly'), class: "w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-xl shadow-lg transition-all hover:-translate-y-1 focus:ring-4 focus:ring-slate-900/20 dark:focus:ring-white/20", data: { turbo: false } %>
-      
-      <%= link_to "Nevermind, go back", pricing_path, class: "inline-block text-sm font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors py-2" %>
-    </div>
+      <ul class="space-y-2.5 mb-8">
+        <% BillingPlans.pro_features.each do |f| %>
+          <li class="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+            <span class="material-symbols-outlined text-[20px] text-primary"><%= f[:icon] %></span>
+            <%= f[:text] %>
+          </li>
+        <% end %>
+      </ul>
 
-    <!-- Security Badge -->
-    <div class="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400 font-medium">
-      <span class="material-symbols-outlined text-[16px]">lock</span>
-      Secure checkout powered by Paystack
+      <%= button_to create_subscription_billing_path(plan: cycle),
+            class: "odt-btn odt-btn--primary odt-btn--lg odt-btn--block", data: { turbo: false } do %>
+        <span class="material-symbols-outlined text-[20px]">lock</span>
+        Continue to secure checkout
+      <% end %>
+
+      <div class="mt-4 flex items-center justify-between">
+        <%= link_to "Back to plans", pricing_path, class: "text-sm font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" %>
+        <span class="inline-flex items-center gap-1.5 text-xs text-slate-400">
+          <span class="material-symbols-outlined text-[15px]">verified_user</span>
+          Powered by Paystack
+        </span>
+      </div>
     </div>
   </div>
 </div>

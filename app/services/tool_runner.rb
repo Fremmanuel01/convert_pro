@@ -1,6 +1,15 @@
 class ToolRunner
   class InvalidRequestError < StandardError; end
-  class LimitExceededError < StandardError; end
+
+  # Carries a `reason` (quota / size / batch / ai) so the UI can show a
+  # contextual upgrade prompt instead of a generic one.
+  class LimitExceededError < StandardError
+    attr_reader :reason
+    def initialize(message, reason: "quota")
+      super(message)
+      @reason = reason
+    end
+  end
 
   # Marcel sometimes reports the container/base type rather than the specific
   # office format (OOXML files are zips; legacy Office files are OLE compound
@@ -122,7 +131,7 @@ class ToolRunner
     max_mb = AppLimits.max_upload_mb(@user)
     total_size = @uploaded_files.sum(&:size)
     if total_size > max_mb.megabytes
-      raise LimitExceededError, "File size limit exceeded. Your plan limit is #{max_mb}MB."
+      raise LimitExceededError.new("This file is larger than your #{max_mb} MB limit.", reason: "size")
     end
   end
 

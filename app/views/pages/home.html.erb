@@ -9,116 +9,25 @@
 <% end %>
 
 <style>
-  @keyframes floatA {
-    0%,100% { transform: translateY(0px) rotate(-1.5deg); }
-    50%      { transform: translateY(-18px) rotate(1.5deg); }
-  }
-  @keyframes floatB {
-    0%,100% { transform: translateY(0px) rotate(1deg); }
-    50%      { transform: translateY(-14px) rotate(-1deg); }
-  }
-  @keyframes floatC {
-    0%,100% { transform: translateY(0px); }
-    50%      { transform: translateY(-20px); }
-  }
-  @keyframes floatD {
-    0%,100% { transform: translateY(0px) rotate(2deg); }
-    50%      { transform: translateY(-10px) rotate(-2deg); }
-  }
-  @keyframes slideUp {
-    from { opacity:0; transform:translateY(48px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
-  @keyframes scaleIn {
-    from { opacity:0; transform:scale(0.88); }
-    to   { opacity:1; transform:scale(1); }
-  }
-  @keyframes shimmerText {
-    from { background-position: -200% center; }
-    to   { background-position:  200% center; }
-  }
-  @keyframes marqueeScroll {
-    from { transform:translateX(0); }
-    to   { transform:translateX(-50%); }
-  }
-  @keyframes scanLine {
-    0%   { top:-4px; opacity:.8; }
-    100% { top:110%; opacity:0; }
-  }
-  @keyframes ringExpand {
-    0%   { transform:scale(1);   opacity:.45; }
-    100% { transform:scale(2);   opacity:0; }
-  }
-  @keyframes orbitSpin {
-    from { transform:rotate(0deg); }
-    to   { transform:rotate(360deg); }
-  }
-
-  .fa { animation: floatA 7s ease-in-out infinite; }
-  .fb { animation: floatB 9s ease-in-out infinite; }
-  .fc { animation: floatC 11s ease-in-out infinite; }
-  .fd { animation: floatD 8s ease-in-out infinite 2.5s; }
-
-  .d1 { animation: slideUp .75s cubic-bezier(.22,1,.36,1) .05s both; }
-  .d2 { animation: slideUp .75s cubic-bezier(.22,1,.36,1) .18s both; }
-  .d3 { animation: slideUp .75s cubic-bezier(.22,1,.36,1) .32s both; }
-  .d4 { animation: slideUp .75s cubic-bezier(.22,1,.36,1) .46s both; }
-  .d5 { animation: scaleIn .8s  cubic-bezier(.22,1,.36,1) .62s both; }
-
-  .shimmer-text {
-    background: linear-gradient(90deg,
-      #1f3dff 0%, #0ea5e9 20%, #10b981 40%, #f59e0b 60%, #ef6c00 80%, #1f3dff 100%);
-    background-size: 250% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: shimmerText 5s linear infinite;
-  }
-
-  .marquee-wrap { animation: marqueeScroll 32s linear infinite; }
-  .marquee-wrap:hover { animation-play-state: paused; }
-
-  .scan-fx {
-    position:absolute; left:0; right:0; height:3px;
-    background: linear-gradient(90deg, transparent 0%, #1f3dff 35%, #0ea5e9 65%, transparent 100%);
-    animation: scanLine 3.5s ease-in-out infinite;
-    border-radius: 999px;
-  }
-
-  .ring-a { animation: ringExpand 2.8s ease-out infinite; }
-  .ring-b { animation: ringExpand 2.8s ease-out .9s infinite; }
-
-  .card-lift {
-    transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease;
-  }
-  .card-lift:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 28px 55px -14px rgba(31,61,255,.2);
-  }
-
-  .reveal {
-    opacity:0; transform:translateY(36px);
-    transition: opacity .7s ease, transform .7s ease;
-  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes scaleIn { from { opacity:0; transform:scale(.94); } to { opacity:1; transform:scale(1); } }
+  .d1 { animation: slideUp .6s cubic-bezier(.22,1,.36,1) .04s both; }
+  .d2 { animation: slideUp .6s cubic-bezier(.22,1,.36,1) .12s both; }
+  .d3 { animation: slideUp .6s cubic-bezier(.22,1,.36,1) .20s both; }
+  .d4 { animation: slideUp .6s cubic-bezier(.22,1,.36,1) .28s both; }
+  .d5 { animation: scaleIn .6s cubic-bezier(.22,1,.36,1) .30s both; }
+  .reveal { opacity:0; transform:translateY(24px); transition: opacity .6s ease, transform .6s ease; }
   .reveal.in { opacity:1; transform:translateY(0); }
-
-  .orbit-ring {
-    background: conic-gradient(from 0deg, #1f3dff, #0ea5e9, #10b981, #f59e0b, #ef6c00, #1f3dff);
-    border-radius: 9999px;
-    animation: orbitSpin 12s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    .d1,.d2,.d3,.d4,.d5 { animation: none; }
+    .reveal { opacity:1; transform:none; transition:none; }
   }
 </style>
 
 <!-- ══════════════════ HERO ══════════════════ -->
-<section class="relative w-full min-h-[calc(100vh-4.5rem)] flex items-center overflow-hidden">
+<section id="top" class="relative w-full min-h-[calc(100vh-4.5rem)] flex items-center overflow-hidden" style="scroll-margin-top:5rem;">
   <div class="absolute inset-0 -z-10 overflow-hidden">
-    <div class="absolute -top-40 -left-40 w-[720px] h-[720px] rounded-full"
-         style="background:radial-gradient(circle,rgba(31,61,255,.11) 0%,transparent 68%);"></div>
-    <div class="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full"
-         style="background:radial-gradient(circle,rgba(245,158,11,.08) 0%,transparent 68%);"></div>
-    <div class="absolute top-1/2 left-[55%] w-[360px] h-[360px] rounded-full"
-         style="background:radial-gradient(circle,rgba(14,165,233,.06) 0%,transparent 68%);"></div>
-    <div class="absolute inset-0 dark:opacity-[.05] opacity-[.035]"
+    <div class="absolute inset-0 dark:opacity-[.05] opacity-[.03]"
          style="background-image:radial-gradient(circle,#1f3dff 1px,transparent 1px);background-size:44px 44px;"></div>
   </div>
 
@@ -179,204 +88,162 @@
   </div>
 </section>
 
-<!-- ══════════════════ MARQUEE STRIP ══════════════════ -->
-<div class="relative w-full overflow-hidden py-3.5 border-y border-slate-200"
-     style="background:#ffffff;">
-  <div class="flex">
-    <% strip_tools = [
-      {icon:"picture_as_pdf",label:"PDF to Word",    c:"#EF4444"},
-      {icon:"description",   label:"Word to PDF",    c:"#1E88E5"},
-      {icon:"table_chart",   label:"Excel to PDF",   c:"#43A047"},
-      {icon:"slideshow",     label:"PPT to PDF",     c:"#EF6C00"},
-      {icon:"compress",      label:"Compress PDF",   c:"#1f3dff"},
-      {icon:"call_merge",    label:"Merge PDF",      c:"#6366f1"},
-      {icon:"content_cut",   label:"Split PDF",      c:"#8b5cf6"},
-      {icon:"lock",          label:"Protect PDF",    c:"#EF4444"},
-      {icon:"rotate_right",  label:"Rotate PDF",     c:"#0ea5e9"},
-      {icon:"find_in_page",  label:"OCR PDF",        c:"#10b981"},
-      {icon:"water_drop",    label:"Watermark PDF",  c:"#F59E0B"},
-      {icon:"photo_camera",  label:"HEIC to JPG",    c:"#EC4899"},
-      {icon:"image",         label:"JPG to PNG",     c:"#06B6D4"},
-      {icon:"burst_mode",    label:"PDF to Images",  c:"#8b5cf6"},
-    ] %>
-    <% 2.times do %>
-      <div class="marquee-wrap flex items-center flex-shrink-0">
-        <% strip_tools.each do |t| %>
-          <div class="inline-flex items-center gap-2.5 px-7 py-1 flex-shrink-0">
-            <span class="material-symbols-outlined text-xl" style="color:<%= t[:c] %>;"><%= t[:icon] %></span>
-            <span class="text-sm font-semibold whitespace-nowrap" style="color:#1f3dff;"><%= t[:label] %></span>
-            <span class="ml-3" style="color:#1f3dff;opacity:0.3;">·</span>
-          </div>
-        <% end %>
-      </div>
+<!-- ══════════════════ POPULAR TASKS ══════════════════ -->
+<section class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 max-w-7xl mx-auto w-full">
+  <div class="flex items-end justify-between mb-8 reveal">
+    <div>
+      <span class="odt-eyebrow mb-2">Popular tasks</span>
+      <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Start with a common job</h2>
+    </div>
+    <a href="/tools" class="hidden sm:inline-flex odt-btn odt-btn--ghost">All 28 tools →</a>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <% [
+      { id:"compress_pdf", icon:"compress",      name:"Compress PDF",  desc:"Shrink file size" },
+      { id:"pdf_to_docx",  icon:"description",   name:"PDF to Word",   desc:"Editable document" },
+      { id:"merge_pdf",    icon:"call_merge",    name:"Merge PDF",     desc:"Combine into one" },
+      { id:"docx_to_pdf",  icon:"picture_as_pdf",name:"Word to PDF",   desc:"Share-ready PDF" },
+      { id:"images_to_pdf",icon:"photo_library", name:"Images to PDF", desc:"Photos into a PDF" },
+      { id:"ocr_pdf",      icon:"document_scanner",name:"OCR PDF",     desc:"Make it searchable" },
+      { id:"heic_to_jpg",  icon:"photo_camera",  name:"HEIC to JPG",   desc:"iPhone photos" },
+      { id:"split_pdf",    icon:"content_cut",   name:"Split PDF",     desc:"Extract pages" },
+    ].each do |t| %>
+      <a href="/tools/<%= t[:id] %>?from=home" class="odt-card p-4 flex items-center gap-3 hover:border-primary/40 transition-colors no-underline group">
+        <span class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-[22px]"><%= t[:icon] %></span>
+        </span>
+        <span class="min-w-0">
+          <span class="block text-sm font-bold text-slate-900 dark:text-white truncate"><%= t[:name] %></span>
+          <span class="block text-xs text-slate-400 truncate"><%= t[:desc] %></span>
+        </span>
+      </a>
     <% end %>
   </div>
-</div>
+  <a href="/tools" class="sm:hidden mt-5 odt-btn odt-btn--secondary odt-btn--block">See all 28 tools</a>
+</section>
+
+<!-- ══════════════════ VALUE ══════════════════ -->
+<section class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 bg-white dark:bg-slate-900/40 border-y border-slate-200 dark:border-slate-800">
+  <div class="max-w-5xl mx-auto text-center reveal">
+    <span class="odt-eyebrow mb-3">One workspace</span>
+    <h2 class="text-2xl lg:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+      One place for every document task
+    </h2>
+    <p class="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12">
+      Stop hunting for a different website for each job. Convert, compress, merge, protect and OCR —
+      then move straight to the next step without re-uploading.
+    </p>
+    <div class="grid sm:grid-cols-3 gap-6 text-left">
+      <% [
+        { icon:"apps",         t:"Every format in one tab", d:"PDF, Word, Excel, PowerPoint and images — no switching sites." },
+        { icon:"account_tree", t:"Connected steps",         d:"Finish a conversion and we suggest the sensible next action." },
+        { icon:"lock",         t:"Handled with care",       d:"Encrypted transfer, server-side checks, files deleted after processing." },
+      ].each do |v| %>
+        <div class="reveal">
+          <span class="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-[24px]"><%= v[:icon] %></span>
+          </span>
+          <h3 class="font-bold text-slate-900 dark:text-white mb-1.5"><%= v[:t] %></h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><%= v[:d] %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</section>
 
 <!-- ══════════════════ HOW IT WORKS ══════════════════ -->
-<section class="py-20 lg:py-28 px-6 lg:px-16 xl:px-20 max-w-7xl mx-auto w-full">
-  <div class="text-center mb-16 reveal">
-    <span class="text-xs font-bold uppercase tracking-widest mb-3 block" style="color:#1f3dff;">Simple Process</span>
-    <h2 class="text-3xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">Convert in 3 easy steps</h2>
-    <p class="mt-4 text-slate-500 dark:text-slate-400 max-w-xl mx-auto">No account needed. Upload, convert, download. Done.</p>
+<section class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 max-w-5xl mx-auto w-full">
+  <div class="text-center mb-12 reveal">
+    <span class="odt-eyebrow mb-2">How it works</span>
+    <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Three steps, a few seconds</h2>
   </div>
-
-  <div class="grid md:grid-cols-3 gap-6 relative">
-    <div class="hidden md:block absolute top-[50px] left-[calc(33.33%+1rem)] right-[calc(33.33%+1rem)] h-px"
-         style="background:linear-gradient(90deg,#1f3dff,#0ea5e9,#10b981);"></div>
+  <div class="grid md:grid-cols-3 gap-5">
     <% [
-      {n:"01",icon:"upload_file", g1:"#1f3dff",g2:"#0ea5e9",
-       t:"Upload Your File",   d:"Drag & drop or click to select. Supports PDF, Word, Excel, PowerPoint, JPG, PNG, HEIC, and WebP files."},
-      {n:"02",icon:"tune",        g1:"#0ea5e9", g2:"#10b981",
-       t:"Choose Settings",    d:"Pick your output format and configure optional settings like quality, page size, or orientation."},
-      {n:"03",icon:"download",    g1:"#10b981", g2:"#f59e0b",
-       t:"Download Instantly", d:"Your file is ready in seconds. Download directly — all files are automatically deleted after processing."},
-    ].each_with_index do |s,i| %>
-      <div class="reveal flex flex-col items-center text-center p-8 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative z-10"
-           style="transition-delay:<%= i*0.12 %>s;">
-        <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center mb-5 shadow-lg"
-             style="background:linear-gradient(135deg,<%= s[:g1] %>,<%= s[:g2] %>);">
-          <span class="material-symbols-outlined text-2xl text-white"><%= s[:icon] %></span>
+      { n:"1", icon:"upload_file", t:"Add your file", d:"Drop it in or pick from your device. We check the type before anything runs." },
+      { n:"2", icon:"tune",        t:"Choose options", d:"Set output format, quality or page range where it applies. Sensible defaults otherwise." },
+      { n:"3", icon:"download",    t:"Download",       d:"Your result is ready in seconds, then deleted after processing." },
+    ].each do |s| %>
+      <div class="odt-card p-6 reveal">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="size-8 rounded-lg bg-primary text-white text-sm font-bold flex items-center justify-center"><%= s[:n] %></span>
+          <span class="material-symbols-outlined text-primary"><%= s[:icon] %></span>
         </div>
-        <div class="text-xs font-black tracking-widest mb-2" style="color:rgba(31,61,255,.4);"><%= s[:n] %></div>
-        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2.5"><%= s[:t] %></h3>
+        <h3 class="font-bold text-slate-900 dark:text-white mb-1.5"><%= s[:t] %></h3>
         <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><%= s[:d] %></p>
       </div>
     <% end %>
   </div>
 </section>
 
-<!-- ══════════════════ ALL TOOLS ══════════════════ -->
-<section id="tools" class="py-20 lg:py-28 px-6 lg:px-16 xl:px-20"
-         style="background:#ffffff;">
-  <div class="max-w-7xl mx-auto">
-    <div class="text-center mb-16 reveal">
-      <span class="text-xs font-bold uppercase tracking-widest mb-3 block" style="color:#1f3dff;">All Tools</span>
-      <h2 class="text-3xl lg:text-5xl font-black text-slate-900 tracking-tight">
-        Everything for documents<br class="hidden sm:block">& images
-      </h2>
-      <p class="mt-4 text-slate-500 max-w-xl mx-auto">28 professional tools across four categories. Fast, precise, and completely free.</p>
+<!-- ══════════════════ FREE VS PRO (outcome-based) ══════════════════ -->
+<section id="pricing-preview" class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 max-w-4xl mx-auto w-full">
+  <div class="text-center mb-10 reveal">
+    <span class="odt-eyebrow mb-2">Free &amp; Pro</span>
+    <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Free to try. Pro when it's part of your day.</h2>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5 reveal">
+    <div class="odt-card p-6">
+      <h3 class="font-bold text-slate-900 dark:text-white mb-3">Free</h3>
+      <ul class="space-y-2.5">
+        <% BillingPlans.free_features.each do |f| %>
+          <li class="flex items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+            <span class="material-symbols-outlined text-[18px] text-slate-400"><%= f[:icon] %></span><%= f[:text] %>
+          </li>
+        <% end %>
+      </ul>
     </div>
-
-    <% [
-      { label:"PDF Tools", lc:"#1f3dff", tools:[
-          {id:"merge_pdf",     ic:"call_merge",   bg:"rgba(31,61,255,.09)",  cl:"#1f3dff",  t:"Merge PDF",      d:"Combine multiple PDFs into one"},
-          {id:"split_pdf",     ic:"content_cut",  bg:"rgba(139,92,246,.09)", cl:"#8b5cf6",  t:"Split PDF",      d:"Extract pages into separate files"},
-          {id:"compress_pdf",  ic:"compress",     bg:"rgba(31,61,255,.09)",  cl:"#1f3dff",  t:"Compress PDF",   d:"Reduce file size, keep quality"},
-          {id:"rotate_pdf",    ic:"rotate_right", bg:"rgba(14,165,233,.09)", cl:"#0ea5e9",  t:"Rotate PDF",     d:"Rotate pages 90°, 180°, or 270°"},
-          {id:"watermark_pdf", ic:"water_drop",   bg:"rgba(245,158,11,.09)", cl:"#f59e0b",  t:"Watermark PDF",  d:"Add custom text watermark"},
-          {id:"protect_pdf",   ic:"lock",         bg:"rgba(239,68,68,.09)",  cl:"#ef4444",  t:"Protect PDF",    d:"Encrypt with password"},
-          {id:"unlock_pdf",    ic:"lock_open",    bg:"rgba(245,158,11,.09)", cl:"#f59e0b",  t:"Unlock PDF",     d:"Remove password from PDF"},
-          {id:"ocr_pdf",       ic:"find_in_page", bg:"rgba(16,185,129,.09)", cl:"#10b981",  t:"OCR PDF",        d:"Make scanned PDFs searchable"},
-          {id:"redact_pdf",    ic:"hide_source",  bg:"rgba(100,116,139,.09)",cl:"#64748b",  t:"Redact PDF",     d:"Strip hidden metadata layers"},
-        ]},
-      { label:"Document Conversion", lc:"#1E88E5", tools:[
-          {id:"docx_to_pdf",      ic:"description",    bg:"rgba(30,136,229,.09)",  cl:"#1E88E5", t:"Word to PDF",        d:"Convert .docx and .doc to PDF"},
-          {id:"xlsx_to_pdf",      ic:"table_chart",    bg:"rgba(67,160,71,.09)",   cl:"#43A047", t:"Excel to PDF",       d:"Convert spreadsheets to PDF"},
-          {id:"pptx_to_pdf",      ic:"slideshow",      bg:"rgba(239,108,0,.09)",   cl:"#EF6C00", t:"PowerPoint to PDF",  d:"Convert presentations to PDF"},
-          {id:"pdf_to_docx",      ic:"picture_as_pdf", bg:"rgba(239,68,68,.09)",   cl:"#ef4444", t:"PDF to Word",        d:"Convert PDF to editable Word"},
-          {id:"pdf_to_images",    ic:"burst_mode",     bg:"rgba(139,92,246,.09)",  cl:"#8b5cf6", t:"PDF to Images",      d:"Extract every page as JPG or PNG"},
-          {id:"pdf_to_text",      ic:"text_snippet",   bg:"rgba(100,116,139,.09)", cl:"#64748b", t:"PDF to Text",        d:"Extract plain text content"},
-          {id:"images_to_pdf",    ic:"photo_library",  bg:"rgba(236,72,153,.09)",  cl:"#ec4899", t:"Images to PDF",      d:"Combine images into one PDF"},
-          {id:"webpage_to_pdf",   ic:"language",       bg:"rgba(20,184,166,.09)",  cl:"#14b8a6", t:"Webpage to PDF",     d:"Save any webpage as PDF"},
-          {id:"summarize_pdf",    ic:"summarize",      bg:"rgba(99,102,241,.09)",  cl:"#6366f1", t:"Summarize PDF",      d:"Get a concise document summary"},
-          {id:"ai_translate_pdf", ic:"translate",      bg:"rgba(14,165,233,.09)",  cl:"#0ea5e9", t:"Translate PDF",      d:"Translate to another language"},
-        ]},
-      { label:"Image Conversion", lc:"#EC4899", tools:[
-          {id:"jpg_to_png",  ic:"image",        bg:"rgba(6,182,212,.09)",   cl:"#06b6d4", t:"JPG to PNG",  d:"Convert JPEG to lossless PNG"},
-          {id:"png_to_jpg",  ic:"image",        bg:"rgba(245,158,11,.09)",  cl:"#f59e0b", t:"PNG to JPG",  d:"Convert PNG to compact JPEG"},
-          {id:"heic_to_jpg", ic:"photo_camera", bg:"rgba(236,72,153,.09)",  cl:"#ec4899", t:"HEIC to JPG", d:"Convert iPhone photos to JPG"},
-          {id:"heic_to_png", ic:"photo_camera", bg:"rgba(239,68,68,.09)",   cl:"#ef4444", t:"HEIC to PNG", d:"Convert iPhone HEIC to PNG"},
-          {id:"webp_to_jpg", ic:"broken_image", bg:"rgba(14,165,233,.09)",  cl:"#0ea5e9", t:"WebP to JPG", d:"Convert WebP images to JPEG"},
-          {id:"webp_to_png", ic:"broken_image", bg:"rgba(20,184,166,.09)",  cl:"#14b8a6", t:"WebP to PNG", d:"Convert WebP to PNG format"},
-        ]},
-      { label:"Generate Documents", lc:"#8b5cf6", tools:[
-          {id:"ai_generate_pptx", ic:"slideshow",     bg:"rgba(239,108,0,.09)",  cl:"#EF6C00", t:"Generate Presentation", d:"Create a PowerPoint from a prompt"},
-          {id:"ai_generate_docx", ic:"edit_document", bg:"rgba(30,136,229,.09)", cl:"#1E88E5", t:"Generate Document",     d:"Create a Word document from a prompt"},
-        ]},
-    ].each do |cat| %>
-      <div class="mb-12 reveal">
-        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-5 flex items-center gap-3">
-          <span class="w-7 h-0.5 rounded-full" style="background:<%= cat[:lc] %>;"></span>
-          <%= cat[:label] %>
-        </h3>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <% cat[:tools].each do |tool| %>
-            <a href="/tools/<%= tool[:id] %>"
-               class="card-lift group flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 dark:hover:border-primary/30 no-underline">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                   style="background:<%= tool[:bg] %>;">
-                <span class="material-symbols-outlined text-[20px]" style="color:<%= tool[:cl] %>;"><%= tool[:ic] %></span>
-              </div>
-              <div class="min-w-0 flex-1">
-                <div class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate"><%= tool[:t] %></div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug"><%= tool[:d] %></div>
-              </div>
-              <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 text-lg">chevron_right</span>
-            </a>
-          <% end %>
-        </div>
+    <div class="odt-card p-6 border-primary/40 ring-1 ring-primary/20">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-slate-900 dark:text-white">Pro</h3>
+        <span class="text-sm font-semibold text-slate-500"><%= BillingPlans.display_price('monthly') %>/mo</span>
       </div>
-    <% end %>
+      <ul class="space-y-2.5">
+        <% BillingPlans.pro_features.each do |f| %>
+          <li class="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
+            <span class="material-symbols-outlined text-[18px] text-primary"><%= f[:icon] %></span><%= f[:text] %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+  <div class="text-center mt-6">
+    <a href="<%= pricing_path %>" class="odt-btn odt-btn--ghost">Compare plans →</a>
   </div>
 </section>
 
-<!-- ══════════════════ WHY US ══════════════════ -->
-<section class="py-20 lg:py-28 px-6 lg:px-16 xl:px-20 max-w-7xl mx-auto w-full">
-  <div class="text-center mb-16 reveal">
-    <span class="text-xs font-bold uppercase tracking-widest mb-3 block" style="color:#1f3dff;">Why Choose Us</span>
-    <h2 class="text-3xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">Built for reliability</h2>
-  </div>
-
-  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+<!-- ══════════════════ TRUST ══════════════════ -->
+<section class="py-16 px-6 lg:px-16 xl:px-20 bg-white dark:bg-slate-900/40 border-y border-slate-200 dark:border-slate-800">
+  <div class="max-w-4xl mx-auto grid sm:grid-cols-3 gap-6 text-center reveal">
     <% [
-      {ic:"bolt",         g1:"#1f3dff",g2:"#0ea5e9", t:"Lightning Fast",   d:"Most conversions complete in under 5 seconds, even for large complex documents."},
-      {ic:"shield",       g1:"#10b981",g2:"#14b8a6", t:"Privacy First",    d:"Files are processed securely and automatically deleted after you download."},
-      {ic:"devices",      g1:"#8b5cf6",g2:"#6366f1", t:"Works Everywhere", d:"Desktop, tablet, or mobile — just your browser, nothing to install."},
-      {ic:"high_quality", g1:"#f59e0b",g2:"#ef6c00", t:"High Fidelity",    d:"Preserves fonts, tables, images, and layouts with high accuracy."},
-    ].each_with_index do |f,i| %>
-      <div class="reveal p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-           style="transition-delay:<%= i*0.1 %>s;">
-        <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 shadow-lg"
-             style="background:linear-gradient(135deg,<%= f[:g1] %>,<%= f[:g2] %>);">
-          <span class="material-symbols-outlined text-white text-[22px]"><%= f[:ic] %></span>
-        </div>
-        <h3 class="font-bold text-slate-900 dark:text-white mb-2"><%= f[:t] %></h3>
-        <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><%= f[:d] %></p>
+      { icon:"lock",         t:"Encrypted transfer",  d:"Files move over an encrypted connection." },
+      { icon:"auto_delete",  t:"Deleted after use",   d:"Uploads and results are removed after processing." },
+      { icon:"shield_lock",  t:"Some tools stay local", d:"Several image and PDF tools run entirely in your browser." },
+    ].each do |c| %>
+      <div>
+        <span class="material-symbols-outlined text-primary text-[26px] mb-2"><%= c[:icon] %></span>
+        <h3 class="font-bold text-slate-900 dark:text-white text-sm mb-1"><%= c[:t] %></h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"><%= c[:d] %></p>
       </div>
     <% end %>
   </div>
+  <p class="text-center text-xs text-slate-400 mt-6 max-w-xl mx-auto">
+    AI tools (summarize, translate, generate) send document text to a third-party AI provider — each of those tools tells you before you submit.
+  </p>
 </section>
 
-<!-- ══════════════════ CTA BANNER ══════════════════ -->
-<section class="px-6 lg:px-16 xl:px-20 pb-24 lg:pb-32">
-  <div class="max-w-7xl mx-auto reveal">
-    <div class="relative rounded-3xl overflow-hidden p-12 lg:p-16 text-center shadow-2xl"
-         style="background:linear-gradient(135deg,#1f3dff 0%,#1E88E5 45%,#0ea5e9 70%,#10b981 100%);">
-      <div class="absolute inset-0"
-           style="background-image:radial-gradient(circle,rgba(255,255,255,.11) 1px,transparent 1px);background-size:28px 28px;"></div>
-      <div class="absolute top-0 right-0 w-72 h-72 rounded-full opacity-10"
-           style="background:white;transform:translate(30%,-30%);"></div>
-      <div class="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10"
-           style="background:black;transform:translate(-30%,30%);"></div>
-      <div class="relative z-10">
-        <h2 class="text-3xl lg:text-5xl font-black text-white tracking-tight mb-4">Ready to get started?</h2>
-        <p class="text-white/80 text-lg mb-8 max-w-xl mx-auto">
-          Join thousands of users who rely on OfficedocTools for their daily document workflow. Free to use — no account required.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="/tools"
-             class="inline-flex items-center justify-center gap-2 bg-white font-bold px-8 py-4 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 no-underline"
-             style="color:#1f3dff;">
-            <span class="material-symbols-outlined text-xl">rocket_launch</span>
-            Start Converting Free
-          </a>
-          <a href="/users/sign_up"
-             class="inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-bold px-8 py-4 rounded-2xl transition-all duration-300 hover:scale-105 no-underline">
-            Create Free Account
-          </a>
-        </div>
-      </div>
+<!-- ══════════════════ FINAL CTA ══════════════════ -->
+<section class="py-20 px-6 text-center">
+  <div class="max-w-2xl mx-auto reveal">
+    <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
+      Ready when you are
+    </h2>
+    <p class="text-slate-500 dark:text-slate-400 mb-7">Add a file at the top of the page, or browse every tool.</p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="#top" class="odt-btn odt-btn--primary odt-btn--lg">
+        <span class="material-symbols-outlined text-[20px]">upload_file</span> Add a file
+      </a>
+      <a href="/tools" class="odt-btn odt-btn--secondary odt-btn--lg">Browse all tools</a>
     </div>
   </div>
 </section>

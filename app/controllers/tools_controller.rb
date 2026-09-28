@@ -46,8 +46,8 @@ class ToolsController < ApplicationController
     rescue ToolRunner::InvalidRequestError => e
       redirect_to tool_path(@tool[:id]), alert: e.message
     rescue ToolRunner::LimitExceededError => e
-      track_event(:quota_reached, tool_id: @tool[:id], properties: { source: "upload" })
-      redirect_to upgrade_billing_path, alert: e.message
+      track_event(:quota_reached, tool_id: @tool[:id], properties: { source: "upload", reason: e.reason })
+      redirect_to upgrade_billing_path(reason: e.reason, tool_id: @tool[:id]), alert: e.message
     rescue => e
       Rails.logger.error("ToolsController Error: #{e.message}")
       redirect_to tool_path(@tool[:id]), alert: "An unexpected error occurred."

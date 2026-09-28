@@ -24,3 +24,9 @@ application.register("uploader", UploaderController)
 import ToolFilterController from "controllers/tool_filter_controller"
 application.register("tool-filter", ToolFilterController)
 
+import BillingToggleController from "controllers/billing_toggle_controller"
+application.register("billing-toggle", BillingToggleController)
+
+import CountUpController from "controllers/count_up_controller"
+application.register("count-up", CountUpController)
+

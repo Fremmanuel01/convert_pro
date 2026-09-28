@@ -46,4 +46,43 @@ module BillingPlans
     major = amount_minor(cycle) / 100
     "#{CURRENCY_SYMBOL}#{major.to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}"
   end
+
+  # ── Plan value, described by OUTCOME (not a feature matrix) ────────────────
+  # Single source for pricing, dashboard and contextual upsell copy. Limits read
+  # from AppLimits so nothing is hardcoded twice. No dark patterns: no fake
+  # "most popular", no invented scarcity.
+  def self.free_features
+    [
+      { icon: "check_circle", text: "#{ConversionLimiter::FREE_LIMIT} conversions to get started" },
+      { icon: "check_circle", text: "All 28 document & image tools" },
+      { icon: "check_circle", text: "Files up to #{AppLimits::FREE_MAX_UPLOAD_MB} MB" },
+      { icon: "check_circle", text: "Secure processing, auto-deleted after" }
+    ]
+  end
+
+  def self.pro_features
+    [
+      { icon: "all_inclusive", text: "Unlimited conversions" },
+      { icon: "cloud_upload",  text: "Large files up to #{AppLimits::PRO_MAX_UPLOAD_MB} MB" },
+      { icon: "bolt",          text: "Priority processing queue" },
+      { icon: "history",       text: "30-day conversion history" },
+      { icon: "auto_awesome",  text: "Full AI & OCR allowance" }
+    ]
+  end
+
+  # Short "why upgrade" lines keyed by the friction the user just hit.
+  def self.upgrade_reason(key)
+    {
+      "quota"  => { title: "You've used your free conversions",
+                    body:  "Upgrade to Pro for unlimited conversions — keep working without interruptions." },
+      "size"   => { title: "This file is over the #{AppLimits::FREE_MAX_UPLOAD_MB} MB free limit",
+                    body:  "Pro handles files up to #{AppLimits::PRO_MAX_UPLOAD_MB} MB." },
+      "batch"  => { title: "Converting a lot of files?",
+                    body:  "Pro gives you unlimited conversions and a priority queue." },
+      "ai"     => { title: "Get the full AI & OCR allowance",
+                    body:  "Pro unlocks unlimited AI summaries, translation and OCR." }
+    }.fetch(key.to_s, {
+      title: "Do more with Pro",
+      body:  "Unlimited conversions, larger files and priority processing." })
+  end
 end
