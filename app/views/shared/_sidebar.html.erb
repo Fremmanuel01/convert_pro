@@ -47,17 +47,28 @@
 </nav>
 
 <!-- Usage Progress -->
-<div class="p-4 glass-card rounded-xl space-y-3">
+<% pro = current_user.pro? && current_user.active?
+   used = current_user.conversions_count
+   free_limit = ConversionLimiter::FREE_LIMIT
+   remaining = [free_limit - used, 0].max
+   pct = pro ? 100 : [(used.to_f / free_limit) * 100, 100].min %>
+<div class="p-4 glass-card rounded-xl space-y-2">
 <div class="flex justify-between items-center">
-<span class="text-xs font-medium text-slate-500"><%= current_user.pro? && current_user.active? ? 'Pro Limit' : 'Free Limit' %></span>
-<span class="text-xs font-bold text-slate-900 dark:text-white">
-  <%= current_user.pro? && current_user.active? ? 'Unlimited' : "#{current_user.conversions_count} / #{current_user.conversion_limit_per_day}" %>
-</span>
+<span class="text-xs font-medium text-slate-500"><%= pro ? 'Pro plan' : 'Free conversions' %></span>
+<span class="text-xs font-bold text-slate-900 dark:text-white"><%= pro ? 'Unlimited' : "#{used} of #{free_limit} used" %></span>
 </div>
+<% unless pro %>
 <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-<div class="h-full bg-primary" style="width: <%= current_user.pro? && current_user.active? ? '100' : [((current_user.conversions_count.to_f / current_user.conversion_limit_per_day) * 100), 100].min %>%;"></div>
+<div class="h-full <%= remaining.zero? ? 'bg-rose-500' : 'bg-primary' %>" style="width: <%= pct %>%;"></div>
 </div>
-<p class="text-[10px] text-slate-500 text-center"><%= current_user.pro? && current_user.active? ? 'Premium Unlocked' : 'Upgrade for unlimited' %></p>
+<p class="text-[11px] text-slate-500 text-center">
+<% if remaining.zero? %>
+No free conversions left — <span class="text-primary font-semibold">upgrade for unlimited</span>
+<% else %>
+<span class="font-semibold text-slate-700 dark:text-slate-300"><%= remaining %> left</span> · Pro removes the limit
+<% end %>
+</p>
+<% end %>
 </div>
 </div>
 <div class="space-y-4">

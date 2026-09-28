@@ -9,6 +9,7 @@
      data-controller="uploader"
      data-uploader-mode-value="<%= mode %>"
      data-uploader-tools-value="<%= (local_assigns[:tools] || []).to_json %>"
+     data-uploader-events-url-value="<%= events_path %>"
      data-action="dragover->uploader#dragover dragleave->uploader#dragleave drop->uploader#drop">
 
   <!-- Prompt / drop zone -->

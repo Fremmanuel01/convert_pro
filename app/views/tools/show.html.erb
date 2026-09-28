@@ -25,6 +25,37 @@
     <div class="p-8 bg-white/10 dark:bg-transparent">
       <% select_class = "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all text-slate-900 dark:text-white" %>
 
+      <%
+        client_side_ids = %w[images_to_pdf merge_pdf split_pdf unlock_pdf pdf_to_images heic_to_jpg heic_to_png webp_to_jpg webp_to_png]
+        is_client_tool  = client_side_ids.include?(@tool[:id])
+        is_ai_tool      = ToolRegistry.group_for(@tool[:id]) == "AI Documents"
+        ai_provider     = @tool[:id] == "summarize_pdf" ? "Groq" : "Anthropic (Claude)"
+      %>
+
+      <% if is_ai_tool %>
+        <div role="note" class="mb-6 flex gap-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/70 dark:bg-amber-900/10 p-4">
+          <span class="material-symbols-outlined text-amber-500 shrink-0" aria-hidden="true">info</span>
+          <p class="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+            This tool sends your document's text to <strong><%= ai_provider %></strong> to generate the result.
+            Please don't submit confidential material you're not comfortable sharing with a third-party AI provider.
+          </p>
+        </div>
+      <% elsif is_client_tool %>
+        <div role="note" class="mb-6 flex gap-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/70 dark:bg-emerald-900/10 p-4">
+          <span class="material-symbols-outlined text-emerald-500 shrink-0" aria-hidden="true">shield_lock</span>
+          <p class="text-sm text-emerald-800 dark:text-emerald-200 leading-relaxed">
+            <strong>Private:</strong> this conversion runs entirely in your browser — your file is never uploaded to our servers.
+          </p>
+        </div>
+      <% else %>
+        <div role="note" class="mb-6 flex gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 p-4">
+          <span class="material-symbols-outlined text-slate-400 shrink-0" aria-hidden="true">lock</span>
+          <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Your file is processed securely over an encrypted connection and automatically deleted after processing. Every upload is validated on our servers before conversion.
+          </p>
+        </div>
+      <% end %>
+
       <%= form_with url: tools_path(tool_id: @tool[:id]), method: :post, local: true, multipart: true, class: "space-y-6 relative z-10",
           data: {
             controller: "client-tool",

@@ -51,10 +51,10 @@ class Rack::Attack
     warden_user_id(req) if conversion_create?(req)
   end
 
-  # Client-side accounting endpoint per IP.
+  # Client-side accounting + funnel-event endpoints per IP (share a bucket).
   throttle("accounting/ip", limit: LIMITS[:accounting_per_ip][:limit],
                             period: LIMITS[:accounting_per_ip][:period]) do |req|
-    req.ip if req.post? && req.path == "/conversions/log"
+    req.ip if req.post? && (req.path == "/conversions/log" || req.path == "/events")
   end
 
   # Login attempts per IP.

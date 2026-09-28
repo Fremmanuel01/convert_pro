@@ -12,6 +12,7 @@ Rails.application.routes.draw do
   get "enterprise", to: "pages#enterprise"
   get "dashboard", to: "pages#dashboard"
   get "analytics", to: "analytics#index"
+  post "events", to: "events#create" # client funnel events (whitelisted)
 
   resource :billing, controller: "billing", only: [:show] do
     get :upgrade

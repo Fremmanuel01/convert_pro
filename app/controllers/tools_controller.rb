@@ -10,8 +10,10 @@ class ToolsController < ApplicationController
       return
     end
 
+    source = %w[home next].include?(params[:from]) ? params[:from] : "direct"
     track_event(:tool_viewed, tool_id: @tool[:id],
-                properties: { tool_category: @tool[:category], path: client_side_path?(@tool[:id]) ? "client" : "server" })
+                properties: { tool_category: @tool[:category], source: source,
+                              path: client_side_path?(@tool[:id]) ? "client" : "server" })
   end
 
   def create

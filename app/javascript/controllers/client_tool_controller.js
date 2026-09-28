@@ -65,7 +65,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to generate PDF.")
+            this.showError("Failed to generate PDF.")
         } finally {
             this.setProcessing(false)
         }
@@ -74,7 +74,7 @@ export default class extends Controller {
     async processMergePdf() {
         const files = this.fileInputTarget.files
         if (files.length < 2) {
-            alert("Please select at least 2 PDF files.")
+            this.showError("Please select at least 2 PDF files.")
             return
         }
         this.setProcessing(true)
@@ -92,7 +92,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to merge PDFs.")
+            this.showError("Failed to merge PDFs.")
         } finally {
             this.setProcessing(false)
         }
@@ -120,7 +120,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to split PDF.")
+            this.showError("Failed to split PDF.")
         } finally {
             this.setProcessing(false)
         }
@@ -143,7 +143,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to protect PDF.")
+            this.showError("Failed to protect PDF.")
         } finally {
             this.setProcessing(false)
         }
@@ -163,7 +163,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to unlock PDF. Wrong password?")
+            this.showError("Failed to unlock PDF. Wrong password?")
         } finally {
             this.setProcessing(false)
         }
@@ -196,7 +196,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to extract images from PDF.")
+            this.showError("Failed to extract images from PDF.")
         } finally {
             this.setProcessing(false)
         }
@@ -214,7 +214,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to convert HEIC.")
+            this.showError("Failed to convert HEIC.")
         } finally {
             this.setProcessing(false)
         }
@@ -239,7 +239,7 @@ export default class extends Controller {
             this.resetUI()
         } catch (error) {
             console.error(error)
-            alert("Failed to convert WEBP.")
+            this.showError("Failed to convert WEBP.")
         } finally {
             this.setProcessing(false)
         }
@@ -310,6 +310,24 @@ export default class extends Controller {
     resetUI() {
         const el = document.getElementById('file-name-display')
         if (el) el.classList.add('hidden')
+    }
+
+    // Non-blocking inline error (replaces alert()). Announced to screen readers.
+    showError(message) {
+        let box = this.element.querySelector('[data-client-tool-error]')
+        if (!box) {
+            box = document.createElement('div')
+            box.setAttribute('data-client-tool-error', '')
+            box.setAttribute('role', 'alert')
+            box.className = 'mt-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800/50 dark:bg-rose-900/20 dark:text-rose-300 text-sm font-medium px-4 py-3'
+            this.element.prepend(box)
+        }
+        box.textContent = message
+    }
+
+    clearError() {
+        const box = this.element.querySelector('[data-client-tool-error]')
+        if (box) box.remove()
     }
 
     setProcessing(isProcessing) {

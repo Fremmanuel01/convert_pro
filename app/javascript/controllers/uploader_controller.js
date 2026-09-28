@@ -14,7 +14,8 @@ export default class extends Controller {
   static targets = ["input", "dropzone", "preview", "filename", "filesize", "results", "empty", "prompt"]
   static values = {
     tools: { type: Array, default: [] }, // [{id,name,icon,category,accepts:[mime...],exts:[...]}]
-    mode: { type: String, default: "default" }
+    mode: { type: String, default: "default" },
+    eventsUrl: { type: String, default: "" }
   }
 
   connect() {
@@ -93,10 +94,12 @@ export default class extends Controller {
       return
     }
 
+    this.reportFileSelected(ext)
+
     this.resultsTarget.innerHTML = matches
       .map(
         (t) => `
-        <a href="/tools/${encodeURIComponent(t.id)}" class="uploader-action">
+        <a href="/tools/${encodeURIComponent(t.id)}?from=home" class="uploader-action">
           <span class="material-symbols-outlined uploader-action__icon">${this.escape(t.icon)}</span>
           <span class="uploader-action__body">
             <span class="uploader-action__name">${this.escape(t.name)}</span>
@@ -106,6 +109,17 @@ export default class extends Controller {
         </a>`
       )
       .join("")
+  }
+
+  // Best-effort funnel event. No filename/contents — only the extension family.
+  reportFileSelected(ext) {
+    if (!this.hasEventsUrlValue || !this.eventsUrlValue) return
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+    fetch(this.eventsUrlValue, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+      body: JSON.stringify({ name: "file_selected", ext })
+    }).catch(() => {})
   }
 
   humanSize(bytes) {

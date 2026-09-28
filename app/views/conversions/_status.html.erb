@@ -56,7 +56,7 @@
           <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3 text-center sm:text-left">Do more with this <%= output_ext.presence || "file" %></p>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <% recommendations.each do |rec| %>
-              <%= link_to tool_path(rec[:id]),
+              <%= link_to tool_path(rec[:id], from: "next"),
                     class: "flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 hover:border-primary/50 hover:shadow-sm transition-all group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" do %>
                 <span class="material-symbols-outlined text-[22px] text-primary shrink-0"><%= rec[:icon] %></span>
                 <span class="min-w-0">
