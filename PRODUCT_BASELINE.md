@@ -263,3 +263,27 @@ _Added 2026-09-28. The baseline findings above are unchanged; this section recor
 
 ## Still open (tracked for later sprints)
 Redact naming; progress UI; billing portal / cancellation; AI-egress disclosure copy; analytics reporting UI; the lifetime-vs-periodic free-cap decision; unused `GEMINI_API_KEY`.
+
+---
+
+# Sprint 2 Implementation Status
+
+_Added 2026-09-28. Original baseline and Sprint 1 history above are unchanged. Sprint 2 = Product Experience & Conversion UX. Full detail in `SPRINT_2_UX_AUDIT.md` and `SPRINT_2_REPORT.md`._
+
+**Verification at close of Sprint 2:** suite **98 examples, 0 failures**; Brakeman **0 warnings**; bundler-audit **clean**; all pages boot 200.
+
+## What changed (mapped to the baseline's "Important Before Launch")
+- **Progress feedback for server tools → RESOLVED.** The meta-refresh full-page reload is replaced by an in-place, staged (Uploading→Processing→Ready), `aria-live` poll that auto-transitions to the result. This was the baseline's #1 UX defect.
+- **Dead ends after success → RESOLVED.** Result screen now has Download + Convert-another + deterministic, registry-driven next-step recommendations (no dead recs).
+- **Coarse IA + no search → RESOLVED.** User-language groups (PDF/Convert/Images/Scan & OCR/AI Documents) + instant search.
+- **Trust claims exceed reality → RESOLVED.** Removed false universal "no account / all in browser"; per-tool honesty; explicit AI third-party data-egress disclosure.
+- **"AI SaaS" aesthetic → IMPROVED.** Restrained hero/layout, honest footer, no vanity metrics. (Auth pages + lower homepage sections still to do.)
+- **Quota messaging generic/dishonest → IMPROVED.** Sidebar shows used/remaining and Pro value; "per day" label dropped.
+- **a11y gaps → IMPROVED.** Inline errors replace `alert()`; focus-visible; aria-live; keyboard uploader.
+- **Funnel analytics → EXTENDED.** `file_selected` event + source attribution make the redesigned funnel measurable end-to-end.
+
+## New architecture (Sprint 2)
+- `ToolRecommender` (deterministic next actions), `ToolRegistry` IA (`GROUPS`/`groups`/`file_tool_index`), reusable uploader + poll + tool-filter Stimulus controllers, ownership-checked `GET /conversions/:id/status`, whitelisted rate-limited `POST /events`.
+
+## Still open (tracked for Sprint 3)
+Tool-page monolith not yet migrated onto the reusable uploader; no file hand-off/workflow chaining; Turbo not adopted; auth pages not redesigned; analytics reporting UI; lifetime-vs-periodic free-cap decision; in-app billing cancellation (from Sprint 1).
