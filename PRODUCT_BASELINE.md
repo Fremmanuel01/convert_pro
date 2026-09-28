@@ -4,6 +4,8 @@
 **Purpose:** Factual snapshot of the application as it exists today, before any commercial-launch changes. Nothing in this document has been implemented or changed — it is an audit only.
 **Stack:** Rails 8.1, PostgreSQL, SolidQueue + SolidCache (no Redis), Active Storage (Cloudflare R2 / Cloudinary), Devise + Google OAuth + Firebase, Paystack, Tailwind, Stimulus/importmap.
 
+> **Note (2026-09-28):** The original baseline below is preserved verbatim for historical reference. **Sprint 1 has since been implemented** — see the [Sprint 1 Implementation Status](#sprint-1-implementation-status) section at the end of this document and `SPRINT_1_REPORT.md`.
+
 ---
 
 ## 1. Tool Inventory
@@ -226,3 +228,38 @@ Traced every tool from `ToolRegistry` → `ToolsController#create` → `ToolRunn
 5. **Expiring, signed download URLs**; no public buckets.
 6. **Good secrets hygiene** — `.env` and `master.key` gitignored/untracked; `brakeman` + `bundler-audit` already in the Gemfile.
 7. **Privacy-friendly client-side processing** for common image/simple-PDF tools (files never leave the browser) — a genuine selling point if made consistent and intentional.
+
+---
+
+# Sprint 1 Implementation Status
+
+_Added 2026-09-28. The baseline findings above are unchanged; this section records what Sprint 1 (Production Foundation & Commercial Enforcement) delivered against them. Full detail in `SPRINT_1_REPORT.md`._
+
+**Verification at close of Sprint 1:** test suite **80 examples, 0 failures**; Brakeman **0 active warnings**; **0 High** dependency advisories.
+
+## Release Blockers — status
+1. **Quota bypass on 9 client-side tools → RESOLVED.** Client tools now pre-authorize against a server-authoritative, idempotent accounting endpoint; over-quota is refused (402). All 28 tools participate in deliberate accounting.
+2. **Cleanup disabled / indefinite retention → RESOLVED.** `recurring.yml` activated; `CleanupConversionsJob` now enforces free/guest/pro/failed retention and reclaims abandoned jobs.
+3. **Stale `schema.rb` / non-reproducible build → RESOLVED.** Migration applied, schema regenerated, test env isolated from real Cloudinary; fresh setup is reproducible.
+4. **No server-side file validation → RESOLVED.** Magic-byte validation in `ToolRunner` before any native processor; spoofed types rejected.
+5. **No rate limiting → RESOLVED.** `rack-attack` throttles (per-IP, per-user, expensive-tool bucket, auth endpoints) + per-user concurrency cap, all centrally configured.
+6. **AI tools likely broken (invalid model) → RESOLVED.** Centralized `AiConfig`; invalid `claude-opus-4-6` replaced with valid `claude-sonnet-4-6` (ENV-overridable).
+7. **Billing currency mismatch → RESOLVED in code (prod action required).** Single `BillingPlans` source; decision taken to **charge USD ($5/$50)**; Paystack sends currency + amount + plan code from one source; UI renders from it. Requires USD Paystack plan codes in production (see report §7).
+
+## Important Before Launch — status
+1. Progress feedback for server tools — **DEFERRED** (UI sprint; still needs manual reload).
+2. Minimum funnel analytics — **RESOLVED** (`Analytics` + 11 events, privacy-safe).
+3. AI third-party data-egress disclosure — **OPEN** (needs privacy copy; no code blocker).
+4. Fix the test environment — **RESOLVED**.
+5. "Redact PDF" misleading name — **UNCHANGED** (out of Sprint 1 scope; still flagged).
+6. Atomic quota counter — **RESOLVED** (atomic claim/refund). Lifetime-vs-periodic free cap remains a product decision (still lifetime 5).
+7. Don't retry permanent failures — **RESOLVED**.
+8. In-app subscription cancellation — **DEFERRED** (still Paystack-side only).
+
+## Added in Sprint 1 (beyond the original list)
+- **Dependency security:** patched all High-severity bundler-audit advisories (0 remaining); pinned `json ~> 2.19` for httparty compatibility.
+- **IDOR fix:** `conversions#show` no longer leaks other users' conversions by id.
+- **Unsafe reflection removed:** `ToolJob` uses a name→class lookup instead of `constantize` on a stored attribute.
+
+## Still open (tracked for later sprints)
+Redact naming; progress UI; billing portal / cancellation; AI-egress disclosure copy; analytics reporting UI; residual non-High dependency advisories; the lifetime-vs-periodic free-cap decision; unused `GEMINI_API_KEY`.
