@@ -1,0 +1,52 @@
+<%#
+  Reusable upload surface. locals:
+    mode:  "recommend" (identify file -> matching tools) | "form"
+    tools: array of file-tool descriptors (recommend mode)
+  Discovery/preview only — authoritative validation happens server-side on submit.
+%>
+<% mode = local_assigns.fetch(:mode, "recommend") %>
+<div class="uploader rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 p-6 sm:p-8 transition-colors"
+     data-controller="uploader"
+     data-uploader-mode-value="<%= mode %>"
+     data-uploader-tools-value="<%= (local_assigns[:tools] || []).to_json %>"
+     data-action="dragover->uploader#dragover dragleave->uploader#dragleave drop->uploader#drop">
+
+  <!-- Prompt / drop zone -->
+  <div data-uploader-target="prompt" role="button" tabindex="0"
+       aria-label="Choose a file to get started"
+       data-action="click->uploader#open keydown->uploader#onKeydown"
+       class="cursor-pointer text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl">
+    <div class="size-14 mx-auto rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-3xl">upload_file</span>
+    </div>
+    <p class="text-lg font-bold text-slate-900 dark:text-white">Drop a file, or <span class="text-primary">browse</span></p>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">PDF, Word, Excel, PowerPoint, JPG, PNG, HEIC, WEBP</p>
+    <p class="text-xs text-slate-400 mt-3 inline-flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[15px]">lock</span>
+      Up to 10&nbsp;MB free · files auto-deleted after processing
+    </p>
+  </div>
+
+  <input type="file" data-uploader-target="input" data-action="change->uploader#change"
+         class="sr-only" aria-hidden="true" tabindex="-1">
+
+  <!-- Selected file preview -->
+  <div data-uploader-target="preview" hidden>
+    <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3 mb-4">
+      <span class="material-symbols-outlined text-primary text-[26px] shrink-0">description</span>
+      <div class="min-w-0 flex-1">
+        <p data-uploader-target="filename" class="text-sm font-semibold text-slate-900 dark:text-white truncate"></p>
+        <p data-uploader-target="filesize" class="text-xs text-slate-400"></p>
+      </div>
+      <button type="button" data-action="uploader#remove"
+              class="shrink-0 size-8 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              aria-label="Remove file">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+    <% if mode == "recommend" %>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">What you can do with this file</p>
+      <div data-uploader-target="results" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+    <% end %>
+  </div>
+</div>

@@ -15,3 +15,12 @@ application.register("dropdown", DropdownController)
 import ClientToolController from "controllers/client_tool_controller"
 application.register("client-tool", ClientToolController)
 
+import PollController from "controllers/poll_controller"
+application.register("poll", PollController)
+
+import UploaderController from "controllers/uploader_controller"
+application.register("uploader", UploaderController)
+
+import ToolFilterController from "controllers/tool_filter_controller"
+application.register("tool-filter", ToolFilterController)
+

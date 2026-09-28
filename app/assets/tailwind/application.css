@@ -39,4 +39,56 @@
         border-radius: 1.5rem;
         opacity: 0.5;
     }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* ── Sprint 2 shared components ─────────────────────────────────────────── */
+@layer components {
+    .tool-tab {
+        color: rgb(100 116 139);
+        background: transparent;
+    }
+    .tool-tab:hover { color: rgb(51 65 85); }
+    .tool-tab.is-active {
+        background: rgb(255 255 255);
+        color: rgb(15 23 42);
+        box-shadow: 0 1px 2px rgba(0,0,0,.06);
+        border: 1px solid rgb(226 232 240);
+    }
+    :is(.dark .tool-tab).is-active {
+        background: rgb(30 41 59);
+        color: rgb(255 255 255);
+        border-color: rgb(51 65 85);
+    }
+
+    /* Universal uploader */
+    .uploader--dragover {
+        border-color: var(--color-primary);
+        background: rgba(31, 61, 255, 0.04);
+    }
+    .uploader-action {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid rgb(226 232 240);
+        border-radius: 0.75rem;
+        background: #fff;
+        text-decoration: none;
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .uploader-action:hover {
+        border-color: rgba(31, 61, 255, 0.5);
+        box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    :is(.dark .uploader-action) { background: rgb(15 18 35); border-color: rgb(51 65 85); }
+    .uploader-action__icon { color: var(--color-primary); }
+    .uploader-action__body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .uploader-action__name { font-weight: 600; color: rgb(15 23 42); font-size: .9rem; }
+    :is(.dark .uploader-action__name) { color: #fff; }
+    .uploader-action__cat { font-size: .75rem; color: rgb(148 163 184); }
+    .uploader-action__go { color: rgb(148 163 184); margin-left: auto; }
+    .uploader-empty { font-size: .9rem; color: rgb(100 116 139); text-align: center; padding: 0.5rem 0; }
 }

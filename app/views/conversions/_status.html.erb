@@ -1,0 +1,132 @@
+<%#
+  Processing → result frame. Reloaded in place by poll_controller until terminal.
+  Renders three states: processing (indeterminate, staged, aria-live), completed
+  (download + convert-another + deterministic recommendations), failed (retry).
+%>
+<% active = conversion.pending? || conversion.processing?
+   auto = local_assigns[:auto_download] && conversion.completed? &&
+          conversion.output_file.attached? && (user_signed_in? || conversion.user_id.present?)
+   output_ext = conversion.output_file.attached? ? File.extname(conversion.output_file.blob.filename.to_s).delete(".").upcase : nil %>
+
+<div id="conversion_status"
+     data-controller="poll"
+     data-poll-active-value="<%= active %>"
+     data-poll-url-value="<%= status_conversion_path(conversion) %>"
+     data-poll-interval-value="2500"
+     data-poll-auto-download-value="<%= auto ? download_conversion_path(conversion) : "" %>">
+
+  <% if conversion.completed? && conversion.output_file.attached? %>
+    <div class="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-900/10 p-6 sm:p-8">
+      <div class="flex flex-col items-center text-center">
+        <div class="size-14 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-3xl">task_alt</span>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-1">Your file is ready</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <% if output_ext.present? %>Converted to <span class="font-semibold text-slate-700 dark:text-slate-200"><%= output_ext %></span> ·<% end %>
+          <%= number_to_human_size(conversion.output_file.byte_size) %>
+        </p>
+
+        <% if user_signed_in? || conversion.user_id.present? %>
+          <%= link_to download_conversion_path(conversion),
+                class: "inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-8 rounded-xl shadow-sm transition-colors w-full sm:w-auto min-w-[220px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" do %>
+            <span class="material-symbols-outlined text-[20px]">download</span>
+            Download <%= output_ext.presence || "file" %>
+          <% end %>
+        <% else %>
+          <%= link_to download_conversion_path(conversion),
+                class: "inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-8 rounded-xl shadow-sm transition-colors w-full sm:w-auto min-w-[220px]" do %>
+            <span class="material-symbols-outlined text-[20px]">lock_open</span>
+            Create a free account to download
+          <% end %>
+          <p class="text-xs text-slate-500 mt-2">Free account · 5 conversions included</p>
+        <% end %>
+
+        <% if tool_meta %>
+          <%= link_to tool_path(tool_meta[:id]),
+                class: "mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-primary transition-colors" do %>
+            <span class="material-symbols-outlined text-[18px]">restart_alt</span>
+            Convert another file
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if recommendations.present? %>
+        <div class="mt-6 pt-6 border-t border-emerald-200/60 dark:border-emerald-800/40">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3 text-center sm:text-left">Do more with this <%= output_ext.presence || "file" %></p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <% recommendations.each do |rec| %>
+              <%= link_to tool_path(rec[:id]),
+                    class: "flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 hover:border-primary/50 hover:shadow-sm transition-all group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" do %>
+                <span class="material-symbols-outlined text-[22px] text-primary shrink-0"><%= rec[:icon] %></span>
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-slate-900 dark:text-white truncate"><%= rec[:name] %></span>
+                  <span class="block text-xs text-slate-400 group-hover:text-slate-500 transition-colors">Next step</span>
+                </span>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+  <% elsif conversion.failed? %>
+    <div class="rounded-2xl border border-rose-200 dark:border-rose-800/50 bg-rose-50/60 dark:bg-rose-900/10 p-6 sm:p-8 text-center" role="alert">
+      <div class="size-14 mx-auto rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 flex items-center justify-center mb-4">
+        <span class="material-symbols-outlined text-3xl">error_outline</span>
+      </div>
+      <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">We couldn't finish this conversion</h3>
+      <p class="text-sm text-slate-600 dark:text-slate-300 max-w-lg mx-auto mb-6">
+        <%= conversion.error_message.presence || "Something went wrong while processing your file. Please try again with a different file." %>
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <% if tool_meta %>
+          <%= link_to tool_path(tool_meta[:id]),
+                class: "inline-flex justify-center items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity" do %>
+            <span class="material-symbols-outlined text-[18px]">refresh</span>
+            Try another file
+          <% end %>
+        <% end %>
+        <%= link_to "mailto:hello@officedoctools.com",
+              class: "inline-flex justify-center items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 px-6 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" do %>
+          <span class="material-symbols-outlined text-[18px]">support_agent</span>
+          Contact support
+        <% end %>
+      </div>
+    </div>
+
+  <% else %>
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/20 p-8 text-center">
+      <% stages = [["upload", "Uploading"], ["settings", "Processing"], ["draft", "Preparing result"], ["check", "Ready"]]
+         current = conversion.processing? ? 1 : 0 %>
+      <div class="size-16 mx-auto mb-5 relative">
+        <svg class="animate-spin text-primary w-full h-full" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+          <path class="opacity-100" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+      </div>
+      <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-1">
+        <%= stages[current][1] %>…
+      </h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6" aria-live="polite">
+        This usually takes a few seconds. This page updates automatically — no need to refresh.
+      </p>
+
+      <!-- Staged, non-numeric progress (no fake percentages) -->
+      <ol class="flex items-center justify-center gap-2 mb-2" aria-hidden="true">
+        <% stages.each_with_index do |(icon, _label), i| %>
+          <li class="flex items-center gap-2">
+            <span class="size-8 rounded-full flex items-center justify-center text-[16px] border transition-colors
+                         <%= i <= current ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700' %>">
+              <span class="material-symbols-outlined text-[16px]"><%= icon %></span>
+            </span>
+            <% unless i == stages.length - 1 %>
+              <span class="w-6 h-0.5 rounded <%= i < current ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700' %>"></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+      <p class="text-xs text-slate-400"><%= stages[current][1] %></p>
+    </div>
+  <% end %>
+</div>

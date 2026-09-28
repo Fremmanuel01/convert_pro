@@ -25,6 +25,21 @@ class ConversionsController < ApplicationController
     end
 
     @tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }
+    @recommendations = ToolRecommender.for(@conversion)
+  end
+
+  # Polled by the processing screen (Turbo Frame) to transition Uploading →
+  # Processing → Ready in place, with no full-page reload. Ownership-checked
+  # exactly like #show, so it can't leak another user's conversion.
+  def status
+    @conversion = authorized_conversion(params[:id])
+    return head :not_found if @conversion.nil?
+
+    @tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }
+    @recommendations = ToolRecommender.for(@conversion)
+    render partial: "conversions/status",
+           locals: { conversion: @conversion, tool_meta: @tool_meta, recommendations: @recommendations },
+           layout: false
   end
 
   def download

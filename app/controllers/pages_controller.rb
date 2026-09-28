@@ -2,6 +2,8 @@ class PagesController < ApplicationController
   before_action :authenticate_user!, only: [:dashboard]
 
   def home
+    @tool_index = ToolRegistry.file_tool_index
+    @tool_groups = ToolRegistry.groups
   end
 
   def pricing
