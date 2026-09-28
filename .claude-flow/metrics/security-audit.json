@@ -1,104 +1,83 @@
 {
-  "timestamp": "2026-09-26T21:21:46.158Z",
+  "timestamp": "2026-09-26T23:59:46.273Z",
   "mode": "headless",
   "workerType": "audit",
   "model": "haiku",
-  "durationMs": 60715,
-  "executionId": "audit_1790457645443_hfpksh",
+  "durationMs": 64630,
+  "executionId": "audit_1790467121643_d6v7lu",
   "success": true,
   "findings": {
     "vulnerabilities": [
       {
-        "severity": "critical",
-        "file": ".env",
-        "line": 4,
-        "description": "FIREBASE_API_KEY hardcoded and committed to repository. Exposed API key can be used for unauthorized Firebase operations, potential data breach."
-      },
-      {
-        "severity": "critical",
-        "file": ".env",
-        "line": 14,
-        "description": "PAYSTACK_SECRET_KEY hardcoded and committed to repository. Exposed secret key allows unauthorized payment processing and financial fraud."
-      },
-      {
-        "severity": "critical",
-        "file": ".env",
-        "line": 19,
-        "description": "GROQ_API_KEY hardcoded and committed to repository. Can be used for unauthorized API calls, causing financial loss."
-      },
-      {
-        "severity": "critical",
-        "file": ".env",
-        "line": 20,
-        "description": "GEMINI_API_KEY hardcoded and committed to repository. Exposed credential enables unauthorized API access and costs."
-      },
-      {
-        "severity": "critical",
-        "file": ".env",
-        "line": 21,
-        "description": "ANTHROPIC_API_KEY hardcoded and committed to repository. Secret key can be exploited for unauthorized API calls and billing fraud."
+        "severity": "high",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 11,
+        "description": "External CDN dependency for PDF.js worker without Subresource Integrity (SRI). Loading from https://esm.run/ is vulnerable to MITM attacks. Should use SRI hash or serve from own CDN."
       },
       {
         "severity": "high",
         "file": "app/javascript/firebase_auth.js",
-        "line": 28,
-        "description": "innerHTML used to set button content. While currently hardcoded, this is a potential XSS vector if error messages or dynamic content are rendered here."
+        "line": 51,
+        "description": "Error message from Firebase Auth directly exposed to user in DOM. Error messages may contain sensitive information or stack traces that aid attackers."
       },
       {
-        "severity": "high",
-        "file": "app/controllers/users/omniauth_callbacks_controller.rb",
-        "line": 11,
-        "description": "User validation error messages exposed in redirect alert. Information disclosure vulnerability - attackers can enumerate valid email patterns and user validation rules."
+        "severity": "medium",
+        "file": "app/javascript/controllers/mobile_menu_controller.js",
+        "line": 6,
+        "description": "Debug logging in production code (console.log). Disable in production to prevent information leakage."
       },
       {
-        "severity": "high",
-        "file": "app/javascript/client_tool_controller.js",
-        "line": 166,
-        "description": "PDF.js worker loaded from external CDN (https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs). Supply chain attack vector - CDN compromise could inject malicious code."
+        "severity": "medium",
+        "file": "app/javascript/controllers/sidebar_controller.js",
+        "line": 6,
+        "description": "Debug logging in production code (console.log). Disable in production to prevent information leakage."
       },
       {
         "severity": "medium",
         "file": "app/javascript/controllers/client_tool_controller.js",
-        "line": 1,
-        "description": "No file type validation before processing files. Client-side file upload should validate MIME types and file extensions. Users could upload malicious files."
+        "line": 75,
+        "description": "Client-side error logging with console.error exposes implementation details. Combined with external PDF.js load, this could aid reconnaissance."
       },
       {
         "severity": "medium",
-        "file": "app/services/tools/pptx_to_pdf.rb",
-        "line": 1,
-        "description": "System command execution with external binary detection. While hardcoded binary names are used, verify proper argument escaping to prevent command injection."
+        "file": "app/javascript/application.js",
+        "line": 9,
+        "description": "Firebase configuration loaded from meta tag without validation. While Firebase config is typically non-sensitive (public API keys), ensure no secrets are accidentally embedded here."
       },
       {
-        "severity": "low",
+        "severity": "medium",
         "file": "app/javascript/firebase_auth.js",
-        "line": 41,
-        "description": "Console error logging with detailed Firebase error messages. Error details exposed in browser console could reveal system architecture to attackers."
+        "line": 32,
+        "description": "Hidden form fields for CSRF token and auth token sent via POST. Ensure backend validates CSRF token and uses SameSite cookie attributes."
       },
       {
         "severity": "low",
-        "file": "app/javascript/controllers/mobile_menu_controller.js",
-        "line": 6,
-        "description": "Console logging in production code. Remove debug console.log() statements from production builds."
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 60,
+        "description": "No explicit file type validation before processing. Relies on server-side validation (good), but adding client-side mime type checks would prevent malicious files from being processed client-side."
+      },
+      {
+        "severity": "low",
+        "file": "vendor/javascript/@firebase--app.js",
+        "line": 1,
+        "description": "Third-party Firebase library loaded from external CDN without SRI. Consider pinning specific versions and using SRI hashes."
       }
     ],
-    "riskScore": 92,
+    "riskScore": 62,
     "recommendations": [
-      "URGENT: Move all API keys from .env to environment variables managed by deployment platform (Heroku, etc.). Rotate ALL exposed keys immediately in Firebase, Paystack, Groq, Gemini, and Anthropic consoles.",
-      "URGENT: Remove .env file from git history using `git-filter-repo` or `BFG Repo-Cleaner`. Add .env to .gitignore.",
-      "Add pre-commit hook to prevent committing secrets: install `git-secrets` or `detect-secrets` and configure in husky/pre-commit.",
-      "Replace all innerHTML assignments with textContent or createElement() to prevent XSS vulnerabilities.",
-      "Host PDF.js worker locally instead of loading from third-party CDN to eliminate supply chain attack vector.",
-      "Implement server-side file type validation using file magic numbers (MIME type checking), not just extensions.",
-      "Remove or sanitize validation error messages exposed to users. Log full errors server-side for debugging.",
-      "Remove all console.log(), console.error() statements from production code. Use a proper logging service.",
-      "Enable Content Security Policy (CSP) headers to mitigate XSS attacks.",
-      "Set secure cookie flags: HttpOnly, Secure, SameSite=Strict for session cookies.",
-      "Run `bundle exec bundle-audit` regularly to scan for vulnerable gems.",
-      "Run Brakeman static analysis on Rails code: `brakeman --no-summary` to catch security issues.",
-      "Implement request size limits on file uploads to prevent DoS attacks.",
-      "Add rate limiting to API endpoints to prevent abuse."
+      "Add Subresource Integrity (SRI) hashes to all external CDN resources (PDF.js worker, Firebase libs)",
+      "Wrap PDF.js worker URL in a CSP-compliant data URL or serve from same origin to eliminate external dependency",
+      "Remove or disable all console.log/console.error statements in production builds using build-time stripping",
+      "Sanitize Firebase error messages before displaying: use generic error text, log actual errors server-side only",
+      "Ensure all forms use SameSite=Strict cookie attributes and validate CSRF tokens server-side",
+      "Add Content Security Policy (CSP) headers to restrict external script/worker loading",
+      "Implement client-side file type validation (check magic bytes, not just extensions) before server submission",
+      "Validate Firebase config in meta tag format to prevent injection; use JSON.parse with try-catch",
+      "Add rate limiting on file processing endpoints (already partially done with authorizeConversion)",
+      "Consider implementing file size limits both client and server-side to prevent DoS",
+      "Audit all vendor libraries for known CVEs; keep Firebase SDK updated"
     ]
   },
-  "rawOutputPreview": "Based on my analysis of the codebase, here's the security vulnerability report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 4,\n      \"description\": \"FIREBASE_API_KEY hardcoded and committed to repository. Exposed API key can be used for unauthorized Firebase operations, potential data breach.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 14,\n      \"description\": \"PAYSTACK_SECRET_KEY hardcoded and committed to repository. Exposed secret key allows unauthorized payment processing and financial fraud.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 19,\n      \"description\": \"GROQ_API_KEY hardcoded and committed to repository. Can be used for unauthorized API calls, causing financial loss.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 20,\n      \"description\": \"GEMINI_API_KEY hardcoded and committed to repository. Exposed credential enables unauthorized API access and costs.\"\n    },\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 21,\n      \"description\": \"ANTHROPIC_API_KEY hardcoded and committed to repository. Secret key can be exploited for unauthorized API calls and billing fraud.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 28,\n      \"description\": \"innerHTML used to set button content. While currently hardcoded, this is a potential XSS vector if error messages or dynamic content are rendered here.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/controllers/users/omniauth_callbacks_controller.rb\",\n      \"line\": 11,\n      \"description\": \"User validation error messages exposed in redirect alert. Information disclosure vulnerability - attackers can enumerate valid email patterns and user validation rules.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/client_tool_controller.js\",\n      \"line\": 166,\n",
-  "rawOutputLength": 5583
+  "rawOutputPreview": "Based on the codebase context you provided, here's the security vulnerability report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 11,\n      \"description\": \"External CDN dependency for PDF.js worker without Subresource Integrity (SRI). Loading from https://esm.run/ is vulnerable to MITM attacks. Should use SRI hash or serve from own CDN.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 51,\n      \"description\": \"Error message from Firebase Auth directly exposed to user in DOM. Error messages may contain sensitive information or stack traces that aid attackers.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/mobile_menu_controller.js\",\n      \"line\": 6,\n      \"description\": \"Debug logging in production code (console.log). Disable in production to prevent information leakage.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/sidebar_controller.js\",\n      \"line\": 6,\n      \"description\": \"Debug logging in production code (console.log). Disable in production to prevent information leakage.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 75,\n      \"description\": \"Client-side error logging with console.error exposes implementation details. Combined with external PDF.js load, this could aid reconnaissance.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/application.js\",\n      \"line\": 9,\n      \"description\": \"Firebase configuration loaded from meta tag without validation. While Firebase config is typically non-sensitive (public API keys), ensure no secrets are accidentally embedded here.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 32,\n      \"description\": \"Hidden form fields for CSRF token an",
+  "rawOutputLength": 4531
 }

@@ -60,7 +60,9 @@
     <div class="mb-8">
       <h3 class="text-lg font-bold mb-2 text-white">Pro</h3>
       <div class="flex items-baseline gap-1 text-white">
-        <span class="text-5xl font-black tracking-tighter" id="pro-price">$5</span>
+        <span class="text-5xl font-black tracking-tighter" id="pro-price"
+              data-monthly="<%= BillingPlans.display_price('monthly') %>"
+              data-yearly="<%= BillingPlans.display_price('yearly') %>"><%= BillingPlans.display_price('monthly') %></span>
         <span class="text-slate-400 font-medium" id="pro-period">/month</span>
       </div>
       <p class="mt-4 text-sm text-slate-400">Unlock the full power of AI-driven document processing.</p>
@@ -119,8 +121,8 @@
         setActiveStyle(btnMonthly);
         resetStyles(btnYearly);
 
-        // Update Price and Button URL for Monthly
-        proPrice.textContent = '$5';
+        // Update Price and Button URL for Monthly (price from BillingPlans data attrs)
+        proPrice.textContent = proPrice.dataset.monthly;
         proPeriod.textContent = '/month';
         
         if(proCheckoutBtn) {
@@ -132,8 +134,8 @@
         setActiveStyle(btnYearly);
         resetStyles(btnMonthly);
 
-        // Update Price and Button URL for Yearly
-        proPrice.textContent = '$50';
+        // Update Price and Button URL for Yearly (price from BillingPlans data attrs)
+        proPrice.textContent = proPrice.dataset.yearly;
         proPeriod.textContent = '/year';
         
         if(proCheckoutBtn) {

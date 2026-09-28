@@ -35,6 +35,7 @@ class PaystackService
     payload = {
       email: user.email,
       amount: amount_minor,
+      currency: BillingPlans::CURRENCY,
       plan: chosen_plan_code,
       reference: reference,
       callback_url: callback_url

@@ -23,9 +23,13 @@ class ToolJob < ApplicationJob
                     properties: { path: "server", reason: "transient_exhausted" })
   end
 
-  # Only class names registered in ToolRegistry may be instantiated — never trust
-  # the stored string blindly (defends against unsafe reflection).
-  ALLOWED_TOOL_CLASSES = ToolRegistry.tools.map { |t| t[:class_name] }.freeze
+  # Map of registered tool class-name -> resolved Class. Built once at load from
+  # trusted ToolRegistry data (constant literals), so we never call constantize on
+  # a stored attribute at runtime — the stored name is only ever used as a lookup
+  # key, which closes the unsafe-reflection vector entirely.
+  TOOL_CLASSES = ToolRegistry.tools.each_with_object({}) do |t, map|
+    map[t[:class_name]] = t[:class_name].constantize
+  end.freeze
 
   def perform(conversion_id)
     conversion = Conversion.find_by(id: conversion_id)
@@ -34,11 +38,12 @@ class ToolJob < ApplicationJob
     # Idempotency: don't reprocess something already done or in flight elsewhere.
     return if conversion.completed? || conversion.processing?
 
-    unless ALLOWED_TOOL_CLASSES.include?(conversion.tool_name)
+    tool_class = TOOL_CLASSES[conversion.tool_name]
+    unless tool_class
       conversion.update!(status: :failed, error_message: "Unknown tool.")
       return
     end
 
-    conversion.tool_name.constantize.new(conversion).call
+    tool_class.new(conversion).call
   end
 end

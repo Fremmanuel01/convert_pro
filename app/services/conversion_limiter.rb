@@ -35,6 +35,7 @@ class ConversionLimiter
   def claim!
     return true if @user.nil?
     return true if unlimited?
+    return false unless @user.free? # e.g. lapsed Pro: blocked, must renew
 
     rows = User.where(id: @user.id)
                .where("conversions_count < ?", FREE_LIMIT)

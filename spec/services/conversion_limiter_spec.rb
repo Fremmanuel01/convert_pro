@@ -65,6 +65,57 @@ RSpec.describe ConversionLimiter do
     end
   end
 
+  describe "#claim! (atomic)" do
+    it "claims exactly FREE_LIMIT units for a free user, then refuses" do
+      user = create(:user, plan: :free, conversions_count: 0)
+      limiter = ConversionLimiter.new(user)
+
+      results = Array.new(ConversionLimiter::FREE_LIMIT + 1) { limiter.claim! }
+
+      expect(results.count(true)).to eq(ConversionLimiter::FREE_LIMIT)
+      expect(results.last).to be false
+      expect(user.reload.conversions_count).to eq(ConversionLimiter::FREE_LIMIT)
+    end
+
+    it "never lets concurrent claims exceed the limit" do
+      user = create(:user, plan: :free, conversions_count: ConversionLimiter::FREE_LIMIT - 1)
+      # Two racing claimers: the conditional UPDATE guarantees only one crosses the boundary.
+      first  = ConversionLimiter.new(User.find(user.id)).claim!
+      second = ConversionLimiter.new(User.find(user.id)).claim!
+
+      expect([first, second]).to contain_exactly(true, false)
+      expect(user.reload.conversions_count).to eq(ConversionLimiter::FREE_LIMIT)
+    end
+
+    it "treats active Pro as unlimited without touching the counter" do
+      user = create(:user, plan: :pro, subscription_status: :active, conversions_count: 0)
+      expect(ConversionLimiter.new(user).claim!).to be true
+      expect(user.reload.conversions_count).to eq(0)
+    end
+
+    it "refuses inactive Pro (blocked, not billed against free units)" do
+      user = create(:user, plan: :pro, subscription_status: :inactive, conversions_count: 0)
+      expect(ConversionLimiter.new(user).claim!).to be false
+      expect(user.reload.conversions_count).to eq(0)
+    end
+  end
+
+  describe "#refund!" do
+    it "gives one unit back but never below zero" do
+      user = create(:user, plan: :free, conversions_count: 2)
+      limiter = ConversionLimiter.new(user)
+
+      expect(limiter.refund!).to be true
+      expect(user.reload.conversions_count).to eq(1)
+    end
+
+    it "does nothing at zero" do
+      user = create(:user, plan: :free, conversions_count: 0)
+      expect(ConversionLimiter.new(user).refund!).to be false
+      expect(user.reload.conversions_count).to eq(0)
+    end
+  end
+
   describe "#status_message" do
     it "returns appropriate messages" do
       expect(ConversionLimiter.new(pro_active_user).status_message).to include("Unlimited")

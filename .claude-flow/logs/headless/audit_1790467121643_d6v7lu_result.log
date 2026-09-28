@@ -1,0 +1,84 @@
+[2026-09-26T23:59:46.274Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "Based on the codebase context you provided, here's the security vulnerability report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 11,\n      \"description\": \"External CDN dependency for PDF.js worker without Subresource Integrity (SRI). Loading from https://esm.run/ is vulnerable to MITM attacks. Should use SRI hash or serve from own CDN.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 51,\n      \"description\": \"Error message from Firebase Auth directly exposed to user in DOM. Error messages may contain sensitive information or stack traces that aid attackers.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/mobile_menu_controller.js\",\n      \"line\": 6,\n      \"description\": \"Debug logging in production code (console.log). Disable in production to prevent information leakage.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/sidebar_controller.js\",\n      \"line\": 6,\n      \"description\": \"Debug logging in production code (console.log). Disable in production to prevent information leakage.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 75,\n      \"description\": \"Client-side error logging with console.error exposes implementation details. Combined with external PDF.js load, this could aid reconnaissance.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/application.js\",\n      \"line\": 9,\n      \"description\": \"Firebase configuration loaded from meta tag without validation. While Firebase config is typically non-sensitive (public API keys), ensure no secrets are accidentally embedded here.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 32,\n      \"description\": \"Hidden form fields for CSRF token and auth token sent via POST. Ensure backend validates CSRF token and uses SameSite cookie attributes.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 60,\n      \"description\": \"No explicit file type validation before processing. Relies on server-side validation (good), but adding client-side mime type checks would prevent malicious files from being processed client-side.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"vendor/javascript/@firebase--app.js\",\n      \"line\": 1,\n      \"description\": \"Third-party Firebase library loaded from external CDN without SRI. Consider pinning specific versions and using SRI hashes.\"\n    }\n  ],\n  \"riskScore\": 62,\n  \"recommendations\": [\n    \"Add Subresource Integrity (SRI) hashes to all external CDN resources (PDF.js worker, Firebase libs)\",\n    \"Wrap PDF.js worker URL in a CSP-compliant data URL or serve from same origin to eliminate external dependency\",\n    \"Remove or disable all console.log/console.error statements in production builds using build-time stripping\",\n    \"Sanitize Firebase error messages before displaying: use generic error text, log actual errors server-side only\",\n    \"Ensure all forms use SameSite=Strict cookie attributes and validate CSRF tokens server-side\",\n    \"Add Content Security Policy (CSP) headers to restrict external script/worker loading\",\n    \"Implement client-side file type validation (check magic bytes, not just extensions) before server submission\",\n    \"Validate Firebase config in meta tag format to prevent injection; use JSON.parse with try-catch\",\n    \"Add rate limiting on file processing endpoints (already partially done with authorizeConversion)\",\n    \"Consider implementing file size limits both client and server-side to prevent DoS\",\n    \"Audit all vendor libraries for known CVEs; keep Firebase SDK updated\"\n  ]\n}\n```\n\n## Key Findings Summary:\n\n**Critical Issues:**\n- **PDF.js worker CDN vulnerability** — The hardcoded external URL is a MITM risk vector\n- **Error message leakage** — Firebase errors exposed to DOM could reveal auth flow details\n\n**Process Improvements:**\n- All external dependencies need SRI hashes\n- Production builds must strip debug logging\n- Add CSP headers to restrict resource loading\n- Implement stronger error handling with server-side logging\n\nThe riskScore of 62/100 reflects moderate risk — the app has good practices (CSRF protection, server-side auth) but needs hardening on external dependencies and error handling.\n",
+  "parsedOutput": {
+    "vulnerabilities": [
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 11,
+        "description": "External CDN dependency for PDF.js worker without Subresource Integrity (SRI). Loading from https://esm.run/ is vulnerable to MITM attacks. Should use SRI hash or serve from own CDN."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 51,
+        "description": "Error message from Firebase Auth directly exposed to user in DOM. Error messages may contain sensitive information or stack traces that aid attackers."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/mobile_menu_controller.js",
+        "line": 6,
+        "description": "Debug logging in production code (console.log). Disable in production to prevent information leakage."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/sidebar_controller.js",
+        "line": 6,
+        "description": "Debug logging in production code (console.log). Disable in production to prevent information leakage."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 75,
+        "description": "Client-side error logging with console.error exposes implementation details. Combined with external PDF.js load, this could aid reconnaissance."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/application.js",
+        "line": 9,
+        "description": "Firebase configuration loaded from meta tag without validation. While Firebase config is typically non-sensitive (public API keys), ensure no secrets are accidentally embedded here."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 32,
+        "description": "Hidden form fields for CSRF token and auth token sent via POST. Ensure backend validates CSRF token and uses SameSite cookie attributes."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 60,
+        "description": "No explicit file type validation before processing. Relies on server-side validation (good), but adding client-side mime type checks would prevent malicious files from being processed client-side."
+      },
+      {
+        "severity": "low",
+        "file": "vendor/javascript/@firebase--app.js",
+        "line": 1,
+        "description": "Third-party Firebase library loaded from external CDN without SRI. Consider pinning specific versions and using SRI hashes."
+      }
+    ],
+    "riskScore": 62,
+    "recommendations": [
+      "Add Subresource Integrity (SRI) hashes to all external CDN resources (PDF.js worker, Firebase libs)",
+      "Wrap PDF.js worker URL in a CSP-compliant data URL or serve from same origin to eliminate external dependency",
+      "Remove or disable all console.log/console.error statements in production builds using build-time stripping",
+      "Sanitize Firebase error messages before displaying: use generic error text, log actual errors server-side only",
+      "Ensure all forms use SameSite=Strict cookie attributes and validate CSRF tokens server-side",
+      "Add Content Security Policy (CSP) headers to restrict external script/worker loading",
+      "Implement client-side file type validation (check magic bytes, not just extensions) before server submission",
+      "Validate Firebase config in meta tag format to prevent injection; use JSON.parse with try-catch",
+      "Add rate limiting on file processing endpoints (already partially done with authorizeConversion)",
+      "Consider implementing file size limits both client and server-side to prevent DoS",
+      "Audit all vendor libraries for known CVEs; keep Firebase SDK updated"
+    ]
+  },
+  "durationMs": 64630,
+  "model": "haiku",
+  "sandboxMode": "strict",
+  "workerType": "audit",
+  "timestamp": "2026-09-26T23:59:46.273Z",
+  "executionId": "audit_1790467121643_d6v7lu"
+}

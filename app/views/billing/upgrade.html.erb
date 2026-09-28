@@ -6,8 +6,9 @@
     </div>
 
     <div class="mt-8 mb-8">
-      <% plan_type = params[:plan] == 'yearly' ? 'Yearly' : 'Monthly' %>
-      <% price = params[:plan] == 'yearly' ? '$50/year' : '$5/month' %>
+      <% cycle = params[:plan] == 'yearly' ? 'yearly' : 'monthly' %>
+      <% plan_type = cycle.capitalize %>
+      <% price = "#{BillingPlans.display_price(cycle)}/#{BillingPlans.fetch(cycle)[:cycle]}" %>
       
       <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white mb-4">Upgrade to Pro</h2>
       <p class="text-base text-slate-500 dark:text-slate-400">

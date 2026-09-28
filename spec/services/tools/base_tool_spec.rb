@@ -22,6 +22,14 @@ RSpec.describe Tools::BaseTool do
     end
   end
 
+  class PermanentFailTool < Tools::BaseTool
+    protected
+
+    def process(input_paths)
+      raise Tools::BaseTool::ExecutionError, "This file is password protected."
+    end
+  end
+
   let(:user) { create(:user) }
   let(:conversion) { Conversion.create!(user: user, tool_name: "DummyTool", status: :pending) }
   let(:file) { fixture_file_upload('sample.pdf', 'application/pdf') }
@@ -55,6 +63,28 @@ RSpec.describe Tools::BaseTool do
       expect(failing_conversion.status).to eq("failed")
       expect(failing_conversion.error_message).to include("Oops something broke")
       expect(failing_conversion.output_file).not_to be_attached
+    end
+
+    it "does NOT re-raise permanent (ExecutionError) failures — so they are not retried" do
+      conv = Conversion.create!(user: user, tool_name: "PermanentFailTool", status: :pending, usage_counted: true)
+      conv.input_files.attach(file)
+      user.update!(conversions_count: 3)
+
+      expect { PermanentFailTool.new(conv).call }.not_to raise_error
+
+      expect(conv.reload.status).to eq("failed")
+      expect(conv.error_message).to include("password protected")
+      # Permanent failure refunds the quota unit so the user isn't charged for it.
+      expect(user.reload.conversions_count).to eq(2)
+    end
+
+    it "does NOT refund on transient failures (they will be retried)" do
+      conv = Conversion.create!(user: user, tool_name: "FailingTool", status: :pending, usage_counted: true)
+      conv.input_files.attach(file)
+      user.update!(conversions_count: 3)
+
+      expect { FailingTool.new(conv).call }.to raise_error(StandardError, "Oops something broke")
+      expect(user.reload.conversions_count).to eq(3)
     end
   end
 end

@@ -66,6 +66,10 @@ gem "dotenv-rails", "~> 3.2"
 gem "jwt"
 gem "httparty"
 
+# Stay on the json 2.19 line: it satisfies the security advisories (>= 2.19.9)
+# while still accepting httparty's quirks_mode kwarg (removed in json 3.0).
+gem "json", "~> 2.19", ">= 2.19.9"
+
 gem "rspec-rails", "~> 8.0", groups: [:development, :test]
 gem "factory_bot_rails", "~> 6.5", groups: [:development, :test]
 gem "shoulda-matchers", "~> 7.0", groups: [:development, :test]

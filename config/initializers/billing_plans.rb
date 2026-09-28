@@ -5,21 +5,25 @@
 # the checkout amount sent to Paystack AND the price shown in the UI read from
 # here, so they can never drift again.
 #
-# The amounts below are the values Paystack has been charging (kobo, the NGN
-# minor unit) — i.e. nothing customers are billed changes. CURRENCY/display are
-# provided so the UI shows what is actually charged.
+# Authoritative pricing: USD (product decision, Sprint 1). amount_minor is in the
+# currency's minor unit (cents). PaystackService charges these exact amounts and
+# passes CURRENCY, and the UI renders display_price — so charge and display can
+# never disagree.
+#
+# PRODUCTION REQUIREMENT: the Paystack account must have USD-denominated plans and
+# PAYSTACK_MONTHLY_PLAN_CODE / PAYSTACK_YEARLY_PLAN_CODE must point at them.
 module BillingPlans
-  CURRENCY        = ENV.fetch("BILLING_CURRENCY", "NGN")        # ISO 4217
-  CURRENCY_SYMBOL = ENV.fetch("BILLING_CURRENCY_SYMBOL", "₦")
+  CURRENCY        = ENV.fetch("BILLING_CURRENCY", "USD")        # ISO 4217
+  CURRENCY_SYMBOL = ENV.fetch("BILLING_CURRENCY_SYMBOL", "$")
 
   PLANS = {
     "monthly" => {
-      amount_minor: Integer(ENV.fetch("PRICE_MONTHLY_MINOR", 500_000)),   # ₦5,000
+      amount_minor: Integer(ENV.fetch("PRICE_MONTHLY_MINOR", 500)),    # $5.00
       plan_code_env: "PAYSTACK_MONTHLY_PLAN_CODE",
       cycle: "month"
     },
     "yearly" => {
-      amount_minor: Integer(ENV.fetch("PRICE_YEARLY_MINOR", 5_000_000)),  # ₦50,000
+      amount_minor: Integer(ENV.fetch("PRICE_YEARLY_MINOR", 5_000)),   # $50.00
       plan_code_env: "PAYSTACK_YEARLY_PLAN_CODE",
       cycle: "year"
     }

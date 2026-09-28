@@ -1,0 +1,15 @@
+{
+  "ignored_warnings": [
+    { "fingerprint": "2605471af534939e4336f21c194a2501ef36b449536085585e7cfd0e1ee4c266", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "2ef73afa513c120b394545aea4c2938d45e2bbcf6f68cca68ea3324a55373154", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "360f9b162c47402210d8faf41da95bc9aba6ef66b44d298f22d2c6d0a929059d", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "3a94d43bdc678590936db2c77a4af16dd99ac1a9fa9a96f1d38ac3f44d018b8b", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "5a42f22e73488458aec3135b5d6904fc0c55149325d6a4c9af29167b72219a93", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "6262c29cccfdc290e6ea4bf7e798f7601fcc33733af6eda7d964b6d350680018", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "6ff2f0ff4796cc8d19a2d2a84f3eaa74b60f2c10f1f4c7066097fbf635834a3e", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "91592c072e5d6a66e8cb09f96100d15e5f9f75e2a459af6ef5d21673efd84844", "note": "Open3.capture3(*argv) — array form, no shell. qpdf --password=<value> is a single argv element; the value cannot inject shell commands." },
+    { "fingerprint": "bcf6e0897ddfa19abe93035310fa8f9cacfbb19b6747f2204b230431924f8a97", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." },
+    { "fingerprint": "f5b49c0c5acbaea4b47298a1696f4cfe60eaa1449874a2fdf76bcd07e053a6e5", "note": "Open3.capture3(*argv) — array form, no shell. Binary + flags are literals; user-derived values are separate argv elements and cannot inject shell commands." }
+  ],
+  "brakeman_version": "7.1.1"
+}
