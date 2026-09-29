@@ -54,7 +54,7 @@ module BillingPlans
   def self.free_features
     [
       { icon: "check_circle", text: "#{ConversionLimiter::FREE_LIMIT} conversions to get started" },
-      { icon: "check_circle", text: "All 28 document & image tools" },
+      { icon: "check_circle", text: "All #{ToolRegistry.tools.size} document & image tools" },
       { icon: "check_circle", text: "Files up to #{AppLimits::FREE_MAX_UPLOAD_MB} MB" },
       { icon: "check_circle", text: "Secure processing, auto-deleted after" }
     ]

@@ -308,3 +308,23 @@ _Added 2026-09-28. Original baseline + Sprint 1/2 history above unchanged. Sprin
 
 ## Still open (Sprint 3)
 `tools/show` monolith not migrated onto the reusable uploader/design system; no file hand-off/workflow chaining; auth pages not redesigned; in-app subscription cancellation; analytics reporting UI; lifetime-vs-periodic free-cap decision; optional Higgsfield explainer asset.
+
+---
+
+# Sprint 2.6 Implementation Status
+
+_Added 2026-09-29. All prior history preserved. Sprint 2.6 = Product Consolidation & Commercial Truth. Full detail in `SPRINT_2_6_REPORT.md`._
+
+**Verification:** suite **173 examples, 0 failures**; Brakeman **0 warnings**; bundler-audit **clean**.
+
+## What changed
+- **tools/show monolith retired:** 848-line template → 30-line shell + partials (`_trust_note`, `_uploader`, `_options`, `_form`). Tool options now render from `ToolRegistry::TOOL_OPTIONS` **data** (no 28 branches). ~310 lines of inline JS (incl. a CDN PDF.js decorative engine) → focused `file_drop` Stimulus controller; `client_tool` controller unchanged (composable). Every tool-specific capability preserved; all 28... **27** tools verified to render + resolve.
+- **File hand-off foundation:** a completed output can feed a compatible next tool without re-upload (ownership + type checked, IDOR-safe, server-side tools). `ToolRunner` accepts `source_conversion_id`.
+- **Auth redesigned** (Mobbin: form-as-primary) on the `odt-*` system across sign in / up / password / confirmation / unlock; Firebase Google IDs preserved; removed shimmer/vanity/"secure cloud storage".
+- **Commercial claims removed/corrected** (repo-wide audit): enterprise fabrications (99.9% SLA, 50k+ users, <2s, SSO/audit logs, dedicated account manager, "Trusted by Microsoft/Google/…"); solutions "Join thousands"/"Popular"/"cloud storage"; "cancel anytime"; and the **"28 tools"** claim — the registry actually has **27**, now rendered from data everywhere.
+- **Enterprise** → truthful lightweight business inquiry (nav "For business"). **Solutions** → real jobs (nav "What you can do").
+- **Semantic search aliases** ("make pdf smaller" → Compress, etc.) folded into the deterministic tool search — no LLM.
+- **Theme research conclusion:** recommend Option B (dark marketing, light document-working surfaces) — Mobbin-backed, **not implemented** (own pass). Refero MCP unavailable (stated). Magic UI/Higgsfield not used.
+
+## Still open (launch blockers / Sprint 3)
+In-app subscription cancellation (not operational — "cancel anytime" removed); "unlimited conversions" flagged for the pricing decision; Redact-PDF naming gap; light-workspace theme pass; lifetime-vs-periodic free cap; a manual mobile pass on the migrated tool system.

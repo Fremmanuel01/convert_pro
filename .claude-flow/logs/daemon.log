@@ -2921,3 +2921,34 @@
 [2026-09-29T07:26:03.075Z] [INFO] Worker audit deferred: Memory too low: 1.1% free
 [2026-09-29T07:26:03.259Z] [INFO] Worker audit deferred: Memory too low: 1.1% free
 [2026-09-29T07:26:33.263Z] [INFO] Worker map deferred: Memory too low: 2.8% free
+[2026-09-29T07:27:03.268Z] [INFO] Worker testgaps deferred: Memory too low: 0.7% free
+[2026-09-29T07:27:33.272Z] [INFO] Worker map deferred: Memory too low: 1.9% free
+[2026-09-29T07:28:03.279Z] [INFO] Worker optimize deferred: Memory too low: 1.1% free
+[2026-09-29T07:28:33.282Z] [INFO] Worker optimize deferred: Memory too low: 1.2% free
+[2026-09-29T07:29:03.289Z] [INFO] Worker audit deferred: Memory too low: 0.7% free
+[2026-09-29T07:29:33.296Z] [INFO] Worker testgaps deferred: Memory too low: 1.3% free
+[2026-09-29T07:30:03.304Z] [INFO] Worker map deferred: Memory too low: 1.5% free
+[2026-09-29T07:30:33.309Z] [INFO] Worker audit deferred: Memory too low: 1.2% free
+[2026-09-29T07:31:03.313Z] [INFO] Worker audit deferred: Memory too low: 0.9% free
+[2026-09-29T07:31:33.318Z] [INFO] Worker optimize deferred: Memory too low: 0.7% free
+[2026-09-29T07:32:03.326Z] [INFO] Worker consolidate deferred: Memory too low: 0.5% free
+[2026-09-29T07:32:23.760Z] [INFO] Worker testgaps deferred: Memory too low: 0.7% free
+[2026-09-29T07:32:33.330Z] [INFO] Worker audit deferred: Memory too low: 0.7% free
+[2026-09-29T07:33:03.334Z] [INFO] Worker optimize deferred: Memory too low: 0.5% free
+[2026-09-29T07:33:33.337Z] [INFO] Worker testgaps deferred: Memory too low: 0.9% free
+[2026-09-29T07:34:03.343Z] [INFO] Worker audit deferred: Memory too low: 0.6% free
+[2026-09-29T07:34:33.351Z] [INFO] Worker map deferred: Memory too low: 1.4% free
+[2026-09-29T07:35:03.355Z] [INFO] Worker optimize deferred: Memory too low: 0.5% free
+[2026-09-29T07:35:33.360Z] [INFO] Worker consolidate deferred: Memory too low: 2.1% free
+[2026-09-29T07:36:03.072Z] [INFO] Worker consolidate deferred: Memory too low: 0.4% free
+[2026-09-29T07:36:03.082Z] [INFO] Worker audit deferred: Memory too low: 0.4% free
+[2026-09-29T07:36:03.367Z] [INFO] Worker audit deferred: Memory too low: 0.4% free
+[2026-09-29T07:36:33.371Z] [INFO] Worker testgaps deferred: Memory too low: 1.8% free
+[2026-09-29T07:37:03.376Z] [INFO] Starting worker: map (1/2 concurrent)
+[2026-09-29T07:37:03.379Z] [INFO] Worker map completed in 5ms
+[2026-09-29T07:37:03.380Z] [INFO] Starting worker: audit (1/2 concurrent)
+[2026-09-29T07:37:03.380Z] [INFO] Running audit in headless mode (Claude Code AI)
+[2026-09-29T07:37:11.020Z] [INFO] Starting worker: optimize (2/2 concurrent)
+[2026-09-29T07:37:11.021Z] [INFO] Running optimize in headless mode (Claude Code AI)
+[2026-09-29T07:37:23.767Z] [INFO] Worker map deferred: max concurrent (2) reached
+[2026-09-29T07:37:23.769Z] [INFO] Worker optimize deferred: max concurrent (2) reached
