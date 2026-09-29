@@ -30,3 +30,6 @@ application.register("billing-toggle", BillingToggleController)
 import CountUpController from "controllers/count_up_controller"
 application.register("count-up", CountUpController)
 
+import FileDropController from "controllers/file_drop_controller"
+application.register("file-drop", FileDropController)
+

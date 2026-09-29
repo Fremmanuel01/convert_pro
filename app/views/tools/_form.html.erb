@@ -1,0 +1,55 @@
+<%# The tool's task form. locals: tool, handoff (optional) %>
+<% options = ToolRegistry.options_for(tool[:id]) %>
+
+<%= form_with url: tools_path(tool_id: tool[:id]), method: :post, multipart: true, class: "space-y-5",
+      data: {
+        controller: "client-tool",
+        client_tool_tool_id_value: tool[:id],
+        client_tool_accepts_multiple_value: tool[:accepts_multiple],
+        client_tool_log_url_value: log_conversions_path,
+        action: "submit->client-tool#process",
+        client_tool_target: "form"
+      } do |f| %>
+
+  <% if tool[:input_type] == :prompt %>
+    <div>
+      <label for="prompt" class="block text-sm font-semibold text-slate-900 dark:text-white mb-1.5">Describe what you want</label>
+      <%= f.text_area :prompt, id: "prompt", rows: 4, required: true,
+            placeholder: (tool[:id].include?("pptx") ? "e.g. A 10-slide presentation on renewable energy for a board meeting" : "e.g. A business proposal for a SaaS startup in healthcare"),
+            class: "odt-input resize-none" %>
+      <p class="text-xs text-slate-400 mt-1.5">The more detail you give, the better the result.</p>
+    </div>
+
+  <% elsif tool[:input_type] == :url %>
+    <div>
+      <label for="url" class="block text-sm font-semibold text-slate-900 dark:text-white mb-1.5">Webpage address</label>
+      <%= f.url_field :url, id: "url", required: true, placeholder: "https://example.com", class: "odt-input" %>
+      <p class="text-xs text-slate-400 mt-1.5">We'll capture the page layout into a PDF.</p>
+    </div>
+
+  <% else %>
+    <%= render "tools/uploader", tool: tool, f: f, handoff: handoff %>
+  <% end %>
+
+  <% if options.present? %>
+    <details class="odt-card overflow-hidden" open>
+      <summary class="px-4 py-3 cursor-pointer select-none flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <span class="material-symbols-outlined text-[18px] text-primary">tune</span>
+        Options
+      </summary>
+      <div class="px-4 pb-4 pt-1">
+        <%= render "tools/options", options: options, f: f %>
+      </div>
+    </details>
+  <% end %>
+
+  <%= f.button type: "submit",
+        class: "odt-btn odt-btn--primary odt-btn--lg odt-btn--block",
+        data: { client_tool_target: "submitButton", disable_with: (tool[:input_type] == :prompt ? "Generating…" : "Uploading…") } do %>
+    <% if tool[:input_type] == :prompt %>
+      <span class="material-symbols-outlined text-[18px]">auto_awesome</span> Generate
+    <% else %>
+      <span class="material-symbols-outlined text-[18px]">bolt</span> <%= tool[:input_type] == :url ? "Create PDF" : "Process file" %>
+    <% end %>
+  <% end %>
+<% end %>

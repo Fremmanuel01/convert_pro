@@ -1,9 +1,9 @@
 <% content_for :head do %>
-  <title>OfficedocTools — Free Online PDF & Document Converter | 28 Professional Tools</title>
-  <meta name="description" content="Convert PDF to Word, merge PDFs, compress files, convert HEIC to JPG and more. 28 free professional document tools. Fast, secure — works in your browser, no software needed.">
+  <title>OfficedocTools — Free Online PDF & Document Converter | <%= tool_count %> Professional Tools</title>
+  <meta name="description" content="Convert PDF to Word, merge PDFs, compress files, convert HEIC to JPG and more. <%= tool_count %> free professional document tools. Fast, secure — works in your browser, no software needed.">
   <meta name="keywords" content="PDF converter, PDF to Word, merge PDF, compress PDF, PDF tools, document converter, free PDF editor online, HEIC to JPG, Word to PDF, Excel to PDF, PowerPoint to PDF">
   <meta property="og:title" content="OfficedocTools — Free Online PDF & Document Converter">
-  <meta property="og:description" content="28 professional document conversion tools. Convert PDF, Word, Excel, PowerPoint, and images instantly in your browser.">
+  <meta property="og:description" content="<%= tool_count %> professional document conversion tools. Convert PDF, Word, Excel, PowerPoint, and images instantly in your browser.">
   <meta property="og:type" content="website">
   <link rel="canonical" href="https://officedoctools.com">
 <% end %>
@@ -39,7 +39,7 @@
         <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border"
               style="background:rgba(31,61,255,.07);border-color:rgba(31,61,255,.25);color:#1f3dff;">
           <span class="w-2 h-2 rounded-full animate-pulse" style="background:#1f3dff;"></span>
-          28 Professional Document Tools
+          <%= tool_count %> Professional Document Tools
         </span>
       </div>
 
@@ -56,7 +56,7 @@
         <a href="#tools"
            class="inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-800/70 text-slate-900 dark:text-white font-semibold px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700/70 transition-colors hover:border-primary/40 no-underline">
           <span class="material-symbols-outlined text-xl text-primary">grid_view</span>
-          Browse all 28 tools
+          Browse all <%= tool_count %> tools
         </a>
         <% unless user_signed_in? %>
           <a href="<%= new_user_registration_path %>"
@@ -95,7 +95,7 @@
       <span class="odt-eyebrow mb-2">Popular tasks</span>
       <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Start with a common job</h2>
     </div>
-    <a href="/tools" class="hidden sm:inline-flex odt-btn odt-btn--ghost">All 28 tools →</a>
+    <a href="/tools" class="hidden sm:inline-flex odt-btn odt-btn--ghost">All <%= tool_count %> tools →</a>
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -120,7 +120,7 @@
       </a>
     <% end %>
   </div>
-  <a href="/tools" class="sm:hidden mt-5 odt-btn odt-btn--secondary odt-btn--block">See all 28 tools</a>
+  <a href="/tools" class="sm:hidden mt-5 odt-btn odt-btn--secondary odt-btn--block">See all <%= tool_count %> tools</a>
 </section>
 
 <!-- ══════════════════ VALUE ══════════════════ -->

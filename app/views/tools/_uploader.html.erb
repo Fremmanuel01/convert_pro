@@ -1,0 +1,58 @@
+<%# Tool upload surface (form context). locals: tool, f (form builder), handoff (optional)
+   The file input keeps the client-tool `fileInput` target so client-side tools keep working,
+   and adds file-drop targets for the drag/drop + preview UX. %>
+<% max_mb = current_user&.pro? && current_user&.active? ? AppLimits::PRO_MAX_UPLOAD_MB : AppLimits::FREE_MAX_UPLOAD_MB
+   multiple = tool[:accepts_multiple]
+   accept = tool[:accepted_types].join(",") %>
+
+<div data-controller="file-drop"
+     data-action="dragover->file-drop#dragover dragleave->file-drop#dragleave drop->file-drop#drop">
+
+  <% if handoff %>
+    <div class="mb-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3.5">
+      <span class="material-symbols-outlined text-primary shrink-0">bolt</span>
+      <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+        Using <strong><%= truncate(handoff[:filename], length: 40) %></strong> from your last conversion — no need to re-upload.
+      </p>
+      <%= link_to "Use a different file", tool_path(tool[:id]), class: "text-xs font-semibold text-primary hover:underline shrink-0" %>
+    </div>
+    <%= hidden_field_tag :from_conversion_id, handoff[:id] %>
+  <% end %>
+
+  <!-- Drop zone / empty state -->
+  <div data-file-drop-target="prompt" class="<%= 'hidden' if handoff %>">
+    <div role="button" tabindex="0" aria-label="Choose a file"
+         data-action="click->file-drop#open keydown->file-drop#onKeydown"
+         class="odt-card border-2 border-dashed border-slate-300 dark:border-slate-700 p-8 text-center cursor-pointer hover:border-primary/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+      <div class="size-14 mx-auto rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+        <span class="material-symbols-outlined text-3xl">cloud_upload</span>
+      </div>
+      <p class="text-base font-semibold text-slate-900 dark:text-white">
+        Drop <%= multiple ? "files" : "a file" %> here, or <span class="text-primary">browse</span>
+      </p>
+      <p class="text-xs text-slate-400 mt-1.5">
+        <%= tool[:accepted_types].filter_map { |t| Array(Marcel::TYPE_EXTS[t]).first&.upcase }.uniq.join(", ") %>
+        · up to <%= max_mb %> MB<%= " · multiple files" if multiple %>
+      </p>
+    </div>
+  </div>
+
+  <%= f.file_field :files, multiple: multiple, accept: accept,
+        required: !handoff,
+        class: "sr-only", id: "file_input", "aria-hidden": true, tabindex: -1,
+        data: { client_tool_target: "fileInput", file_drop_target: "input", action: "change->file-drop#change" } %>
+
+  <!-- Selected files preview -->
+  <div data-file-drop-target="preview" hidden>
+    <div class="odt-card divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+      <div class="px-4 py-2.5 flex items-center justify-between bg-slate-50 dark:bg-slate-800/40">
+        <span data-file-drop-target="summary" class="text-xs font-semibold text-slate-500 dark:text-slate-400"></span>
+        <button type="button" data-action="file-drop#clear" class="text-xs font-semibold text-primary hover:underline">Change</button>
+      </div>
+      <div data-file-drop-target="list"></div>
+    </div>
+    <% if multiple %>
+      <p class="text-xs text-slate-400 mt-2">Files are combined in the order shown.</p>
+    <% end %>
+  </div>
+</div>

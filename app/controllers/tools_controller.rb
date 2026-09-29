@@ -1,4 +1,7 @@
 class ToolsController < ApplicationController
+  CLIENT_SIDE_IDS = %w[images_to_pdf merge_pdf split_pdf unlock_pdf pdf_to_images
+                       heic_to_jpg heic_to_png webp_to_jpg webp_to_png].freeze
+
   def index
     @categories = ToolRegistry.categories
   end
@@ -9,6 +12,8 @@ class ToolsController < ApplicationController
       redirect_to tools_path, alert: "Tool not found."
       return
     end
+
+    @handoff = handoff_for(@tool, params[:from_conversion])
 
     source = %w[home next].include?(params[:from]) ? params[:from] : "direct"
     track_event(:tool_viewed, tool_id: @tool[:id],
@@ -31,7 +36,9 @@ class ToolsController < ApplicationController
         :from_page, :to_page
       ).to_h
       files = params[:files]
-      runner = ToolRunner.new(current_user, @tool[:id], files, options)
+      source = handoff_for(@tool, params[:from_conversion_id])
+
+      runner = ToolRunner.new(current_user, @tool[:id], files, options, source_conversion_id: source&.dig(:id))
       conversion = runner.run!
 
       if current_user.nil?
@@ -40,7 +47,8 @@ class ToolsController < ApplicationController
       end
 
       track_event(:conversion_started, tool_id: @tool[:id],
-                  properties: { path: "server", file_count: Array(files).reject(&:blank?).size })
+                  properties: { path: "server", source: (source ? "handoff" : "upload"),
+                                file_count: Array(files).reject(&:blank?).size })
 
       redirect_to conversion_path(conversion), notice: "Your files are being processed!"
     rescue ToolRunner::InvalidRequestError => e
@@ -56,8 +64,31 @@ class ToolsController < ApplicationController
 
   private
 
+  # File hand-off: returns {id:, filename:} when `conversion_id` is a completed
+  # conversion the requester owns whose OUTPUT type this tool accepts — else nil.
+  # Server-side tools only; ownership reuses the same rules as ConversionsController.
+  def handoff_for(tool, conversion_id)
+    return nil if conversion_id.blank? || client_side_path?(tool[:id]) || tool[:accepted_types].blank?
+
+    conv = Conversion.find_by(id: conversion_id)
+    return nil unless conv&.completed? && conv.output_file.attached?
+    return nil unless owns_conversion?(conv)
+
+    mime = conv.output_file.blob.content_type
+    return nil unless tool[:accepted_types].include?(mime)
+
+    { id: conv.id, filename: conv.output_file.blob.filename.to_s }
+  end
+
+  def owns_conversion?(conv)
+    if conv.user_id.present?
+      user_signed_in? && conv.user_id == current_user.id
+    else
+      session[:guest_conversion_ids]&.include?(conv.id)
+    end
+  end
+
   def client_side_path?(tool_id)
-    %w[images_to_pdf merge_pdf split_pdf unlock_pdf pdf_to_images
-       heic_to_jpg heic_to_png webp_to_jpg webp_to_png].include?(tool_id)
+    CLIENT_SIDE_IDS.include?(tool_id)
   end
 end

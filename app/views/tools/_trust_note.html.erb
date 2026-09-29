@@ -1,0 +1,27 @@
+<%# Privacy/trust disclosure for a tool. local: tool (registry entry) %>
+<% is_ai     = ToolRegistry.group_for(tool[:id]) == "AI Documents"
+   is_client = %w[images_to_pdf merge_pdf split_pdf unlock_pdf pdf_to_images heic_to_jpg heic_to_png webp_to_jpg webp_to_png].include?(tool[:id])
+   provider  = tool[:id] == "summarize_pdf" ? "Groq" : "Anthropic (Claude)" %>
+
+<% if is_ai %>
+  <div role="note" class="flex gap-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/70 dark:bg-amber-900/10 p-3.5">
+    <span class="material-symbols-outlined text-amber-500 shrink-0 text-[20px]" aria-hidden="true">info</span>
+    <p class="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+      This tool sends your document's text to <strong><%= provider %></strong> to generate the result. Don't submit confidential material you're not comfortable sharing with a third-party AI provider.
+    </p>
+  </div>
+<% elsif is_client %>
+  <div role="note" class="flex gap-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/70 dark:bg-emerald-900/10 p-3.5">
+    <span class="material-symbols-outlined text-emerald-500 shrink-0 text-[20px]" aria-hidden="true">shield_lock</span>
+    <p class="text-sm text-emerald-800 dark:text-emerald-200 leading-relaxed">
+      <strong>Private:</strong> this runs entirely in your browser — your file is never uploaded to our servers.
+    </p>
+  </div>
+<% else %>
+  <div role="note" class="flex gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 p-3.5">
+    <span class="material-symbols-outlined text-slate-400 shrink-0 text-[20px]" aria-hidden="true">lock</span>
+    <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+      Validated and processed securely over an encrypted connection, then deleted after processing.
+    </p>
+  </div>
+<% end %>

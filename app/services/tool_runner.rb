@@ -29,12 +29,15 @@ class ToolRunner
   # (declared content-type) check instead of hard-rejecting.
   INCONCLUSIVE_TYPES = %w[application/octet-stream text/plain inode/x-empty].freeze
 
-  def initialize(user, tool_id, uploaded_files, options = {})
+  def initialize(user, tool_id, uploaded_files, options = {}, source_conversion_id: nil)
     @user = user
     @tool_id = tool_id
     @uploaded_files = Array(uploaded_files).reject(&:blank?)
     @options = options
     @tool_meta = ToolRegistry.find(tool_id)
+    # File hand-off: a prior conversion whose output becomes this tool's input.
+    # The controller has already authorized ownership + type match.
+    @source_conversion = source_conversion_id.present? ? Conversion.find_by(id: source_conversion_id) : nil
   end
 
   def run!
@@ -71,6 +74,7 @@ class ToolRunner
     raise InvalidRequestError, "Unknown tool: #{@tool_id}" unless @tool_meta
 
     return if @tool_meta[:accepted_types].empty? # URL / prompt tools take no files
+    return if handoff_source? # source output already type-checked by the controller
 
     raise InvalidRequestError, "No files uploaded" if @uploaded_files.empty?
     if @uploaded_files.size > 1 && !@tool_meta[:accepts_multiple]
@@ -78,6 +82,12 @@ class ToolRunner
     end
 
     @uploaded_files.each { |file| validate_file_type!(file) }
+  end
+
+  # Valid hand-off source: a completed conversion whose output type this tool accepts.
+  def handoff_source?
+    return false unless @source_conversion&.completed? && @source_conversion.output_file.attached?
+    @tool_meta[:accepted_types].include?(@source_conversion.output_file.blob.content_type)
   end
 
   # Authoritative validation: inspect the actual bytes and confirm the detected
@@ -129,7 +139,7 @@ class ToolRunner
 
   def validate_size!
     max_mb = AppLimits.max_upload_mb(@user)
-    total_size = @uploaded_files.sum(&:size)
+    total_size = handoff_source? ? @source_conversion.output_file.byte_size : @uploaded_files.sum(&:size)
     if total_size > max_mb.megabytes
       raise LimitExceededError.new("This file is larger than your #{max_mb} MB limit.", reason: "size")
     end
@@ -156,6 +166,11 @@ class ToolRunner
   end
 
   def attach_files!(conversion)
-    @uploaded_files.each { |file| conversion.input_files.attach(file) }
+    if handoff_source? && @uploaded_files.empty?
+      blob = @source_conversion.output_file.blob
+      conversion.input_files.attach(io: StringIO.new(blob.download), filename: blob.filename.to_s, content_type: blob.content_type)
+    else
+      @uploaded_files.each { |file| conversion.input_files.attach(file) }
+    end
   end
 end

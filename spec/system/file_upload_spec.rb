@@ -15,7 +15,7 @@ RSpec.describe "File Uploads", type: :system do
     File.binwrite(path, "%PDF-1.4\n% valid enough for signature detection\n" + ("0" * 200))
 
     attach_file "file_input", path.to_s
-    click_button "Process Document"
+    click_button "Process file"
 
     expect(page).to have_content("being processed")
   end

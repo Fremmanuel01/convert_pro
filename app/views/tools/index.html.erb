@@ -45,7 +45,7 @@
         <% tools.each do |tool| %>
           <%= link_to tool_path(tool[:id]),
                 class: "tool-card group flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 hover:border-primary/40 hover:shadow-md transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-                data: { category: group, name: "#{tool[:name]} #{tool[:description]}".downcase } do %>
+                data: { category: group, name: "#{tool[:name]} #{tool[:description]} #{ToolRegistry.search_terms(tool[:id]).join(' ')}".downcase } do %>
             <div class="size-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
               <span class="material-symbols-outlined text-[24px]"><%= tool[:icon] %></span>
             </div>

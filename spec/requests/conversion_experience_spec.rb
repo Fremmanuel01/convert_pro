@@ -7,11 +7,11 @@ RSpec.describe "Conversion experience surfaces", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Unlimited conversions")
       expect(response.body).to include("No credit card required")
-      expect(response.body).to include("cancel Pro anytime")
-      # No fake urgency / deceptive labels
+      # No fake urgency / deceptive labels / unverifiable cancellation claim
       expect(response.body).not_to match(/Most Popular/i)
       expect(response.body).not_to match(/per day/i)
       expect(response.body).not_to match(/limited time/i)
+      expect(response.body).not_to match(/cancel anytime/i)
     end
 
     it "shows the price from BillingPlans (USD)" do
@@ -39,7 +39,7 @@ RSpec.describe "Conversion experience surfaces", type: :request do
       sign_in user
       get upgrade_billing_path
       expect(response.body).to include("Continue to secure checkout")
-      expect(response.body).to include("Cancel anytime")
+      expect(response.body).to include("through Paystack")
     end
   end
 
