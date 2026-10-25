@@ -1,11 +1,15 @@
 require 'pdf-reader'
 require 'open3'
-require 'prawn'
+require 'grover'
+require 'cgi'
 
 module Tools
   class AiTranslatePdf < BaseTool
     CLAUDE_API_URL = AiConfig::CLAUDE[:url]
     CLAUDE_MODEL   = AiConfig::CLAUDE[:model]
+
+    # Right-to-left target languages (only Arabic in the current set).
+    RTL_LANGS = %w[ar].freeze
 
     LANGUAGES = {
       'es' => 'Spanish',    'fr' => 'French',    'de' => 'German',
@@ -36,7 +40,7 @@ module Tools
       output_name  = "#{source_name}_#{lang_code}_translated.pdf"
       output_path  = tmp_path(output_name)
 
-      build_output_pdf(translated_text, lang_name, source_name, output_path)
+      build_output_pdf(translated_text, lang_name, source_name, output_path, rtl: RTL_LANGS.include?(lang_code))
       output_path
     end
 
@@ -99,50 +103,65 @@ module Tools
       raise ExecutionError, "Network error: #{e.message}"
     end
 
-    def build_output_pdf(translated_text, lang_name, source_name, output_path)
-      translated_text = pdf_safe_text(translated_text)
-      lang_name       = pdf_safe_text(lang_name)
-      source_name     = pdf_safe_text(source_name)
-      Prawn::Document.generate(output_path, page_size: 'A4', margin: 50) do |pdf|
-        # Header
-        pdf.fill_color "4F46E5"
-        pdf.text "OfficedocTools — AI Translation", size: 9, align: :center
-        pdf.move_down 6
-        pdf.fill_color "1E293B"
-        pdf.text "Translated to #{lang_name}", size: 20, style: :bold, align: :center
-        pdf.fill_color "64748B"
-        pdf.text "Source: #{source_name}", size: 9, align: :center
-        pdf.move_down 6
-        pdf.stroke_color "4F46E5"
-        pdf.stroke_horizontal_rule
-        pdf.move_down 16
+    # Rendered via headless Chromium (Grover), not Prawn: Prawn's built-in fonts
+    # are Windows-1252 only and it does no RTL/complex-script shaping, so Arabic,
+    # Hindi, CJK, Cyrillic would be broken or blank. Chromium handles every
+    # script (shaping, bidi, OS fonts) with no embedded-font assets to ship.
+    def build_output_pdf(translated_text, lang_name, source_name, output_path, rtl: false)
+      html = translation_html(translated_text, lang_name, source_name, rtl: rtl)
 
-        # Body
-        pdf.fill_color "1E293B"
-        translated_text.each_line do |line|
-          line = line.strip
-          next if line.empty?
+      grover_opts = {
+        format:      'A4',
+        margin:      { top: '18mm', bottom: '18mm', left: '16mm', right: '16mm' },
+        launch_args: ['--no-sandbox', '--disable-setuid-sandbox']
+      }
+      grover_opts[:executable_path] = ENV['PUPPETEER_EXECUTABLE_PATH'] if ENV['PUPPETEER_EXECUTABLE_PATH'].present?
 
-          if line.length < 80 && line == line.upcase && line.length > 3
-            # Likely a heading
-            pdf.move_down 10
-            pdf.text line, size: 13, style: :bold
-            pdf.move_down 4
-          else
-            pdf.text line, size: 10, leading: 4
-          end
-        end
-
-        # Footer
-        pdf.move_down 20
-        pdf.stroke_color "E2E8F0"
-        pdf.stroke_horizontal_rule
-        pdf.move_down 6
-        pdf.fill_color "94A3B8"
-        pdf.text "Translated automatically by OfficedocTools AI. Review for accuracy before use.", size: 8, align: :center
-      end
+      File.binwrite(output_path, Grover.new(html, **grover_opts).to_pdf)
+      validate_pdf!(output_path)
+    rescue ExecutionError
+      raise
     rescue => e
       raise ExecutionError, "Failed to generate translated PDF: #{e.message}"
+    end
+
+    def translation_html(translated_text, lang_name, source_name, rtl:)
+      body = translated_text.to_s.split(/\n{2,}/).filter_map do |para|
+        para = para.strip
+        next if para.empty?
+
+        if para.length < 80 && para == para.upcase && para.length > 3
+          "<h2>#{CGI.escapeHTML(para)}</h2>"
+        else
+          "<p>#{CGI.escapeHTML(para).gsub("\n", '<br>')}</p>"
+        end
+      end.join("\n")
+
+      <<~HTML
+        <!DOCTYPE html>
+        <html dir="#{rtl ? 'rtl' : 'ltr'}">
+        <head><meta charset="utf-8"><style>
+          body { font-family: -apple-system, "Segoe UI", "Noto Sans", "Noto Sans CJK SC",
+                 "Noto Sans Arabic", "Noto Sans Devanagari", sans-serif;
+                 font-size: 11pt; color: #1E293B; line-height: 1.55; }
+          .brand  { color: #4F46E5; font-size: 9pt;  text-align: center; }
+          h1      { color: #1E293B; font-size: 20pt; text-align: center; margin: 4px 0; }
+          .src    { color: #64748B; font-size: 9pt;  text-align: center; }
+          hr      { border: none; border-top: 1px solid #4F46E5; margin: 14px 0; }
+          h2      { font-size: 13pt; margin: 16px 0 4px; }
+          p       { margin: 7px 0; }
+          .footer { color: #94A3B8; font-size: 8pt; text-align: center;
+                    margin-top: 26px; border-top: 1px solid #E2E8F0; padding-top: 6px; }
+        </style></head>
+        <body>
+          <div class="brand">OfficedocTools — AI Translation</div>
+          <h1>Translated to #{CGI.escapeHTML(lang_name)}</h1>
+          <div class="src">Source: #{CGI.escapeHTML(source_name)}</div>
+          <hr>
+          #{body}
+          <div class="footer">Translated automatically by OfficedocTools AI. Review for accuracy before use.</div>
+        </body></html>
+      HTML
     end
   end
 end
