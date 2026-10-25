@@ -1,0 +1,213 @@
+[2026-09-29T07:39:12.754Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "Now I have a complete picture of the codebase. Let me compile the findings.\n\n---\n\n## Performance Analysis: convert_pro\n\nThis is a Rails 8 / Stimulus app. No React. Findings below are ordered by impact.\n\n---\n\n### 1. N+1 Queries\n\n#### `AnalyticsController#index` — 4 separate queries, should be 1\n\n**File:** `app/controllers/analytics_controller.rb:6-20`\n\n```ruby\n# Current: 4 round-trips\n@total_conversions = current_user.conversions.count\n@recent_conversions = current_user.conversions.where('created_at > ?', 30.days.ago).count\n@older_conversions  = current_user.conversions.where('created_at BETWEEN ? AND ?', 60.days.ago, 30.days.ago).count\n@recent_activity    = current_user.conversions.order(created_at: :desc).limit(5)\n```\n\n```ruby\n# Fix: 2 queries total\n@recent_activity = current_user.conversions.order(created_at: :desc).limit(5).load\nnow = Time.current\ncounts = current_user.conversions\n  .group(Arel::Nodes::Case.new\n    .when(Arel::Table.new(:conversions)[:created_at].gt(30.days.ago)).then(\"recent\")\n    .when(Arel::Table.new(:conversions)[:created_at].between(60.days.ago..30.days.ago)).then(\"older\")\n    .else(\"all\"))\n  .count\n# Or simpler — one count + pluck:\nrows = current_user.conversions.pluck(:created_at)\n@total_conversions  = rows.size\n@recent_conversions = rows.count { |t| t > 30.days.ago }\n@older_conversions  = rows.count { |t| t.between?(60.days.ago, 30.days.ago) }\n```\n\nThe `pluck` version is simplest and eliminates 3 of the 4 DB round-trips.\n\n---\n\n#### `CleanupConversionsJob#reclaim_abandoned!` — N+1 on `refund_usage!`\n\n**File:** `app/jobs/cleanup_conversions_job.rb:56-65`\n\n```ruby\n# Current: loads user + issues UPDATE per abandoned conversion\nscope.find_each do |conversion|\n  conversion.update!(status: :failed, ...)\n  conversion.refund_usage!   # triggers conversion.user (1 query) + UPDATE users (1 query)\nend\n```\n\n```ruby\n# Fix: bulk update status, then batch refund\ndef reclaim_abandoned!\n  cutoff = Retention::ABANDONED_HOURS.hours.ago\n  ids = Conversion.where(status: [:pending, :processing])\n                  .where(\"updated_at < ?\", cutoff)\n                  .pluck(:id)\n  return 0 if ids.empty?\n\n  Conversion.where(id: ids, usage_counted: true).update_all(\n    status: Conversion.statuses[:failed],\n    usage_counted: false,\n    error_message: \"Processing was interrupted. Please try again.\"\n  )\n\n  # Batch the counter decrements — one UPDATE per affected user, not per conversion\n  user_ids = Conversion.where(id: ids).where.not(user_id: nil).pluck(:user_id)\n  User.where(id: user_ids.tally.keys).each do |u|\n    decrement = user_ids.tally[u.id]\n    User.where(id: u.id).update_all(\"conversions_count = GREATEST(0, conversions_count - #{decrement})\")\n  end\n\n  ids.size\nend\n```\n\n---\n\n#### Missing index on `conversions.status`\n\n**File:** `db/schema.rb:60-73`\n\n`validate_concurrency!` (`tool_runner.rb:152`) and the cleanup job both filter by `status` but the only index is on `user_id`. A composite index covers both:\n\n```ruby\n# New migration\nadd_index :conversions, [:user_id, :status]\nadd_index :conversions, :status  # for the cleanup job's unscoped status queries\n```\n\nWithout these, every concurrency check does a full user-scoped scan over all their conversions.\n\n---\n\n### 2. No React — but Stimulus re-computation issues\n\nThe app uses Stimulus, not React. One notable re-computation per call:\n\n#### `client_tool_controller.js` — array rebuilt on every `process()` call\n\n**File:** `app/javascript/controllers/client_tool_controller.js:20-24`\n\n```javascript\n// Current: new array on every submit\nasync process(event) {\n    const clientSideTools = ['images_to_pdf', 'merge_pdf', ...]\n    if (!clientSideTools.includes(this.toolIdValue)) return\n```\n\n```javascript\n// Fix: class-level constant\nstatic CLIENT_TOOLS = new Set([\n    'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',\n    'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'\n])\n\nasync process(event) {\n    if (!this.constructor.CLIENT_TOOLS.has(this.toolIdValue)) return\n```\n\n`Set#has` is O(1) vs `Array#includes` O(n), and the allocation disappears.\n\n---\n\n### 3. Caching Opportunities\n\n#### `ToolRegistry.find` / `ToolRecommender.tool_id_for` — O(n) linear scan on every request\n\n**Files:** `app/services/tool_registry.rb:290-292`, `app/services/tool_recommender.rb:35-37`, `app/controllers/conversions_controller.rb:166-168`\n\nAll three independently scan the 27-item `tools` array by `:id` or `:class_name`. Since the array is a constant, build lookup hashes at boot:\n\n```ruby\n# In ToolRegistry, after the tools array:\nTOOLS_BY_ID         = tools.index_by { |t| t[:id] }.freeze\nTOOLS_BY_CLASS_NAME = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find(tool_id)          = TOOLS_BY_ID[tool_id]\ndef self.find_by_class(klass)   = TOOLS_BY_CLASS_NAME[klass]\n```\n\nThen `ConversionsController#tool_id_for` and `ToolRecommender.tool_id_for` become:\n\n```ruby\ndef tool_id_for(conversion)\n  ToolRegistry.find_by_class(conversion.tool_name)&.dig(:id)\nend\n```\n\n---\n\n#### `ToolRegistry.file_tool_index` — recomputed per homepage load\n\n**File:** `app/services/tool_registry.rb:333-345`\n\nThe method calls `Marcel::TYPE_EXTS` for every MIME type on every request. The tool list is a constant:\n\n```ruby\nFILE_TOOL_INDEX = tools.filter_map { |t|\n  next if t[:input_type] == :prompt || Array(t[:accepted_types]).empty?\n  { id: t[:id], name: t[:name], icon: t[:icon], category: group_for(t[:id]),\n    accepts: t[:accepted_types],\n    exts: t[:accepted_types].flat_map { |m| Array(Marcel::TYPE_EXTS[m]) }.uniq }\n}.freeze\n\ndef self.file_tool_index = FILE_TOOL_INDEX\n```\n\nSame pattern applies to `ToolRegistry.categories` and `ToolRegistry.groups`.\n\n---\n\n#### `ConversionsController#index` — unbounded query\n\n**File:** `app/controllers/conversions_controller.rb:5`\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc)\n# Loads the user's entire conversion history with no LIMIT\n```\n\nAdd pagination before this grows:\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc).page(params[:page]).per(20)\n# ponytail: using kaminari (already in most Rails stacks); add when will_paginate if different\n```\n\n---\n\n### 4. Memory Leaks (JavaScript)\n\n#### `processPdfToImages` — canvases and PDF.js document not released\n\n**File:** `app/javascript/controllers/client_tool_controller.js:172-202`\n\n```javascript\n// Current: new canvas per page, PDF.js document never destroyed\nfor (let i = 1; i <= pdf.numPages; i++) {\n    const canvas = document.createElement('canvas')  // new allocation per page\n    // ... render, toBlob, arrayBuffer ...\n}\n// pdf object (loadingTask) is never destroyed\n```\n\n```javascript\n// Fix: reuse one canvas, destroy the PDF.js document after\nconst canvas = document.createElement('canvas')\nconst context = canvas.getContext('2d')\n\nfor (let i = 1; i <= pdf.numPages; i++) {\n    const page = await pdf.getPage(i)\n    const viewport = page.getViewport({ scale: 2.0 })\n    canvas.height = viewport.height\n    canvas.width = viewport.width\n    await page.render({ canvasContext: context, viewport }).promise\n    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9))\n    zipData[`page_${i}.jpg`] = new Uint8Array(await blob.arrayBuffer())\n    page.cleanup()\n}\n\npdf.destroy()  // releases the PDF.js worker memory for this document\n```\n\nFor a 50-page PDF at scale:2 this is the difference between 50 large canvas allocations vs 1.\n\n---\n\n### 5. Redundant Computations\n\n#### `Analytics.track` — synchronous DB write in request lifecycle\n\n**File:** `app/services/analytics.rb:30-46`\n\nEvery tool view, conversion start, and download triggers a synchronous `AnalyticsEvent.create!` in the request thread. At scale this adds latency on every hot path.\n\n```ruby\n# Current\nAnalyticsEvent.create!(...)\n\n# Fix: fire-and-forget via job\nAnalyticsEventJob.perform_later(name, user_id, anonymous_id, tool_id, plan, authenticated, properties, Time.current.iso8601)\n```\n\nThe job does the insert asynchronously; the rescue already swallows failures so semantics are identical.\n\n---\n\n### Summary\n\n| # | Issue | File | Impact |\n|---|-------|------|--------|\n| 1 | 4 DB queries in analytics index | `analytics_controller.rb:6` | Medium |\n| 2 | N+1 in `reclaim_abandoned!` (user + UPDATE per row) | `cleanup_conversions_job.rb:56` | Medium |\n| 3 | Missing composite index on `(user_id, status)` | schema / new migration | High |\n| 4 | `ToolRegistry.find` O(n) scan on every request | `tool_registry.rb:290` | Medium |\n| 5 | `file_tool_index` / `groups` / `categories` recomputed per request | `tool_registry.rb:333` | Low-Medium |\n| 6 | Unbounded `conversions` query in index action | `conversions_controller.rb:5` | Future risk |\n| 7 | Canvas-per-page in `processPdfToImages` | `client_tool_controller.js:183` | Medium (large PDFs) |\n| 8 | PDF.js document never `destroy()`-ed | `client_tool_controller.js:178` | Low-Medium |\n| 9 | Synchronous `Analytics.track` in request thread | `analytics.rb:34` | Low now, medium at scale |\n| 10 | `clientSideTools` array rebuilt per submit | `client_tool_controller.js:20` | Negligible |\n\nThe composite index on `conversions(user_id, status)` and the `ToolRegistry` hash lookups are the two changes with the best ROI — one migration and a few lines of Ruby, eliminates repeated scans on every conversion submission and download.\n",
+  "parsedOutput": {
+    "sections": [
+      {
+        "title": "Performance Analysis: convert_pro",
+        "content": "\nThis is a Rails 8 / Stimulus app. No React. Findings below are ordered by impact.\n\n---\n\n",
+        "level": 2
+      },
+      {
+        "title": "1. N+1 Queries",
+        "content": "\n",
+        "level": 3
+      },
+      {
+        "title": "`AnalyticsController#index` — 4 separate queries, should be 1",
+        "content": "\n**File:** `app/controllers/analytics_controller.rb:6-20`\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "Current: 4 round-trips",
+        "content": "@total_conversions = current_user.conversions.count\n@recent_conversions = current_user.conversions.where('created_at > ?', 30.days.ago).count\n@older_conversions  = current_user.conversions.where('created_at BETWEEN ? AND ?', 60.days.ago, 30.days.ago).count\n@recent_activity    = current_user.conversions.order(created_at: :desc).limit(5)\n```\n\n```ruby\n",
+        "level": 1
+      },
+      {
+        "title": "Fix: 2 queries total",
+        "content": "@recent_activity = current_user.conversions.order(created_at: :desc).limit(5).load\nnow = Time.current\ncounts = current_user.conversions\n  .group(Arel::Nodes::Case.new\n    .when(Arel::Table.new(:conversions)[:created_at].gt(30.days.ago)).then(\"recent\")\n    .when(Arel::Table.new(:conversions)[:created_at].between(60.days.ago..30.days.ago)).then(\"older\")\n    .else(\"all\"))\n  .count\n",
+        "level": 1
+      },
+      {
+        "title": "Or simpler — one count + pluck:",
+        "content": "rows = current_user.conversions.pluck(:created_at)\n@total_conversions  = rows.size\n@recent_conversions = rows.count { |t| t > 30.days.ago }\n@older_conversions  = rows.count { |t| t.between?(60.days.ago, 30.days.ago) }\n```\n\nThe `pluck` version is simplest and eliminates 3 of the 4 DB round-trips.\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "`CleanupConversionsJob#reclaim_abandoned!` — N+1 on `refund_usage!`",
+        "content": "\n**File:** `app/jobs/cleanup_conversions_job.rb:56-65`\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "Current: loads user + issues UPDATE per abandoned conversion",
+        "content": "scope.find_each do |conversion|\n  conversion.update!(status: :failed, ...)\n  conversion.refund_usage!   # triggers conversion.user (1 query) + UPDATE users (1 query)\nend\n```\n\n```ruby\n",
+        "level": 1
+      },
+      {
+        "title": "Fix: bulk update status, then batch refund",
+        "content": "def reclaim_abandoned!\n  cutoff = Retention::ABANDONED_HOURS.hours.ago\n  ids = Conversion.where(status: [:pending, :processing])\n                  .where(\"updated_at < ?\", cutoff)\n                  .pluck(:id)\n  return 0 if ids.empty?\n\n  Conversion.where(id: ids, usage_counted: true).update_all(\n    status: Conversion.statuses[:failed],\n    usage_counted: false,\n    error_message: \"Processing was interrupted. Please try again.\"\n  )\n\n  # Batch the counter decrements — one UPDATE per affected user, not per conversion\n  user_ids = Conversion.where(id: ids).where.not(user_id: nil).pluck(:user_id)\n  User.where(id: user_ids.tally.keys).each do |u|\n    decrement = user_ids.tally[u.id]\n    User.where(id: u.id).update_all(\"conversions_count = GREATEST(0, conversions_count - #{decrement})\")\n  end\n\n  ids.size\nend\n```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "Missing index on `conversions.status`",
+        "content": "\n**File:** `db/schema.rb:60-73`\n\n`validate_concurrency!` (`tool_runner.rb:152`) and the cleanup job both filter by `status` but the only index is on `user_id`. A composite index covers both:\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "New migration",
+        "content": "add_index :conversions, [:user_id, :status]\nadd_index :conversions, :status  # for the cleanup job's unscoped status queries\n```\n\nWithout these, every concurrency check does a full user-scoped scan over all their conversions.\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "2. No React — but Stimulus re-computation issues",
+        "content": "\nThe app uses Stimulus, not React. One notable re-computation per call:\n\n",
+        "level": 3
+      },
+      {
+        "title": "`client_tool_controller.js` — array rebuilt on every `process()` call",
+        "content": "\n**File:** `app/javascript/controllers/client_tool_controller.js:20-24`\n\n```javascript\n// Current: new array on every submit\nasync process(event) {\n    const clientSideTools = ['images_to_pdf', 'merge_pdf', ...]\n    if (!clientSideTools.includes(this.toolIdValue)) return\n```\n\n```javascript\n// Fix: class-level constant\nstatic CLIENT_TOOLS = new Set([\n    'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',\n    'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'\n])\n\nasync process(event) {\n    if (!this.constructor.CLIENT_TOOLS.has(this.toolIdValue)) return\n```\n\n`Set#has` is O(1) vs `Array#includes` O(n), and the allocation disappears.\n\n---\n\n",
+        "level": 4
+      },
+      {
+        "title": "3. Caching Opportunities",
+        "content": "\n",
+        "level": 3
+      },
+      {
+        "title": "`ToolRegistry.find` / `ToolRecommender.tool_id_for` — O(n) linear scan on every request",
+        "content": "\n**Files:** `app/services/tool_registry.rb:290-292`, `app/services/tool_recommender.rb:35-37`, `app/controllers/conversions_controller.rb:166-168`\n\nAll three independently scan the 27-item `tools` array by `:id` or `:class_name`. Since the array is a constant, build lookup hashes at boot:\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "In ToolRegistry, after the tools array:",
+        "content": "TOOLS_BY_ID         = tools.index_by { |t| t[:id] }.freeze\nTOOLS_BY_CLASS_NAME = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find(tool_id)          = TOOLS_BY_ID[tool_id]\ndef self.find_by_class(klass)   = TOOLS_BY_CLASS_NAME[klass]\n```\n\nThen `ConversionsController#tool_id_for` and `ToolRecommender.tool_id_for` become:\n\n```ruby\ndef tool_id_for(conversion)\n  ToolRegistry.find_by_class(conversion.tool_name)&.dig(:id)\nend\n```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "`ToolRegistry.file_tool_index` — recomputed per homepage load",
+        "content": "\n**File:** `app/services/tool_registry.rb:333-345`\n\nThe method calls `Marcel::TYPE_EXTS` for every MIME type on every request. The tool list is a constant:\n\n```ruby\nFILE_TOOL_INDEX = tools.filter_map { |t|\n  next if t[:input_type] == :prompt || Array(t[:accepted_types]).empty?\n  { id: t[:id], name: t[:name], icon: t[:icon], category: group_for(t[:id]),\n    accepts: t[:accepted_types],\n    exts: t[:accepted_types].flat_map { |m| Array(Marcel::TYPE_EXTS[m]) }.uniq }\n}.freeze\n\ndef self.file_tool_index = FILE_TOOL_INDEX\n```\n\nSame pattern applies to `ToolRegistry.categories` and `ToolRegistry.groups`.\n\n---\n\n",
+        "level": 4
+      },
+      {
+        "title": "`ConversionsController#index` — unbounded query",
+        "content": "\n**File:** `app/controllers/conversions_controller.rb:5`\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc)\n",
+        "level": 4
+      },
+      {
+        "title": "Loads the user's entire conversion history with no LIMIT",
+        "content": "```\n\nAdd pagination before this grows:\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc).page(params[:page]).per(20)\n",
+        "level": 1
+      },
+      {
+        "title": "ponytail: using kaminari (already in most Rails stacks); add when will_paginate if different",
+        "content": "```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "4. Memory Leaks (JavaScript)",
+        "content": "\n",
+        "level": 3
+      },
+      {
+        "title": "`processPdfToImages` — canvases and PDF.js document not released",
+        "content": "\n**File:** `app/javascript/controllers/client_tool_controller.js:172-202`\n\n```javascript\n// Current: new canvas per page, PDF.js document never destroyed\nfor (let i = 1; i <= pdf.numPages; i++) {\n    const canvas = document.createElement('canvas')  // new allocation per page\n    // ... render, toBlob, arrayBuffer ...\n}\n// pdf object (loadingTask) is never destroyed\n```\n\n```javascript\n// Fix: reuse one canvas, destroy the PDF.js document after\nconst canvas = document.createElement('canvas')\nconst context = canvas.getContext('2d')\n\nfor (let i = 1; i <= pdf.numPages; i++) {\n    const page = await pdf.getPage(i)\n    const viewport = page.getViewport({ scale: 2.0 })\n    canvas.height = viewport.height\n    canvas.width = viewport.width\n    await page.render({ canvasContext: context, viewport }).promise\n    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9))\n    zipData[`page_${i}.jpg`] = new Uint8Array(await blob.arrayBuffer())\n    page.cleanup()\n}\n\npdf.destroy()  // releases the PDF.js worker memory for this document\n```\n\nFor a 50-page PDF at scale:2 this is the difference between 50 large canvas allocations vs 1.\n\n---\n\n",
+        "level": 4
+      },
+      {
+        "title": "5. Redundant Computations",
+        "content": "\n",
+        "level": 3
+      },
+      {
+        "title": "`Analytics.track` — synchronous DB write in request lifecycle",
+        "content": "\n**File:** `app/services/analytics.rb:30-46`\n\nEvery tool view, conversion start, and download triggers a synchronous `AnalyticsEvent.create!` in the request thread. At scale this adds latency on every hot path.\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "Current",
+        "content": "AnalyticsEvent.create!(...)\n\n",
+        "level": 1
+      },
+      {
+        "title": "Fix: fire-and-forget via job",
+        "content": "AnalyticsEventJob.perform_later(name, user_id, anonymous_id, tool_id, plan, authenticated, properties, Time.current.iso8601)\n```\n\nThe job does the insert asynchronously; the rescue already swallows failures so semantics are identical.\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "Summary",
+        "content": "| # | Issue | File | Impact |\n|---|-------|------|--------|\n| 1 | 4 DB queries in analytics index | `analytics_controller.rb:6` | Medium |\n| 2 | N+1 in `reclaim_abandoned!` (user + UPDATE per row) | `cleanup_conversions_job.rb:56` | Medium |\n| 3 | Missing composite index on `(user_id, status)` | schema / new migration | High |\n| 4 | `ToolRegistry.find` O(n) scan on every request | `tool_registry.rb:290` | Medium |\n| 5 | `file_tool_index` / `groups` / `categories` recomputed per request | `tool_registry.rb:333` | Low-Medium |\n| 6 | Unbounded `conversions` query in index action | `conversions_controller.rb:5` | Future risk |\n| 7 | Canvas-per-page in `processPdfToImages` | `client_tool_controller.js:183` | Medium (large PDFs) |\n| 8 | PDF.js document never `destroy()`-ed | `client_tool_controller.js:178` | Low-Medium |\n| 9 | Synchronous `Analytics.track` in request thread | `analytics.rb:34` | Low now, medium at scale |\n| 10 | `clientSideTools` array rebuilt per submit | `client_tool_controller.js:20` | Negligible |\n\nThe composite index on `conversions(user_id, status)` and the `ToolRegistry` hash lookups are the two changes with the best ROI — one migration and a few lines of Ruby, eliminates repeated scans on every conversion submission and download.",
+        "level": 3
+      }
+    ],
+    "codeBlocks": [
+      {
+        "language": "ruby",
+        "code": "# Current: 4 round-trips\n@total_conversions = current_user.conversions.count\n@recent_conversions = current_user.conversions.where('created_at > ?', 30.days.ago).count\n@older_conversions  = current_user.conversions.where('created_at BETWEEN ? AND ?', 60.days.ago, 30.days.ago).count\n@recent_activity    = current_user.conversions.order(created_at: :desc).limit(5)"
+      },
+      {
+        "language": "ruby",
+        "code": "# Fix: 2 queries total\n@recent_activity = current_user.conversions.order(created_at: :desc).limit(5).load\nnow = Time.current\ncounts = current_user.conversions\n  .group(Arel::Nodes::Case.new\n    .when(Arel::Table.new(:conversions)[:created_at].gt(30.days.ago)).then(\"recent\")\n    .when(Arel::Table.new(:conversions)[:created_at].between(60.days.ago..30.days.ago)).then(\"older\")\n    .else(\"all\"))\n  .count\n# Or simpler — one count + pluck:\nrows = current_user.conversions.pluck(:created_at)\n@total_conversions  = rows.size\n@recent_conversions = rows.count { |t| t > 30.days.ago }\n@older_conversions  = rows.count { |t| t.between?(60.days.ago, 30.days.ago) }"
+      },
+      {
+        "language": "ruby",
+        "code": "# Current: loads user + issues UPDATE per abandoned conversion\nscope.find_each do |conversion|\n  conversion.update!(status: :failed, ...)\n  conversion.refund_usage!   # triggers conversion.user (1 query) + UPDATE users (1 query)\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "# Fix: bulk update status, then batch refund\ndef reclaim_abandoned!\n  cutoff = Retention::ABANDONED_HOURS.hours.ago\n  ids = Conversion.where(status: [:pending, :processing])\n                  .where(\"updated_at < ?\", cutoff)\n                  .pluck(:id)\n  return 0 if ids.empty?\n\n  Conversion.where(id: ids, usage_counted: true).update_all(\n    status: Conversion.statuses[:failed],\n    usage_counted: false,\n    error_message: \"Processing was interrupted. Please try again.\"\n  )\n\n  # Batch the counter decrements — one UPDATE per affected user, not per conversion\n  user_ids = Conversion.where(id: ids).where.not(user_id: nil).pluck(:user_id)\n  User.where(id: user_ids.tally.keys).each do |u|\n    decrement = user_ids.tally[u.id]\n    User.where(id: u.id).update_all(\"conversions_count = GREATEST(0, conversions_count - #{decrement})\")\n  end\n\n  ids.size\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "# New migration\nadd_index :conversions, [:user_id, :status]\nadd_index :conversions, :status  # for the cleanup job's unscoped status queries"
+      },
+      {
+        "language": "javascript",
+        "code": "// Current: new array on every submit\nasync process(event) {\n    const clientSideTools = ['images_to_pdf', 'merge_pdf', ...]\n    if (!clientSideTools.includes(this.toolIdValue)) return"
+      },
+      {
+        "language": "javascript",
+        "code": "// Fix: class-level constant\nstatic CLIENT_TOOLS = new Set([\n    'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',\n    'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'\n])\n\nasync process(event) {\n    if (!this.constructor.CLIENT_TOOLS.has(this.toolIdValue)) return"
+      },
+      {
+        "language": "ruby",
+        "code": "# In ToolRegistry, after the tools array:\nTOOLS_BY_ID         = tools.index_by { |t| t[:id] }.freeze\nTOOLS_BY_CLASS_NAME = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find(tool_id)          = TOOLS_BY_ID[tool_id]\ndef self.find_by_class(klass)   = TOOLS_BY_CLASS_NAME[klass]"
+      },
+      {
+        "language": "ruby",
+        "code": "def tool_id_for(conversion)\n  ToolRegistry.find_by_class(conversion.tool_name)&.dig(:id)\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "FILE_TOOL_INDEX = tools.filter_map { |t|\n  next if t[:input_type] == :prompt || Array(t[:accepted_types]).empty?\n  { id: t[:id], name: t[:name], icon: t[:icon], category: group_for(t[:id]),\n    accepts: t[:accepted_types],\n    exts: t[:accepted_types].flat_map { |m| Array(Marcel::TYPE_EXTS[m]) }.uniq }\n}.freeze\n\ndef self.file_tool_index = FILE_TOOL_INDEX"
+      },
+      {
+        "language": "ruby",
+        "code": "@conversions = current_user.conversions.order(created_at: :desc)\n# Loads the user's entire conversion history with no LIMIT"
+      },
+      {
+        "language": "ruby",
+        "code": "@conversions = current_user.conversions.order(created_at: :desc).page(params[:page]).per(20)\n# ponytail: using kaminari (already in most Rails stacks); add when will_paginate if different"
+      },
+      {
+        "language": "javascript",
+        "code": "// Current: new canvas per page, PDF.js document never destroyed\nfor (let i = 1; i <= pdf.numPages; i++) {\n    const canvas = document.createElement('canvas')  // new allocation per page\n    // ... render, toBlob, arrayBuffer ...\n}\n// pdf object (loadingTask) is never destroyed"
+      },
+      {
+        "language": "javascript",
+        "code": "// Fix: reuse one canvas, destroy the PDF.js document after\nconst canvas = document.createElement('canvas')\nconst context = canvas.getContext('2d')\n\nfor (let i = 1; i <= pdf.numPages; i++) {\n    const page = await pdf.getPage(i)\n    const viewport = page.getViewport({ scale: 2.0 })\n    canvas.height = viewport.height\n    canvas.width = viewport.width\n    await page.render({ canvasContext: context, viewport }).promise\n    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9))\n    zipData[`page_${i}.jpg`] = new Uint8Array(await blob.arrayBuffer())\n    page.cleanup()\n}\n\npdf.destroy()  // releases the PDF.js worker memory for this document"
+      },
+      {
+        "language": "ruby",
+        "code": "# Current\nAnalyticsEvent.create!(...)\n\n# Fix: fire-and-forget via job\nAnalyticsEventJob.perform_later(name, user_id, anonymous_id, tool_id, plan, authenticated, properties, Time.current.iso8601)"
+      }
+    ]
+  },
+  "durationMs": 121732,
+  "model": "sonnet",
+  "sandboxMode": "permissive",
+  "workerType": "optimize",
+  "timestamp": "2026-09-29T07:39:12.753Z",
+  "executionId": "optimize_1790667431021_kqkkt2"
+}

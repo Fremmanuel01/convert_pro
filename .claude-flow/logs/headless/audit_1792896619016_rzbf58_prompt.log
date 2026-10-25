@@ -1,0 +1,566 @@
+[2026-10-25T02:50:20.083Z] PROMPT
+============================================================
+Analyze this codebase for security vulnerabilities:
+- Check for hardcoded secrets (API keys, passwords)
+- Identify SQL injection risks
+- Find XSS vulnerabilities
+- Check for insecure dependencies
+- Identify authentication/authorization issues
+
+Provide a JSON report with:
+{
+  "vulnerabilities": [{ "severity": "high|medium|low", "file": "...", "line": N, "description": "..." }],
+  "riskScore": 0-100,
+  "recommendations": ["..."]
+}
+
+## Codebase Context
+
+--- app/javascript/controllers/billing_toggle_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+// Monthly/Yearly toggle on the pricing page: swaps the displayed price, period
+// and the checkout link. Prices come from data attributes (BillingPlans source).
+export default class extends Controller {
+  static targets = ["tab", "price", "period", "cta"]
+
+  select(event) {
+    const cycle = event.currentTarget.dataset.cycle
+    this.tabTargets.forEach((t) => t.classList.toggle("is-active", t === event.currentTarget))
+
+    if (this.hasPriceTarget) this.priceTarget.textContent = this.priceTarget.dataset[cycle]
+    if (this.hasPeriodTarget) this.periodTarget.textContent = cycle === "yearly" ? "/year" : "/month"
+    if (this.hasCtaTarget) this.ctaTarget.href = this.ctaTarget.dataset[`${cycle}Url`]
+  }
+}
+
+
+--- app/javascript/controllers/client_tool_controller.js (truncated) ---
+import { Controller } from "@hotwired/stimulus"
+import { jsPDF } from "jspdf"
+import { PDFDocument } from "pdf-lib"
+import { zipSync } from "fflate"
+import * as pdfjsDist from "pdfjs-dist"
+import heic2any from "heic2any"
+
+// Configure PDF.js worker
+pdfjsDist.GlobalWorkerOptions.workerSrc = `https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs`
+
+export default class extends Controller {
+    static values = {
+        toolId: String,
+        acceptsMultiple: Boolean,
+        logUrl: String
+    }
+    static targets = ["form", "fileInput", "submitButton", "passwordInput"]
+
+    async process(event) {
+        const clientSideTools = [
+            'images_to_pdf', 'merge_pdf', 'split_pdf', 'unlock_pdf',
+            'pdf_to_images', 'heic_to_jpg', 'heic_to_png', 'webp_to_jpg', 'webp_to_png'
+        ]
+
+        // Server-side tools submit the form normally (server does the metering).
+        if (!clientSideTools.includes(this.toolIdValue)) return
+
+        event.preventDefault()
+
+        // Server-authoritative quota accounting BEFORE any in-browser work.
+        // If refused (over quota) we stop and send the user to upgrade.
+        const authorized = await this.authorizeConversion()
+        if (!authorized) return
+
+        switch (this.toolIdValue) {
+            case 'images_to_pdf': this.processImagesToPdf(); break
+            case 'merge_pdf': this.processMergePdf(); break
+            case 'split_pdf': this.processSplitPdf(); break
+            case 'unlock_pdf': this.processUnlockPdf(); break
+            case 'pdf_to_images': this.processPdfToImages(); break
+            case 'heic_to_jpg': this.processHeicTo('image/jpeg'); break
+            case 'heic_to_png': this.processHeicTo('image/png'); break
+            case 'webp_to_jpg': this.processWebpTo('image/jpeg'); break
+            case 'webp_to_png': this.processWebpTo('image/png'); break
+        }
+    }
+
+    async processImagesToPdf() {
+        const files = this.fileInputTarget.files
+        if (files.length === 0) return
+        this.setProcessing(true)
+        try {
+            const pdf = new jsPDF()
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i]
+                const imageData = await this.readFileAsDataURL(file)
+                if (i > 0) pdf.addPage()
+                const imgProps = pdf.getImageProperties(imageData)
+                const pdfWidth = pdf.internal.pageSize.getWidth()
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+                pdf.addImage(imageData, 'auto', 0, 0, pdfWidth, pdfHeight)
+            }
+            pdf.save(`images_to_pdf_${Date.now()}.pdf`)
+            this.formTarget.reset()
+            this.resetUI()
+        } catch (error) {
+            console.error(error)
+            this.showError("Failed to generate PDF.")
+        } finally {
+            this.setProcessing(false)
+        }
+    }
+
+    async processMergePdf() {
+        const files = this.fileInputTarget.files
+        if (files.length < 2) {
+            this.showError("Please select at least 2 PDF files.")
+            return
+        }
+        this.setProcessing(true)
+        try {
+            const mergedPdf = await PDFDocument.create()
+            for (const file of files) {
+                const fileBytes = await this.readFileAsArrayBuffer(file)
+                const pdf = await PDFDocument.load(fileBytes)
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices())
+                copiedPages.forEach((page) => mergedPdf.addPage(page))
+            }
+            const pdfBytes = await mergedPdf.save()
+            this.downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `merged_${Date.now()}.pdf`)
+            this.formTarget.reset()
+            this.resetUI()
+        } catch (error) {
+            console.error(error)
+            this.showError("Failed to merge PDFs.")
+        } finally {
+            this.setProcessing(false)
+        }
+    }
+
+    async processSplitPdf() {
+        const files = this.fileInputTarget.files
+        if (files.length === 0) return
+        this.setProcessing(true)
+        try {
+            const file = files[0]
+            const fileBytes = await this.readFileAsArrayBuffer(file)
+            const pdf = await PDFDocument.load(fileBytes)
+            const zipData = {}
+            for (let i = 0; i < pdf.getPageCount(); i++) {
+                const newPdf = await PDFDocument.create()
+                const [copiedPage] = await newPdf.copyPages(pdf, [i])
+                newPdf.addPage(copiedPage)
+                const newPdfBytes = await newPdf.save()
+                zipData[`page_${i + 1}.pdf`] = new Uint8Array(newPdfBytes)
+            }
+            const zipped = zipSync(zipData)
+            this.downloadBlob(new Blob([zipped], { type: 'application/zip' }), `split_${Date.now()}.zip`)
+            this.formTarget.reset()
+            this.resetUI()
+        } catch (error) {
+            console.error(error)
+            this.showError("F
+
+--- app/javascript/controllers/count_up_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+// Restrained number count-up for a single stat (e.g. tool count). Motion that
+// acknowledges a value, not decoration. Respects reduced-motion.
+export default class extends Controller {
+  static values = { to: Number, duration: { type: Number, default: 900 } }
+
+  connect() {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduce || !this.toValue) {
+      this.element.textContent = String(this.toValue || this.element.textContent)
+      return
+    }
+    const start = performance.now()
+    const from = 0
+    const step = (now) => {
+      const p = Math.min((now - start) / this.durationValue, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      this.element.textContent = String(Math.round(from + (this.toValue - from) * eased))
+      if (p < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }
+}
+
+
+--- app/javascript/controllers/file_drop_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+// Focused file-selection UX for tool forms: drag/drop, browse, a clean preview
+// list (name + size + type icon), multi-file, and clear. It only manages the
+// file input and preview — client-side conversion, quota and submit stay in
+// client_tool_controller (composable, single responsibility each).
+export default class extends Controller {
+  static targets = ["input", "prompt", "preview", "list", "summary"]
+
+  open() { this.inputTarget.click() }
+
+  onKeydown(e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this.open() }
+  }
+
+  dragover(e) { e.preventDefault(); this.element.classList.add("uploader--dragover") }
+  dragleave(e) { e.preventDefault(); this.element.classList.remove("uploader--dragover") }
+
+  drop(e) {
+    e.preventDefault()
+    this.element.classList.remove("uploader--dragover")
+    const files = e.dataTransfer?.files
+    if (files && files.length) {
+      this.inputTarget.files = files
+      this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
+    }
+  }
+
+  change() {
+    const files = Array.from(this.inputTarget.files || [])
+    if (!files.length) return this.clear()
+    this.render(files)
+  }
+
+  clear() {
+    this.inputTarget.value = ""
+    if (this.hasListTarget) this.listTarget.innerHTML = ""
+    if (this.hasPreviewTarget) this.previewTarget.hidden = true
+    if (this.hasPromptTarget) this.promptTarget.hidden = false
+  }
+
+  render(files) {
+    if (this.hasPromptTarget) this.promptTarget.hidden = true
+    if (this.hasPreviewTarget) this.previewTarget.hidden = false
+
+    const total = files.reduce((n, f) => n + f.size, 0)
+    if (this.hasSummaryTarget) {
+      this.summaryTarget.textContent =
+        files.length === 1 ? this.humanSize(total) : `${files.length} files · ${this.humanSize(total)}`
+    }
+    if (this.hasListTarget) {
+      this.listTarget.innerHTML = files.map((f) => this.row(f)).join("")
+    }
+  }
+
+  row(file) {
+    const ext = (file.name.split(".").pop() || "").toLowerCase()
+    const icon = { pdf: "picture_as_pdf", docx: "description", doc: "description", xlsx: "table_chart",
+      xls: "table_chart", pptx: "slideshow", ppt: "slideshow", jpg: "image", jpeg: "image",
+      png: "image", heic: "photo_camera", webp: "image" }[ext] || "insert_drive_file"
+    return `<div class="flex items-center gap-3 px-4 py-2.5">
+      <span class="material-symbols-outlined text-primary text-[22px] shrink-0">${icon}</span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-sm font-medium text-slate-900 dark:text-white truncate">${this.escape(file.name)}</span>
+        <span class="block text-xs text-slate-400">${this.humanSize(file.size)}</span>
+      </span>
+    </div>`
+  }
+
+  humanSize(bytes) {
+    if (!bytes) return "0 B"
+    const u = ["B", "KB", "MB", "GB"]
+    let i = 0, n = bytes
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++ }
+    return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${u[i]}`
+  }
+
+  escape(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+  }
+}
+
+
+--- app/javascript/controllers/index.js ---
+import { application } from "controllers/application"
+
+import MobileMenuController from "controllers/mobile_menu_controller"
+application.register("mobile-menu", MobileMenuController)
+
+import SidebarController from "controllers/sidebar_controller"
+application.register("sidebar", SidebarController)
+
+import ThemeController from "controllers/theme_controller"
+application.register("theme", ThemeController)
+
+import DropdownController from "controllers/dropdown_controller"
+application.register("dropdown", DropdownController)
+
+import ClientToolController from "controllers/client_tool_controller"
+application.register("client-tool", ClientToolController)
+
+import PollController from "controllers/poll_controller"
+application.register("poll", PollController)
+
+import UploaderController from "controllers/uploader_controller"
+application.register("uploader", UploaderController)
+
+import ToolFilterController from "controllers/tool_filter_controller"
+application.register("tool-filter", ToolFilterController)
+
+import BillingToggleController from "controllers/billing_toggle_controller"
+application.register("billing-toggle", BillingToggleController)
+
+import CountUpController from "controllers/count_up_controller"
+application.register("count-up", CountUpController)
+
+import FileDropController from "controllers/file_drop_controller"
+application.register("file-drop", FileDropController)
+
+
+
+--- app/javascript/controllers/poll_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+// Polls a status endpoint and swaps this element in place until the server
+// marks it terminal (completed/failed). No Turbo dependency: it fetches the
+// status HTML fragment and replaces its own outerHTML, so Stimulus disconnects
+// the old controller and connects the fresh one (which re-reads `active` and
+// stops if terminal). Ownership is enforced server-side on every poll.
+export default class extends Controller {
+  static values = {
+    active: Boolean,
+    url: String,
+    interval: { type: Number, default: 2500 },
+    autoDownload: String
+  }
+
+  connect() {
+    if (this.hasAutoDownloadValue && this.autoDownloadValue) {
+      this.triggerDownload(this.autoDownloadValue)
+    }
+    if (this.activeValue && this.hasUrlValue) {
+      this.schedule()
+    }
+  }
+
+  disconnect() {
+    if (this.timer) clearTimeout(this.timer)
+  }
+
+  schedule() {
+    this.timer = setTimeout(() => this.poll(), this.intervalValue)
+  }
+
+  async poll() {
+    try {
+      const res = await fetch(this.urlValue, { headers: { Accept: "text/html" } })
+      if (res.ok) {
+        const html = await res.text()
+        this.element.outerHTML = html // Stimulus reconnects the replacement
+        return
+      }
+    } catch (_e) {
+      // transient network error — fall through and retry
+    }
+    this.schedule()
+  }
+
+  triggerDownload(url) {
+    const a = document.createElement("a")
+    a.href = url
+    a.rel = "noopener"
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  }
+}
+
+
+--- app/javascript/controllers/tool_filter_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+// Instant client-side search + category filtering for the tools page.
+export default class extends Controller {
+  static targets = ["search", "tab", "group", "empty"]
+
+  connect() {
+    this.activeCategory = "all"
+    this.query = ""
+    this.apply()
+  }
+
+  search() {
+    this.query = this.searchTarget.value.trim().toLowerCase()
+    this.apply()
+  }
+
+  filter(event) {
+    this.activeCategory = event.currentTarget.dataset.filter
+    this.tabTargets.forEach((t) => {
+      const active = t === event.currentTarget
+      t.classList.toggle("is-active", active)
+      t.setAttribute("aria-selected", active ? "true" : "false")
+    })
+    this.apply()
+  }
+
+  apply() {
+    let anyVisible = false
+
+    this.groupTargets.forEach((group) => {
+      const inCategory = this.activeCategory === "all" || group.dataset.group === this.activeCategory
+      let groupHasVisible = false
+
+      group.querySelectorAll(".tool-card").forEach((card) => {
+        const matchesQuery = !this.query || (card.dataset.name || "").includes(this.query)
+        const show = inCategory && matchesQuery
+        card.hidden = !show
+        if (show) groupHasVisible = true
+      })
+
+      group.hidden = !groupHasVisible
+      if (groupHasVisible) anyVisible = true
+    })
+
+    if (this.hasEmptyTarget) this.emptyTarget.hidden = anyVisible
+  }
+}
+
+
+--- app/javascript/controllers/uploader_controller.js ---
+import { Controller } from "@hotwired/stimulus"
+
+// Reusable, accessible upload surface.
+//
+// Two modes:
+//  - "recommend" (homepage): identify the dropped file's type from the tool
+//    registry (passed as JSON) and show only the tools that actually accept it.
+//    No upload happens here; picking a tool navigates to that tool's page.
+//  - default: a drop/pick/preview surface other tool forms can adopt.
+//
+// This is discovery UX only. It NEVER implies browser validation replaces the
+// authoritative server-side validation performed on submit.
+export default class extends Controller {
+  static targets = ["input", "dropzone", "preview", "filename", "filesize", "results", "empty", "prompt"]
+  static values = {
+    tools: { type: Array, default: [] }, // [{id,name,icon,category,accepts:[mime...],exts:[...]}]
+    mode: { type: String, default: "default" },
+    eventsUrl: { type: String, default: "" }
+  }
+
+  connect() {
+    this.dragging = false
+  }
+
+  open() { this.inputTarget.click() }
+
+  onKeydown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      this.open()
+    }
+  }
+
+  dragover(event) {
+    event.preventDefault()
+    if (!this.dragging) {
+      this.dragging = true
+      this.element.classList.add("uploader--dragover")
+    }
+  }
+
+  dragleave(event) {
+    event.preventDefault()
+    this.dragging = false
+    this.element.classList.remove("uploader--dragover")
+  }
+
+  drop(event) {
+    event.preventDefault()
+    this.dragging = false
+    this.element.classList.remove("uploader--dragover")
+    const files = event.dataTransfer?.files
+    if (files && files.length) {
+      if (this.hasInputTarget) this.inputTarget.files = files
+      this.handleFile(files[0])
+    }
+  }
+
+  change() {
+    const file = this.inputTarget.files?.[0]
+    if (file) this.handleFile(file)
+  }
+
+  remove() {
+    if (this.hasInputTarget) this.inputTarget.value = ""
+    if (this.hasPreviewTarget) this.previewTarget.hidden = true
+    if (this.hasPromptTarget) this.promptTarget.hidden = false
+    if (this.hasResultsTarget) this.resultsTarget.innerHTML = ""
+  }
+
+  handleFile(file) {
+    if (this.hasFilenameTarget) this.filenameTarget.textContent = file.name
+    if (this.hasFilesizeTarget) this.filesizeTarget.textContent = this.humanSize(file.size)
+    if (this.hasPreviewTarget) this.previewTarget.hidden = false
+    if (this.hasPromptTarget) this.promptTarget.hidden = true
+
+    if (this.modeValue === "recommend") this.recommend(file)
+  }
+
+  recommend(file) {
+    if (!this.hasResultsTarget) return
+    const ext = (file.name.split(".").pop() || "").toLowerCase()
+    const type = (file.type || "").toLowerCase()
+
+    const matches = this.toolsValue.filter((t) => {
+      const accepts = (t.accepts || []).map((s) => s.toLowerCase())
+      const exts = (t.exts || []).map((s) => s.toLowerCase())
+      return (type && accepts.includes(type)) || exts.includes(ext)
+    })
+
+    if (matches.length === 0) {
+      this.resultsTarget.innerHTML =
+        `<p class="uploader-empty">We don't have a tool for <strong>.${this.escape(ext)}</strong> files yet. Browse all tools below.</p>`
+      return
+    }
+
+    this.reportFileSelected(ext)
+
+    this.resultsTarget.innerHTML = matches
+      .map(
+        (t) => `
+        <a href="/tools/${encodeURIComponent(t.id)}?from=home" class="uploader-action">
+          <span class="material-symbols-outlined uploader-action__icon">${this.escape(t.icon)}</span>
+          <span class="uploader-action__body">
+            <span class="uploader-action__name">${this.escape(t.name)}</span>
+            <span class="uploader-action__cat">${this.escape(t.category)}</span>
+          </span>
+          <span class="material-symbols-outlined uploader-action__go">arrow_forward</span>
+        </a>`
+      )
+      .join("")
+  }
+
+  // Best-effort funnel event. No filename/contents — only the extension family.
+  reportFileSelected(ext) {
+    if (!this.hasEventsUrlValue || !this.eventsUrlValue) return
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+    fetch(this.eventsUrlValue, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+      body: JSON.stringify({ name: "file_selected", ext })
+    }).catch(() => {})
+  }
+
+  humanSize(bytes) {
+    if (!bytes) return ""
+    const units = ["B", "KB", "MB", "GB"]
+    let i = 0
+    let n = bytes
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++ }
+    return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`
+  }
+
+  escape(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+    )
+  }
+}
+
+
+## Instructions
+
+Analyze the above codebase context and provide your response following the format specified in the task.

@@ -1,0 +1,174 @@
+[2026-10-25T04:52:53.051Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "I have a complete picture now. Here's the full performance analysis:\n\n---\n\n## Performance Analysis\n\n### 1. N+1 / Redundant DB Query Patterns\n\n**`ConversionsController` — dual `ToolRegistry` scans per request**\n\n`show` and `status` both do two independent linear scans over the 26-tool registry array:\n\n```ruby\n# conversions_controller.rb:27,38\n@tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }\n@recommendations = ToolRecommender.for(@conversion)\n# ToolRecommender#for then calls tool_id_for which does a THIRD scan:\nToolRegistry.tools.find { |t| t[:class_name] == class_name }\n```\n\nFix: build a reverse lookup hash once at load time:\n\n```ruby\n# tool_registry.rb\nCLASS_INDEX = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find_by_class(class_name)\n  CLASS_INDEX[class_name]\nend\n```\n\nThen `ToolRecommender#tool_id_for` and both controllers use `ToolRegistry.find_by_class(...)` — O(1) instead of O(n) × 3.\n\n---\n\n**`ConversionsController#index` — unbounded load**\n\n```ruby\n# conversions_controller.rb:5\n@conversions = current_user.conversions.order(created_at: :desc)\n```\n\nNo limit. A user with hundreds of conversions loads them all. Add a cap:\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc).limit(50)\n```\n\n---\n\n### 2. Missing DB Indexes\n\nThe cleanup job and concurrency guard query columns with no index:\n\n```ruby\n# tool_runner.rb:152 — no index on status\n@user.conversions.where(status: [:pending, :processing]).count\n\n# cleanup_conversions_job.rb:56-57 — no index on updated_at\nConversion.where(status: [...]).where(\"updated_at < ?\", cutoff)\n```\n\nGenerate these migrations:\n\n```ruby\n# db/migrate/XXXXXX_index_conversions_for_queries.rb\nadd_index :conversions, :status\nadd_index :conversions, :updated_at\n# Also useful for the analytics dashboard:\nadd_index :analytics_events, :tool_id\n```\n\n---\n\n### 3. Memory Spike on File Hand-off\n\n`attach_files!` downloads the entire blob into a Ruby `String` / `StringIO` before re-attaching it:\n\n```ruby\n# tool_runner.rb:171 — loads entire file into memory\nconversion.input_files.attach(\n  io: StringIO.new(blob.download),   # ← full file in RAM\n  filename: blob.filename.to_s,\n  content_type: blob.content_type\n)\n```\n\nFor a 20 MB PDF this puts 20 MB of heap pressure per request. Fix by streaming:\n\n```ruby\nblob.open do |tempfile|\n  conversion.input_files.attach(\n    io: tempfile,\n    filename: blob.filename.to_s,\n    content_type: blob.content_type\n  )\nend\n```\n\n`ActiveStorage::Blob#open` streams to a tempfile without loading the full content into heap.\n\n---\n\n### 4. Caching Opportunities\n\n**`ToolRegistry` recomputes derived structures on every call**\n\n`groups`, `file_tool_index`, `categories`, and `group_for` all rebuild data structures from scratch every call. The registry is frozen at boot — memoize once:\n\n```ruby\nclass ToolRegistry\n  # Add after the tools definition:\n  @_groups_cache        = nil\n  @_file_tool_index_cache = nil\n\n  def self.groups\n    @_groups_cache ||= GROUPS.each_with_object({}) do |(name, ids), acc|\n      acc[name] = ids.filter_map { |id| find(id) }\n    end\n  end\n\n  def self.file_tool_index\n    @_file_tool_index_cache ||= tools.filter_map do |t|\n      # ... existing body unchanged\n    end\n  end\nend\n```\n\n**HTTP caching on `tools#index`**\n\nThis page is identical for all users (the upgrade CTA differs, but that's a small fragment). You can use Russian-doll fragment caching on the tool grid:\n\n```erb\n<%# tools/index.html.erb %>\n<% cache \"tools-grid-v1\" do %>\n  <% ToolRegistry.groups.each do |group, tools| %>\n    ...\n  <% end %>\n<% end %>\n```\n\nThe cache key never expires since `ToolRegistry` is static — any registry change needs a version bump (`v2` etc.).\n\n---\n\n### 5. Synchronous Analytics Writes Block Requests\n\nEvery tool view and conversion event writes synchronously to `analytics_events`:\n\n```ruby\n# application_controller.rb:20 — called inside controller action\ndef track_event(name, ...)\n  Analytics.track(...)  # INSERT INTO analytics_events — synchronous\nend\n```\n\nThis adds a DB round-trip to every page that calls `track_event`. Wrap in `deliver_later` via a background job:\n\n```ruby\n# app/jobs/analytics_job.rb\nclass AnalyticsJob < ApplicationJob\n  queue_as :default\n  def perform(name, user_id:, anonymous_id:, tool_id:, properties:)\n    Analytics.track(name, user: User.find_by(id: user_id), ...)\n  end\nend\n\n# application_controller.rb\ndef track_event(name, tool_id: nil, properties: {})\n  AnalyticsJob.perform_later(name.to_s,\n    user_id: current_user&.id, anonymous_id: analytics_anonymous_id,\n    tool_id: tool_id, properties: properties)\nend\n```\n\n---\n\n### 6. Polling Has No Backoff for Long-running Jobs\n\nThe `poll_controller.js` polls every 2.5 s unconditionally. AI tools (summarize, translate, generate) can take 30–60 s. That's 12–24 pointless requests before the job finishes:\n\n```js\n// poll_controller.js:10\ninterval: { type: Number, default: 2500 }  // fixed forever\n```\n\nAdd exponential backoff capped at ~15 s:\n\n```js\nconnect() {\n  this.currentInterval = this.intervalValue  // start at 2500\n  if (this.activeValue && this.hasUrlValue) this.schedule()\n}\n\nschedule() {\n  this.timer = setTimeout(() => this.poll(), this.currentInterval)\n  this.currentInterval = Math.min(this.currentInterval * 1.4, 15000)\n}\n```\n\n---\n\n### Priority Order\n\n| Issue | Impact | Effort |\n|---|---|---|\n| Missing `conversions.status` + `updated_at` indexes | High (table scans every job run) | Low (two migrations) |\n| Unbounded `conversions/index` load | Medium (scales with user history) | Trivial (add `.limit(50)`) |\n| `blob.download` memory spike on hand-off | Medium (spikes per large file) | Low (use `blob.open`) |\n| Async analytics writes | Medium (adds latency to every page) | Low (one job) |\n| `ToolRegistry` memoization | Low-medium (26 tools, fast in-memory) | Low |\n| Poll backoff | Low (wasted requests, not user-visible) | Trivial |\n",
+  "parsedOutput": {
+    "sections": [
+      {
+        "title": "Performance Analysis",
+        "content": "\n",
+        "level": 2
+      },
+      {
+        "title": "1. N+1 / Redundant DB Query Patterns",
+        "content": "\n**`ConversionsController` — dual `ToolRegistry` scans per request**\n\n`show` and `status` both do two independent linear scans over the 26-tool registry array:\n\n```ruby\n",
+        "level": 3
+      },
+      {
+        "title": "conversions_controller.rb:27,38",
+        "content": "@tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }\n@recommendations = ToolRecommender.for(@conversion)\n",
+        "level": 1
+      },
+      {
+        "title": "ToolRecommender#for then calls tool_id_for which does a THIRD scan:",
+        "content": "ToolRegistry.tools.find { |t| t[:class_name] == class_name }\n```\n\nFix: build a reverse lookup hash once at load time:\n\n```ruby\n",
+        "level": 1
+      },
+      {
+        "title": "tool_registry.rb",
+        "content": "CLASS_INDEX = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find_by_class(class_name)\n  CLASS_INDEX[class_name]\nend\n```\n\nThen `ToolRecommender#tool_id_for` and both controllers use `ToolRegistry.find_by_class(...)` — O(1) instead of O(n) × 3.\n\n---\n\n**`ConversionsController#index` — unbounded load**\n\n```ruby\n",
+        "level": 1
+      },
+      {
+        "title": "conversions_controller.rb:5",
+        "content": "@conversions = current_user.conversions.order(created_at: :desc)\n```\n\nNo limit. A user with hundreds of conversions loads them all. Add a cap:\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc).limit(50)\n```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "2. Missing DB Indexes",
+        "content": "\nThe cleanup job and concurrency guard query columns with no index:\n\n```ruby\n",
+        "level": 3
+      },
+      {
+        "title": "tool_runner.rb:152 — no index on status",
+        "content": "@user.conversions.where(status: [:pending, :processing]).count\n\n",
+        "level": 1
+      },
+      {
+        "title": "cleanup_conversions_job.rb:56-57 — no index on updated_at",
+        "content": "Conversion.where(status: [...]).where(\"updated_at < ?\", cutoff)\n```\n\nGenerate these migrations:\n\n```ruby\n",
+        "level": 1
+      },
+      {
+        "title": "db/migrate/XXXXXX_index_conversions_for_queries.rb",
+        "content": "add_index :conversions, :status\nadd_index :conversions, :updated_at\n",
+        "level": 1
+      },
+      {
+        "title": "Also useful for the analytics dashboard:",
+        "content": "add_index :analytics_events, :tool_id\n```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "3. Memory Spike on File Hand-off",
+        "content": "\n`attach_files!` downloads the entire blob into a Ruby `String` / `StringIO` before re-attaching it:\n\n```ruby\n",
+        "level": 3
+      },
+      {
+        "title": "tool_runner.rb:171 — loads entire file into memory",
+        "content": "conversion.input_files.attach(\n  io: StringIO.new(blob.download),   # ← full file in RAM\n  filename: blob.filename.to_s,\n  content_type: blob.content_type\n)\n```\n\nFor a 20 MB PDF this puts 20 MB of heap pressure per request. Fix by streaming:\n\n```ruby\nblob.open do |tempfile|\n  conversion.input_files.attach(\n    io: tempfile,\n    filename: blob.filename.to_s,\n    content_type: blob.content_type\n  )\nend\n```\n\n`ActiveStorage::Blob#open` streams to a tempfile without loading the full content into heap.\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "4. Caching Opportunities",
+        "content": "\n**`ToolRegistry` recomputes derived structures on every call**\n\n`groups`, `file_tool_index`, `categories`, and `group_for` all rebuild data structures from scratch every call. The registry is frozen at boot — memoize once:\n\n```ruby\nclass ToolRegistry\n  # Add after the tools definition:\n  @_groups_cache        = nil\n  @_file_tool_index_cache = nil\n\n  def self.groups\n    @_groups_cache ||= GROUPS.each_with_object({}) do |(name, ids), acc|\n      acc[name] = ids.filter_map { |id| find(id) }\n    end\n  end\n\n  def self.file_tool_index\n    @_file_tool_index_cache ||= tools.filter_map do |t|\n      # ... existing body unchanged\n    end\n  end\nend\n```\n\n**HTTP caching on `tools#index`**\n\nThis page is identical for all users (the upgrade CTA differs, but that's a small fragment). You can use Russian-doll fragment caching on the tool grid:\n\n```erb\n<%# tools/index.html.erb %>\n<% cache \"tools-grid-v1\" do %>\n  <% ToolRegistry.groups.each do |group, tools| %>\n    ...\n  <% end %>\n<% end %>\n```\n\nThe cache key never expires since `ToolRegistry` is static — any registry change needs a version bump (`v2` etc.).\n\n---\n\n",
+        "level": 3
+      },
+      {
+        "title": "5. Synchronous Analytics Writes Block Requests",
+        "content": "\nEvery tool view and conversion event writes synchronously to `analytics_events`:\n\n```ruby\n",
+        "level": 3
+      },
+      {
+        "title": "application_controller.rb:20 — called inside controller action",
+        "content": "def track_event(name, ...)\n  Analytics.track(...)  # INSERT INTO analytics_events — synchronous\nend\n```\n\nThis adds a DB round-trip to every page that calls `track_event`. Wrap in `deliver_later` via a background job:\n\n```ruby\n",
+        "level": 1
+      },
+      {
+        "title": "app/jobs/analytics_job.rb",
+        "content": "class AnalyticsJob < ApplicationJob\n  queue_as :default\n  def perform(name, user_id:, anonymous_id:, tool_id:, properties:)\n    Analytics.track(name, user: User.find_by(id: user_id), ...)\n  end\nend\n\n",
+        "level": 1
+      },
+      {
+        "title": "application_controller.rb",
+        "content": "def track_event(name, tool_id: nil, properties: {})\n  AnalyticsJob.perform_later(name.to_s,\n    user_id: current_user&.id, anonymous_id: analytics_anonymous_id,\n    tool_id: tool_id, properties: properties)\nend\n```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "6. Polling Has No Backoff for Long-running Jobs",
+        "content": "\nThe `poll_controller.js` polls every 2.5 s unconditionally. AI tools (summarize, translate, generate) can take 30–60 s. That's 12–24 pointless requests before the job finishes:\n\n```js\n// poll_controller.js:10\ninterval: { type: Number, default: 2500 }  // fixed forever\n```\n\nAdd exponential backoff capped at ~15 s:\n\n```js\nconnect() {\n  this.currentInterval = this.intervalValue  // start at 2500\n  if (this.activeValue && this.hasUrlValue) this.schedule()\n}\n\nschedule() {\n  this.timer = setTimeout(() => this.poll(), this.currentInterval)\n  this.currentInterval = Math.min(this.currentInterval * 1.4, 15000)\n}\n```\n\n---\n\n",
+        "level": 3
+      },
+      {
+        "title": "Priority Order",
+        "content": "| Issue | Impact | Effort |\n|---|---|---|\n| Missing `conversions.status` + `updated_at` indexes | High (table scans every job run) | Low (two migrations) |\n| Unbounded `conversions/index` load | Medium (scales with user history) | Trivial (add `.limit(50)`) |\n| `blob.download` memory spike on hand-off | Medium (spikes per large file) | Low (use `blob.open`) |\n| Async analytics writes | Medium (adds latency to every page) | Low (one job) |\n| `ToolRegistry` memoization | Low-medium (26 tools, fast in-memory) | Low |\n| Poll backoff | Low (wasted requests, not user-visible) | Trivial |",
+        "level": 3
+      }
+    ],
+    "codeBlocks": [
+      {
+        "language": "ruby",
+        "code": "# conversions_controller.rb:27,38\n@tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }\n@recommendations = ToolRecommender.for(@conversion)\n# ToolRecommender#for then calls tool_id_for which does a THIRD scan:\nToolRegistry.tools.find { |t| t[:class_name] == class_name }"
+      },
+      {
+        "language": "ruby",
+        "code": "# tool_registry.rb\nCLASS_INDEX = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find_by_class(class_name)\n  CLASS_INDEX[class_name]\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "# conversions_controller.rb:5\n@conversions = current_user.conversions.order(created_at: :desc)"
+      },
+      {
+        "language": "ruby",
+        "code": "@conversions = current_user.conversions.order(created_at: :desc).limit(50)"
+      },
+      {
+        "language": "ruby",
+        "code": "# tool_runner.rb:152 — no index on status\n@user.conversions.where(status: [:pending, :processing]).count\n\n# cleanup_conversions_job.rb:56-57 — no index on updated_at\nConversion.where(status: [...]).where(\"updated_at < ?\", cutoff)"
+      },
+      {
+        "language": "ruby",
+        "code": "# db/migrate/XXXXXX_index_conversions_for_queries.rb\nadd_index :conversions, :status\nadd_index :conversions, :updated_at\n# Also useful for the analytics dashboard:\nadd_index :analytics_events, :tool_id"
+      },
+      {
+        "language": "ruby",
+        "code": "# tool_runner.rb:171 — loads entire file into memory\nconversion.input_files.attach(\n  io: StringIO.new(blob.download),   # ← full file in RAM\n  filename: blob.filename.to_s,\n  content_type: blob.content_type\n)"
+      },
+      {
+        "language": "ruby",
+        "code": "blob.open do |tempfile|\n  conversion.input_files.attach(\n    io: tempfile,\n    filename: blob.filename.to_s,\n    content_type: blob.content_type\n  )\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "class ToolRegistry\n  # Add after the tools definition:\n  @_groups_cache        = nil\n  @_file_tool_index_cache = nil\n\n  def self.groups\n    @_groups_cache ||= GROUPS.each_with_object({}) do |(name, ids), acc|\n      acc[name] = ids.filter_map { |id| find(id) }\n    end\n  end\n\n  def self.file_tool_index\n    @_file_tool_index_cache ||= tools.filter_map do |t|\n      # ... existing body unchanged\n    end\n  end\nend"
+      },
+      {
+        "language": "erb",
+        "code": "<%# tools/index.html.erb %>\n<% cache \"tools-grid-v1\" do %>\n  <% ToolRegistry.groups.each do |group, tools| %>\n    ...\n  <% end %>\n<% end %>"
+      },
+      {
+        "language": "ruby",
+        "code": "# application_controller.rb:20 — called inside controller action\ndef track_event(name, ...)\n  Analytics.track(...)  # INSERT INTO analytics_events — synchronous\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "# app/jobs/analytics_job.rb\nclass AnalyticsJob < ApplicationJob\n  queue_as :default\n  def perform(name, user_id:, anonymous_id:, tool_id:, properties:)\n    Analytics.track(name, user: User.find_by(id: user_id), ...)\n  end\nend\n\n# application_controller.rb\ndef track_event(name, tool_id: nil, properties: {})\n  AnalyticsJob.perform_later(name.to_s,\n    user_id: current_user&.id, anonymous_id: analytics_anonymous_id,\n    tool_id: tool_id, properties: properties)\nend"
+      },
+      {
+        "language": "js",
+        "code": "// poll_controller.js:10\ninterval: { type: Number, default: 2500 }  // fixed forever"
+      },
+      {
+        "language": "js",
+        "code": "connect() {\n  this.currentInterval = this.intervalValue  // start at 2500\n  if (this.activeValue && this.hasUrlValue) this.schedule()\n}\n\nschedule() {\n  this.timer = setTimeout(() => this.poll(), this.currentInterval)\n  this.currentInterval = Math.min(this.currentInterval * 1.4, 15000)\n}"
+      }
+    ]
+  },
+  "durationMs": 209614,
+  "model": "sonnet",
+  "sandboxMode": "permissive",
+  "workerType": "optimize",
+  "timestamp": "2026-10-25T04:52:53.050Z",
+  "executionId": "optimize_1792903763436_jpeb7w"
+}

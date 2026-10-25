@@ -3,7 +3,7 @@
 <!-- ── STAT CARDS ───────────────────────────────────────────── -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
   <% [
-    { label: "Total Users",        value: @total_users,           icon: "group",           color: "#1f3dff", bg: "rgba(31,61,255,0.08)"  },
+    { label: "Total Users",        value: @total_users,           icon: "group",           color: "#4F46E5", bg: "rgba(79, 70, 229,0.08)"  },
     { label: "New (7 days)",        value: @users_this_week,       icon: "person_add",      color: "#10b981", bg: "rgba(16,185,129,0.08)" },
     { label: "Total Conversions",  value: @total_conversions,     icon: "transform",       color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
     { label: "Conversions Today",  value: @conversions_today,     icon: "today",           color: "#0ea5e9", bg: "rgba(14,165,233,0.08)" },
@@ -19,7 +19,7 @@
           <span class="material-symbols-outlined text-[16px]" style="color:<%= s[:color] %>;"><%= s[:icon] %></span>
         </div>
       </div>
-      <div class="text-3xl font-black text-slate-900"><%= number_with_delimiter(s[:value]) %></div>
+      <div class="text-3xl font-bold text-slate-900"><%= number_with_delimiter(s[:value]) %></div>
     </div>
   <% end %>
 </div>
@@ -56,7 +56,7 @@
     <canvas id="signupChart" height="200"></canvas>
     <div class="mt-4 space-y-2">
       <div class="flex items-center justify-between text-sm">
-        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#1f3dff;"></span>Google OAuth</span>
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#4F46E5;"></span>Google OAuth</span>
         <span class="font-bold"><%= @google_users %></span>
       </div>
       <div class="flex items-center justify-between text-sm">
@@ -75,14 +75,14 @@
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
       <h3 class="font-bold text-slate-900">Recent signups</h3>
-      <%= link_to "View all →", admin_users_path, class: "text-sm text-[#1f3dff] font-medium hover:underline" %>
+      <%= link_to "View all →", admin_users_path, class: "text-sm text-[#4F46E5] font-medium hover:underline" %>
     </div>
     <div class="divide-y divide-slate-100">
       <% @recent_users.each do |user| %>
         <div class="px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                 style="background: linear-gradient(135deg, #1f3dff, #0ea5e9);">
+                 style="background: linear-gradient(135deg, #4F46E5, #0ea5e9);">
               <%= user.email[0].upcase %>
             </div>
             <div>
@@ -115,8 +115,8 @@
         <div class="px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                 style="background:rgba(31,61,255,0.08);">
-              <span class="material-symbols-outlined text-[14px]" style="color:#1f3dff;">transform</span>
+                 style="background:rgba(79, 70, 229,0.08);">
+              <span class="material-symbols-outlined text-[14px]" style="color:#4F46E5;">transform</span>
             </div>
             <div>
               <div class="text-sm font-semibold text-slate-900"><%= c.tool_name&.humanize %></div>
@@ -172,8 +172,8 @@
       datasets: [{
         label: 'Conversions',
         data: convValues,
-        borderColor: '#1f3dff',
-        backgroundColor: 'rgba(31,61,255,0.06)',
+        borderColor: '#4F46E5',
+        backgroundColor: 'rgba(79, 70, 229,0.06)',
         fill: true,
         tension: 0.4,
         pointRadius: 2,
@@ -201,7 +201,7 @@
   // Top tools chart
   const toolLabels = <%= raw @top_tools.keys.map { |k| k.to_s.humanize }.to_json %>;
   const toolValues = <%= raw @top_tools.values.to_json %>;
-  const toolColors = ['#1f3dff','#0ea5e9','#10b981','#f59e0b','#ef6c00','#8b5cf6','#ec4899','#06b6d4','#ef4444','#64748b'];
+  const toolColors = ['#4F46E5','#0ea5e9','#10b981','#f59e0b','#ef6c00','#8b5cf6','#ec4899','#06b6d4','#ef4444','#64748b'];
 
   new Chart(document.getElementById('toolsChart'), {
     type: 'bar',
@@ -227,7 +227,7 @@
       labels: ['Google OAuth', 'Email'],
       datasets: [{
         data: [<%= @google_users %>, <%= @email_users %>],
-        backgroundColor: ['#1f3dff', '#10b981'],
+        backgroundColor: ['#4F46E5', '#10b981'],
         borderWidth: 0,
         hoverOffset: 4,
       }]

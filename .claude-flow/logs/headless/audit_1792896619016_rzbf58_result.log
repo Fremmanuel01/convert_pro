@@ -1,0 +1,64 @@
+[2026-10-25T02:51:12.416Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/poll_controller.js\",\n      \"line\": 28,\n      \"description\": \"DOM-based XSS vulnerability via outerHTML assignment. The response HTML from this.urlValue is directly injected into the DOM without sanitization. If the polling URL is user-controlled or comes from an untrusted source, an attacker could inject malicious JavaScript. Mitigation: Use textContent or sanitize HTML before assignment, or ensure the URL is always server-controlled and validated.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 10,\n      \"description\": \"External CDN dependency for PDF.js worker. The worker URL points to 'https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs' (hardcoded). This creates a supply chain risk if the CDN is compromised (MITM attack possible). Consider: 1) Host the worker locally, 2) Use SRI (Subresource Integrity) hashes, 3) Pin specific versions with integrity checks.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/uploader_controller.js\",\n      \"line\": 81,\n      \"description\": \"CSRF token extraction from meta tag assumes it exists and is valid. The reportFileSelected() method depends on finding 'meta[name=\\\"csrf-token\\\"]'. If missing, the header won't be set, potentially allowing CSRF attacks. Validate CSRF token existence before fetch or use framework defaults.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/billing_toggle_controller.js\",\n      \"line\": 11,\n      \"description\": \"Unsafe data attribute access. The cycle value from dataset is used directly to access priceTarget.dataset[cycle] without validation. If an unexpected cycle value is passed, it could reference unintended data attributes. Add validation: ensure cycle is 'monthly' or 'yearly' only.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 18,\n      \"description\": \"No client-side file size or type validation before processing. While server authorization is checked via authorizeConversion(), malicious files could still be processed client-side before quota rejection. Add basic validation: file type checks and size limits before processing begins.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/controllers/uploader_controller.js\",\n      \"line\": 48,\n      \"description\": \"Unsafe tools array initialization from data attributes. The toolsValue array is populated from HTML data attributes. If the HTML is server-rendered correctly, this is safe, but verify that tools data cannot be manipulated by the client or injected via URL parameters.\"\n    }\n  ],\n  \"riskScore\": 32,\n  \"recommendations\": [\n    \"Replace outerHTML with innerHTML or use a proper HTML sanitization library (DOMPurify) for dynamic content injection in poll_controller.js\",\n    \"Host PDF.js worker locally or implement SRI (Subresource Integrity) hash verification for the CDN URL\",\n    \"Add input validation: ensure billing cycle values are whitelisted ('monthly'/'yearly') and file extensions match expected types\",\n    \"Implement missing CSRF token fallback or use Rails CSRF middleware defaults\",\n    \"Validate CSRF token exists before using it in fetch requests; use framework-provided helpers when possible\",\n    \"Add client-side file size limits (as UX feedback only—server remains authoritative)\",\n    \"Verify tools array data source is always server-rendered and never user-modifiable\",\n    \"Consider Content Security Policy (CSP) headers to mitigate XSS and external script execution risks\",\n    \"Audit all data attributes used in controllers to ensure they're server-controlled and validated\"\n  ]\n}\n```\n\n**Summary:** Risk score 32/100. The main issue is XSS via `outerHTML` in poll_controller (HIGH). Medium risks include external CDN dependency and missing CSRF validation. The codebase shows good practices (escape functions, server-authoritative quota checks) but needs tighter input validation on data attributes and safer DOM manipulation. All issues are fixable with straightforward hardening.\n",
+  "parsedOutput": {
+    "vulnerabilities": [
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/poll_controller.js",
+        "line": 28,
+        "description": "DOM-based XSS vulnerability via outerHTML assignment. The response HTML from this.urlValue is directly injected into the DOM without sanitization. If the polling URL is user-controlled or comes from an untrusted source, an attacker could inject malicious JavaScript. Mitigation: Use textContent or sanitize HTML before assignment, or ensure the URL is always server-controlled and validated."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 10,
+        "description": "External CDN dependency for PDF.js worker. The worker URL points to 'https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs' (hardcoded). This creates a supply chain risk if the CDN is compromised (MITM attack possible). Consider: 1) Host the worker locally, 2) Use SRI (Subresource Integrity) hashes, 3) Pin specific versions with integrity checks."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/uploader_controller.js",
+        "line": 81,
+        "description": "CSRF token extraction from meta tag assumes it exists and is valid. The reportFileSelected() method depends on finding 'meta[name=\"csrf-token\"]'. If missing, the header won't be set, potentially allowing CSRF attacks. Validate CSRF token existence before fetch or use framework defaults."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/billing_toggle_controller.js",
+        "line": 11,
+        "description": "Unsafe data attribute access. The cycle value from dataset is used directly to access priceTarget.dataset[cycle] without validation. If an unexpected cycle value is passed, it could reference unintended data attributes. Add validation: ensure cycle is 'monthly' or 'yearly' only."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 18,
+        "description": "No client-side file size or type validation before processing. While server authorization is checked via authorizeConversion(), malicious files could still be processed client-side before quota rejection. Add basic validation: file type checks and size limits before processing begins."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/uploader_controller.js",
+        "line": 48,
+        "description": "Unsafe tools array initialization from data attributes. The toolsValue array is populated from HTML data attributes. If the HTML is server-rendered correctly, this is safe, but verify that tools data cannot be manipulated by the client or injected via URL parameters."
+      }
+    ],
+    "riskScore": 32,
+    "recommendations": [
+      "Replace outerHTML with innerHTML or use a proper HTML sanitization library (DOMPurify) for dynamic content injection in poll_controller.js",
+      "Host PDF.js worker locally or implement SRI (Subresource Integrity) hash verification for the CDN URL",
+      "Add input validation: ensure billing cycle values are whitelisted ('monthly'/'yearly') and file extensions match expected types",
+      "Implement missing CSRF token fallback or use Rails CSRF middleware defaults",
+      "Validate CSRF token exists before using it in fetch requests; use framework-provided helpers when possible",
+      "Add client-side file size limits (as UX feedback only—server remains authoritative)",
+      "Verify tools array data source is always server-rendered and never user-modifiable",
+      "Consider Content Security Policy (CSP) headers to mitigate XSS and external script execution risks",
+      "Audit all data attributes used in controllers to ensure they're server-controlled and validated"
+    ]
+  },
+  "durationMs": 53400,
+  "model": "haiku",
+  "sandboxMode": "strict",
+  "workerType": "audit",
+  "timestamp": "2026-10-25T02:51:12.416Z",
+  "executionId": "audit_1792896619016_rzbf58"
+}
