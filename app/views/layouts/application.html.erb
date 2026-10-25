@@ -39,7 +39,9 @@
     <link rel="icon" href="/icon.png?v=3" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png?v=3">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400..600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload", "data-turbo-eval": "false" %>
@@ -61,9 +63,6 @@
   </body>
   <% else %>
   <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden min-h-screen flex flex-col relative">
-    <!-- Restrained single-tone backdrop -->
-    <div class="absolute inset-x-0 top-0 h-[420px] pointer-events-none z-0 bg-gradient-to-b from-primary/5 to-transparent"></div>
-
     <div class="relative z-10 flex flex-col min-h-screen">
       <%= render "shared/navbar" %>
       <%= render "shared/flash" %>

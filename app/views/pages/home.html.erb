@@ -25,26 +25,15 @@
 </style>
 
 <!-- ══════════════════ HERO ══════════════════ -->
-<section id="top" class="relative w-full min-h-[calc(100vh-4.5rem)] flex items-center overflow-hidden" style="scroll-margin-top:5rem;">
-  <div class="absolute inset-0 -z-10 overflow-hidden">
-    <div class="absolute inset-0 dark:opacity-[.05] opacity-[.03]"
-         style="background-image:radial-gradient(circle,#1f3dff 1px,transparent 1px);background-size:44px 44px;"></div>
-  </div>
-
-  <div class="max-w-7xl mx-auto w-full px-6 lg:px-16 xl:px-20 py-16 lg:py-24 grid lg:grid-cols-2 gap-14 items-center">
+<section id="top" class="relative w-full flex items-center" style="scroll-margin-top:5rem;">
+  <div class="max-w-6xl mx-auto w-full px-6 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
 
     <!-- Copy -->
     <div class="flex flex-col gap-6">
-      <div class="d1">
-        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border"
-              style="background:rgba(31,61,255,.07);border-color:rgba(31,61,255,.25);color:#1f3dff;">
-          <span class="w-2 h-2 rounded-full animate-pulse" style="background:#1f3dff;"></span>
-          <%= tool_count %> Professional Document Tools
-        </span>
-      </div>
+      <span class="d1 odt-eyebrow"><%= tool_count %> document tools, one workspace</span>
 
-      <h1 class="d2 text-4xl lg:text-5xl xl:text-[56px] font-black leading-[1.08] tracking-tight text-slate-900 dark:text-white">
-        Everything you need to get a<br>document <span class="text-primary">ready for work.</span>
+      <h1 class="d2 font-serif font-medium text-[2.75rem] lg:text-6xl leading-[1.04] tracking-tight text-slate-900 dark:text-white">
+        Everything you need to get a document <span class="text-primary italic">ready for work.</span>
       </h1>
 
       <p class="d3 text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-lg">
@@ -52,32 +41,29 @@
         Drop a file and we'll show you exactly what you can do with it.
       </p>
 
-      <div class="d4 flex flex-col sm:flex-row gap-3">
-        <a href="#tools"
-           class="inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-800/70 text-slate-900 dark:text-white font-semibold px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700/70 transition-colors hover:border-primary/40 no-underline">
-          <span class="material-symbols-outlined text-xl text-primary">grid_view</span>
+      <div class="d4 flex flex-col sm:flex-row gap-3 pt-1">
+        <a href="#tools" class="odt-btn odt-btn--secondary odt-btn--lg">
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
           Browse all <%= tool_count %> tools
         </a>
         <% unless user_signed_in? %>
-          <a href="<%= new_user_registration_path %>"
-             class="inline-flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 font-semibold px-6 py-3 rounded-xl hover:text-primary transition-colors no-underline">
+          <a href="<%= new_user_registration_path %>" class="odt-btn odt-btn--ghost odt-btn--lg">
             Create a free account
           </a>
         <% end %>
       </div>
 
-      <!-- Honest trust strip -->
-      <ul class="d4 flex flex-wrap gap-x-6 gap-y-2 pt-1 text-sm text-slate-500 dark:text-slate-400">
-        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-emerald-500">verified_user</span> Files deleted after processing</li>
-        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-emerald-500">bolt</span> Most files done in seconds</li>
-        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-emerald-500">devices</span> Works on any device</li>
+      <ul class="d4 flex flex-wrap gap-x-6 gap-y-2 pt-3 text-sm text-slate-500 dark:text-slate-400">
+        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">verified_user</span> Files deleted after processing</li>
+        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">bolt</span> Done in seconds</li>
+        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">devices</span> Works on any device</li>
       </ul>
     </div>
 
     <!-- Upload-first primary action -->
     <div class="d5">
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-900/5 p-5 sm:p-6">
-        <p class="text-sm font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+      <div class="odt-card p-5 sm:p-6 shadow-md">
+        <p class="text-sm font-semibold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[20px]">upload_file</span>
           What do you need to do with your file?
         </p>
@@ -93,7 +79,7 @@
   <div class="flex items-end justify-between mb-8 reveal">
     <div>
       <span class="odt-eyebrow mb-2">Popular tasks</span>
-      <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Start with a common job</h2>
+      <h2 class="text-2xl lg:text-3xl font-serif font-medium tracking-tight text-slate-900 dark:text-white">Start with a common job</h2>
     </div>
     <a href="/tools" class="hidden sm:inline-flex odt-btn odt-btn--ghost">All <%= tool_count %> tools →</a>
   </div>
@@ -127,7 +113,7 @@
 <section class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 bg-white dark:bg-slate-900/40 border-y border-slate-200 dark:border-slate-800">
   <div class="max-w-5xl mx-auto text-center reveal">
     <span class="odt-eyebrow mb-3">One workspace</span>
-    <h2 class="text-2xl lg:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+    <h2 class="text-2xl lg:text-4xl font-serif font-medium tracking-tight text-slate-900 dark:text-white mb-4">
       One place for every document task
     </h2>
     <p class="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12">
@@ -156,7 +142,7 @@
 <section class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 max-w-5xl mx-auto w-full">
   <div class="text-center mb-12 reveal">
     <span class="odt-eyebrow mb-2">How it works</span>
-    <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Three steps, a few seconds</h2>
+    <h2 class="text-2xl lg:text-3xl font-serif font-medium tracking-tight text-slate-900 dark:text-white">Three steps, a few seconds</h2>
   </div>
   <div class="grid md:grid-cols-3 gap-5">
     <% [
@@ -180,7 +166,7 @@
 <section id="pricing-preview" class="py-16 lg:py-20 px-6 lg:px-16 xl:px-20 max-w-4xl mx-auto w-full">
   <div class="text-center mb-10 reveal">
     <span class="odt-eyebrow mb-2">Free &amp; Pro</span>
-    <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Free to try. Pro when it's part of your day.</h2>
+    <h2 class="text-2xl lg:text-3xl font-serif font-medium tracking-tight text-slate-900 dark:text-white">Free to try. Pro when it's part of your day.</h2>
   </div>
   <div class="grid md:grid-cols-2 gap-5 reveal">
     <div class="odt-card p-6">
@@ -235,7 +221,7 @@
 <!-- ══════════════════ FINAL CTA ══════════════════ -->
 <section class="py-20 px-6 text-center">
   <div class="max-w-2xl mx-auto reveal">
-    <h2 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
+    <h2 class="text-2xl lg:text-3xl font-serif font-medium tracking-tight text-slate-900 dark:text-white mb-3">
       Ready when you are
     </h2>
     <p class="text-slate-500 dark:text-slate-400 mb-7">Add a file at the top of the page, or browse every tool.</p>

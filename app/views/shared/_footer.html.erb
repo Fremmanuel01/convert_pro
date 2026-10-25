@@ -1,22 +1,21 @@
-<footer class="relative z-10 py-12 border-t border-slate-200/10 dark:border-slate-800/50 mt-auto">
-<div class="max-w-7xl mx-auto px-6 lg:px-20">
-<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">lock</span>
-<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Encrypted transfer</span>
-</div>
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">auto_delete</span>
-<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Files auto-deleted</span>
-</div>
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">bolt</span>
-<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Fast processing</span>
-</div>
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">apps</span>
-<span class="text-sm font-medium text-slate-600 dark:text-slate-400"><%= tool_count %> document tools</span>
-</div>
-</div>
-</div>
+<footer class="relative z-10 border-t border-slate-200 dark:border-slate-800 mt-auto">
+  <div class="max-w-6xl mx-auto px-6 lg:px-12 py-10">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <%= render "shared/logo", size: 28 %>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
+        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-slate-400">lock</span>Encrypted transfer</span>
+        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-slate-400">auto_delete</span>Files auto-deleted</span>
+        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-slate-400">bolt</span>Fast processing</span>
+        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-slate-400">apps</span><%= tool_count %> tools</span>
+      </div>
+    </div>
+    <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-400">
+      <span>&copy; <%= Date.current.year %> OfficedocTools. All rights reserved.</span>
+      <div class="flex items-center gap-5">
+        <%= link_to "Pricing", pricing_path, class: "hover:text-slate-600 dark:hover:text-slate-300 transition-colors" %>
+        <%= link_to "Tools", tools_path, class: "hover:text-slate-600 dark:hover:text-slate-300 transition-colors" %>
+        <%= link_to "For business", enterprise_path, class: "hover:text-slate-600 dark:hover:text-slate-300 transition-colors" %>
+      </div>
+    </div>
+  </div>
 </footer>

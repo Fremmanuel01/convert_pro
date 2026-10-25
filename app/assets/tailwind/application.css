@@ -2,50 +2,35 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Convert Pro / OfficedocTools — design system
+   Calm, precise, trustworthy. One accent (indigo), restrained radii & shadows,
+   a single elevation ramp, no decorative glow or glass. Reusable primitives so
+   templates share one vocabulary instead of hand-rolling utility soup.
+   ───────────────────────────────────────────────────────────────────────── */
 @theme {
-    --color-primary: #1f3dff;
-    --color-background-light: #f5f6f8;
-    --color-background-dark: #0f1223;
+    --color-primary: #4F46E5;        /* indigo-600 */
+    --color-primary-hover: #4338CA;  /* indigo-700 */
+    --color-background-light: #F8FAFC;
+    --color-background-dark: #0B1120;
+    --color-surface-dark: #111A2E;
     --font-display: "Inter", sans-serif;
+    --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
+
+    /* Elevation ramp — subtle, single source */
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, .04);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, .08), 0 1px 2px rgba(15, 23, 42, .04);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, .08);
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, .10);
 }
 
 @layer utilities {
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .glow-soft {
-        box-shadow: 0 0 40px -10px rgba(31, 61, 255, 0.3);
-    }
-
-    .hover-glow:hover {
-        box-shadow: 0 0 20px rgba(31, 61, 255, 0.3);
-        border-color: rgba(31, 61, 255, 0.5);
-    }
-
-    .glow-border {
-        position: relative;
-    }
-
-    .glow-border::after {
-        content: '';
-        position: absolute;
-        inset: -1px;
-        background: linear-gradient(45deg, #1f3dff, #6366f1, #1f3dff);
-        filter: blur(8px);
-        z-index: -1;
-        border-radius: 1.5rem;
-        opacity: 0.5;
-    }
-
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
-/* ── Sprint 2 shared components ─────────────────────────────────────────── */
 @layer components {
+    /* ── Tool filter tabs ─────────────────────────────────────────────── */
     .tool-tab {
         color: rgb(100 116 139);
         background: transparent;
@@ -54,112 +39,119 @@
     .tool-tab.is-active {
         background: rgb(255 255 255);
         color: rgb(15 23 42);
-        box-shadow: 0 1px 2px rgba(0,0,0,.06);
+        box-shadow: var(--shadow-xs);
         border: 1px solid rgb(226 232 240);
     }
+    :is(.dark .tool-tab) { color: rgb(148 163 184); }
+    :is(.dark .tool-tab):hover { color: rgb(226 232 240); }
     :is(.dark .tool-tab).is-active {
         background: rgb(30 41 59);
         color: rgb(255 255 255);
         border-color: rgb(51 65 85);
     }
 
-    /* Universal uploader */
+    /* ── Universal uploader ───────────────────────────────────────────── */
     .uploader--dragover {
         border-color: var(--color-primary);
-        background: rgba(31, 61, 255, 0.04);
+        background: rgba(79, 70, 229, .05);
     }
     .uploader-action {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1rem;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 0.75rem;
-        background: #fff;
-        text-decoration: none;
+        display: flex; align-items: center; gap: .75rem;
+        padding: .75rem 1rem;
+        border: 1px solid rgb(226 232 240); border-radius: .75rem;
+        background: #fff; text-decoration: none;
         transition: border-color .15s, box-shadow .15s;
     }
-    .uploader-action:hover {
-        border-color: rgba(31, 61, 255, 0.5);
-        box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    }
-    :is(.dark .uploader-action) { background: rgb(15 18 35); border-color: rgb(51 65 85); }
+    .uploader-action:hover { border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
+    :is(.dark .uploader-action) { background: var(--color-surface-dark); border-color: rgb(51 65 85); }
     .uploader-action__icon { color: var(--color-primary); }
     .uploader-action__body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
     .uploader-action__name { font-weight: 600; color: rgb(15 23 42); font-size: .9rem; }
     :is(.dark .uploader-action__name) { color: #fff; }
     .uploader-action__cat { font-size: .75rem; color: rgb(148 163 184); }
     .uploader-action__go { color: rgb(148 163 184); margin-left: auto; }
-    .uploader-empty { font-size: .9rem; color: rgb(100 116 139); text-align: center; padding: 0.5rem 0; }
+    .uploader-empty { font-size: .9rem; color: rgb(100 116 139); text-align: center; padding: .5rem 0; }
 
-    /* ── OfficeDocTools design system (Sprint 2.5) ────────────────────────
-       Precise, calm, fast, trustworthy. Restrained radii/shadows, one accent.
-       Reusable button/card/input/badge primitives so surfaces stop hand-rolling. */
-
-    /* Buttons */
+    /* ── Buttons ──────────────────────────────────────────────────────── */
     .odt-btn {
         display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
         font-weight: 600; font-size: .875rem; line-height: 1;
-        padding: .625rem 1.1rem; border-radius: .75rem;
+        padding: .625rem 1.1rem; border-radius: .625rem;
         transition: background-color .15s, border-color .15s, color .15s, transform .05s;
         cursor: pointer; text-decoration: none; white-space: nowrap;
         border: 1px solid transparent;
     }
     .odt-btn:active { transform: translateY(.5px); }
     .odt-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-    .odt-btn--lg { padding: .85rem 1.5rem; font-size: .95rem; border-radius: .85rem; }
+    .odt-btn--lg { padding: .8rem 1.4rem; font-size: .95rem; border-radius: .7rem; }
+    .odt-btn--sm { padding: .45rem .8rem; font-size: .8rem; }
     .odt-btn--block { width: 100%; }
-    .odt-btn--primary { background: var(--color-primary); color: #fff; }
-    .odt-btn--primary:hover { background: #1a34e0; }
+    .odt-btn--primary { background: var(--color-primary); color: #fff; box-shadow: var(--shadow-xs); }
+    .odt-btn--primary:hover { background: var(--color-primary-hover); }
     .odt-btn--secondary { background: #fff; color: rgb(15 23 42); border-color: rgb(226 232 240); }
-    .odt-btn--secondary:hover { background: rgb(248 250 252); }
-    :is(.dark .odt-btn--secondary) { background: rgb(15 23 42); color: #fff; border-color: rgb(51 65 85); }
+    .odt-btn--secondary:hover { background: rgb(248 250 252); border-color: rgb(203 213 225); }
+    :is(.dark .odt-btn--secondary) { background: var(--color-surface-dark); color: #fff; border-color: rgb(51 65 85); }
     :is(.dark .odt-btn--secondary):hover { background: rgb(30 41 59); }
     .odt-btn--ghost { background: transparent; color: rgb(71 85 105); }
-    .odt-btn--ghost:hover { color: var(--color-primary); }
+    .odt-btn--ghost:hover { color: var(--color-primary); background: rgba(79, 70, 229, .06); }
     :is(.dark .odt-btn--ghost) { color: rgb(203 213 225); }
+    :is(.dark .odt-btn--ghost):hover { background: rgba(255, 255, 255, .05); }
 
-    /* Card */
+    /* ── Card ─────────────────────────────────────────────────────────── */
     .odt-card {
         background: #fff; border: 1px solid rgb(226 232 240);
-        border-radius: 1rem; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+        border-radius: .875rem; box-shadow: var(--shadow-xs);
     }
-    :is(.dark .odt-card) { background: rgb(15 18 35); border-color: rgb(30 41 59); }
+    :is(.dark .odt-card) { background: var(--color-surface-dark); border-color: rgb(30 41 59); }
+    .odt-card--interactive { transition: border-color .15s, box-shadow .15s, transform .1s; }
+    .odt-card--interactive:hover { border-color: rgb(203 213 225); box-shadow: var(--shadow-md); }
+    :is(.dark .odt-card--interactive):hover { border-color: rgb(51 65 85); }
 
-    /* Input */
+    /* ── Input ────────────────────────────────────────────────────────── */
     .odt-input {
         width: 100%; background: #fff; border: 1px solid rgb(226 232 240);
-        border-radius: .75rem; padding: .625rem 1rem; font-size: .875rem;
+        border-radius: .625rem; padding: .625rem 1rem; font-size: .875rem;
         color: rgb(15 23 42); transition: border-color .15s, box-shadow .15s;
     }
-    .odt-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(31,61,255,.12); }
+    .odt-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, .14); }
     :is(.dark .odt-input) { background: rgb(2 6 23); border-color: rgb(51 65 85); color: #fff; }
+    :is(.dark .odt-input)::placeholder { color: rgb(100 116 139); }
 
-    /* Eyebrow / section label */
+    /* ── Icon chip (tool/feature glyph tile) ──────────────────────────── */
+    .odt-chip {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 2.75rem; height: 2.75rem; border-radius: .75rem;
+        background: rgba(79, 70, 229, .08); color: var(--color-primary);
+    }
+    :is(.dark .odt-chip) { background: rgba(79, 70, 229, .16); }
+
+    /* ── Eyebrow / section label ──────────────────────────────────────── */
     .odt-eyebrow {
-        display: inline-block; font-size: .75rem; font-weight: 700;
-        letter-spacing: .08em; text-transform: uppercase; color: var(--color-primary);
+        display: inline-block; font-size: .75rem; font-weight: 600;
+        letter-spacing: .06em; text-transform: uppercase; color: rgb(100 116 139);
     }
 
-    /* Badge */
+    /* ── Badge ────────────────────────────────────────────────────────── */
     .odt-badge {
         display: inline-flex; align-items: center; gap: .35rem;
-        font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+        font-size: .7rem; font-weight: 600; letter-spacing: .02em;
         padding: .2rem .55rem; border-radius: 999px;
-        background: rgba(31,61,255,.08); color: var(--color-primary);
+        background: rgba(79, 70, 229, .09); color: var(--color-primary);
     }
+    .odt-badge--neutral { background: rgb(241 245 249); color: rgb(71 85 105); }
+    :is(.dark .odt-badge--neutral) { background: rgb(30 41 59); color: rgb(148 163 184); }
 
-    /* Usage meter */
+    /* ── Usage meter ──────────────────────────────────────────────────── */
     .odt-meter { width: 100%; height: .5rem; border-radius: 999px; background: rgb(226 232 240); overflow: hidden; }
     :is(.dark .odt-meter) { background: rgb(30 41 59); }
     .odt-meter__fill { height: 100%; background: var(--color-primary); transition: width .4s ease; }
     .odt-meter__fill--full { background: rgb(244 63 94); }
 
-    /* Restrained motion: count-up + success pop (state feedback only) */
+    /* ── Restrained motion: success feedback only ─────────────────────── */
     @keyframes odt-pop { 0% { transform: scale(.8); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
     .odt-pop { animation: odt-pop .32s cubic-bezier(.34,1.56,.64,1) both; }
     @media (prefers-reduced-motion: reduce) {
         .odt-pop { animation: none; }
-        .odt-btn, .odt-meter__fill { transition: none; }
+        .odt-btn, .odt-meter__fill, .odt-card--interactive { transition: none; }
     }
 }
