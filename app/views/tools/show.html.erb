@@ -1,4 +1,31 @@
-<% content_for :title, "#{@tool[:name]} — OfficeDocTools" %>
+<% seo = tool_seo(@tool)
+   tool_url = canonical_url(tool_path(@tool[:id])) %>
+<% content_for :title, seo[:title] %>
+<% content_for :meta_description, seo[:description] %>
+<% content_for :canonical, tool_url %>
+<% content_for :jsonld do %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "SoftwareApplication",
+    "name" => "#{@tool[:name]} — OfficedocTools", "url" => tool_url,
+    "applicationCategory" => "BusinessApplication", "operatingSystem" => "Web",
+    "description" => @tool[:description],
+    "offers" => { "@type" => "Offer", "price" => "0", "priceCurrency" => "USD" }
+  }) %>
+  <%= json_ld(breadcrumb_schema([
+    ["Tools", canonical_url(tools_path)],
+    [@tool[:name], tool_url]
+  ])) %>
+  <%= json_ld(faq_schema(seo[:faq])) %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "HowTo",
+    "name" => "How to #{@tool[:name].downcase}",
+    "step" => [
+      { "@type" => "HowToStep", "name" => "Add your file", "text" => "Drop your file in or browse to select it." },
+      { "@type" => "HowToStep", "name" => "Choose options", "text" => "Set any options this tool offers, or keep the defaults." },
+      { "@type" => "HowToStep", "name" => "Download", "text" => "Process the file and download your result in seconds." }
+    ]
+  }) %>
+<% end %>
 
 <div class="max-w-2xl mx-auto w-full mt-6 px-4 sm:px-0">
   <!-- Breadcrumb / identity -->
@@ -24,7 +51,26 @@
     <%= render "tools/form", tool: @tool, handoff: @handoff %>
   </div>
 
-  <p class="text-center text-xs text-slate-400 mt-4">
+  <!-- SEO content: intro + FAQ (also emitted as FAQPage schema above) -->
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">About <%= @tool[:name] %></h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed"><%= seo[:intro] %></p>
+
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mt-8 mb-3">Frequently asked questions</h2>
+    <div class="space-y-2">
+      <% seo[:faq].each do |q, a| %>
+        <details class="odt-card p-4 group">
+          <summary class="flex items-center justify-between cursor-pointer list-none text-sm font-medium text-slate-900 dark:text-white">
+            <%= q %>
+            <span class="material-symbols-outlined text-[20px] text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
+          </summary>
+          <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-2.5"><%= a %></p>
+        </details>
+      <% end %>
+    </div>
+  </section>
+
+  <p class="text-center text-xs text-slate-400 mt-10">
     <%= link_to "Browse all tools", tools_path, class: "hover:text-primary transition-colors" %>
   </p>
 </div>

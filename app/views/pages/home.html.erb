@@ -1,11 +1,17 @@
-<% content_for :head do %>
-  <title>OfficedocTools — Free Online PDF & Document Converter | <%= tool_count %> Professional Tools</title>
-  <meta name="description" content="Convert PDF to Word, merge PDFs, compress files, convert HEIC to JPG and more. <%= tool_count %> free professional document tools. Fast, secure — works in your browser, no software needed.">
-  <meta name="keywords" content="PDF converter, PDF to Word, merge PDF, compress PDF, PDF tools, document converter, free PDF editor online, HEIC to JPG, Word to PDF, Excel to PDF, PowerPoint to PDF">
-  <meta property="og:title" content="OfficedocTools — Free Online PDF & Document Converter">
-  <meta property="og:description" content="<%= tool_count %> professional document conversion tools. Convert PDF, Word, Excel, PowerPoint, and images instantly in your browser.">
-  <meta property="og:type" content="website">
-  <link rel="canonical" href="https://officedoctools.com">
+<% content_for :title, "OfficedocTools — Free Online PDF & Document Tools" %>
+<% content_for :meta_description, "Convert PDF to Word, merge PDFs, compress files, OCR scans, convert HEIC to JPG and more. #{tool_count} free document tools — fast, private, no signup needed." %>
+<% content_for :jsonld do %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "WebApplication",
+    "name" => "OfficedocTools", "url" => canonical_host,
+    "applicationCategory" => "BusinessApplication", "operatingSystem" => "Web",
+    "description" => "#{tool_count} free online tools to convert, compress, merge, protect and OCR PDF, Word, Excel, PowerPoint and image files.",
+    "offers" => { "@type" => "Offer", "price" => "0", "priceCurrency" => "USD" }
+  }) %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "Organization",
+    "name" => "OfficedocTools", "url" => canonical_host, "logo" => "#{canonical_host}/logo.png"
+  }) %>
 <% end %>
 
 <style>

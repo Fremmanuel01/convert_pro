@@ -7,6 +7,8 @@ Rails.application.routes.draw do
 
   root "pages#home"
 
+  get "sitemap.xml", to: "sitemap#index", as: :sitemap, defaults: { format: "xml" }
+
   get "pricing", to: "pages#pricing"
   get "solutions", to: "pages#solutions"
   get "enterprise", to: "pages#enterprise"

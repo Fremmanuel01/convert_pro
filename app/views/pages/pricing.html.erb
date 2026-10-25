@@ -1,3 +1,15 @@
+<% content_for :title, "Pricing — Free & Pro | OfficedocTools" %>
+<% content_for :meta_description, "OfficedocTools is free to use. Upgrade to Pro for unlimited conversions, larger files, OCR and AI document tools. Simple monthly or yearly pricing, no card to start." %>
+<% content_for :jsonld do %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "Product",
+    "name" => "OfficedocTools", "url" => canonical_url(pricing_path),
+    "description" => "Free online document tools, with an optional Pro plan for unlimited conversions, larger files, OCR and AI tools.",
+    "offers" => { "@type" => "Offer", "price" => "0", "priceCurrency" => "USD",
+                  "description" => "Free plan — #{ConversionLimiter::FREE_LIMIT} conversions to start" }
+  }) %>
+<% end %>
+
 <div class="max-w-4xl mx-auto w-full px-6 py-14">
   <div class="text-center mb-10">
     <span class="odt-eyebrow mb-3">Pricing</span>
