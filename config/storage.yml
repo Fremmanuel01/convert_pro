@@ -6,17 +6,13 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
-cloudinary:
-  service: Cloudinary
-  resource_type: "raw"
-
 amazon:
   service: S3
   access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
   secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
   region: "auto"
   bucket: <%= ENV.fetch("AWS_BUCKET", "officedoctools-files") %>
-  endpoint: "https://c3b07ce336d11d2e349120d23d3ff4d4.r2.cloudflarestorage.com"
+  endpoint: <%= ENV["AWS_ENDPOINT"] %>
   force_path_style: true
   request_checksum_calculation: "when_required"
   response_checksum_validation: "when_required"

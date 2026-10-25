@@ -21,8 +21,8 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Use S3 when AWS credentials are present, fall back to Cloudinary otherwise.
-  config.active_storage.service = ENV["AWS_ACCESS_KEY_ID"].present? ? :amazon : :cloudinary
+  # Cloudflare R2 (S3-compatible) when creds are present, else local disk.
+  config.active_storage.service = ENV["AWS_ACCESS_KEY_ID"].present? ? :amazon : :local
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true

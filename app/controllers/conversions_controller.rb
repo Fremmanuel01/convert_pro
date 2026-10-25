@@ -154,10 +154,6 @@ class ConversionsController < ApplicationController
         disposition:  "attachment; filename=\"#{safe_filename}\"",
         content_type: blob.content_type.presence || "application/octet-stream"
       ), allow_other_host: true
-    when "cloudinary"
-      cloudinary_url = build_cloudinary_download_url(blob.key, safe_filename)
-      raise "Cloudinary resource not found for key: #{blob.key}" unless cloudinary_url
-      redirect_to cloudinary_url, allow_other_host: true
     else
       redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
     end
@@ -186,27 +182,5 @@ class ConversionsController < ApplicationController
               .delete_prefix("_")
               .truncate(60, omission: "")
     "#{base}#{ext}"
-  end
-
-  def build_cloudinary_download_url(key, filename)
-    ["raw", "image"].each do |resource_type|
-      begin
-        Cloudinary::Api.resource(key, resource_type: resource_type)
-        return Cloudinary::Utils.cloudinary_url(
-          key,
-          resource_type: resource_type,
-          type:          "upload",
-          secure:        true,
-          sign_url:      true,
-          flags:         "attachment:#{filename.gsub(' ', '_')}"
-        )
-      rescue Cloudinary::Api::NotFound
-        next
-      rescue => e
-        Rails.logger.warn "Cloudinary lookup (#{resource_type}) failed for #{key}: #{e.message}"
-        next
-      end
-    end
-    nil
   end
 end

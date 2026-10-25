@@ -12,6 +12,7 @@
 # production credentials from a local .env.
 /.env*
 !/.env.test
+!/.env.example
 
 # Ignore all logfiles and tempfiles.
 /log/*

@@ -31,8 +31,9 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Local disk by default; use R2 (the :amazon S3 service) when R2 creds are set,
+  # so storage can be tested locally. See config/storage.yml.
+  config.active_storage.service = ENV["AWS_ACCESS_KEY_ID"].present? ? :amazon : :local
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
