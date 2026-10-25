@@ -100,6 +100,9 @@ module Tools
     end
 
     def build_output_pdf(translated_text, lang_name, source_name, output_path)
+      translated_text = pdf_safe_text(translated_text)
+      lang_name       = pdf_safe_text(lang_name)
+      source_name     = pdf_safe_text(source_name)
       Prawn::Document.generate(output_path, page_size: 'A4', margin: 50) do |pdf|
         # Header
         pdf.fill_color "4F46E5"

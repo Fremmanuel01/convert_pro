@@ -142,6 +142,8 @@ module Tools
     end
 
     def create_summary_pdf(markdown, source_filename, output_path)
+      markdown        = pdf_safe_text(markdown)
+      source_filename = pdf_safe_text(source_filename)
       Prawn::Document.generate(output_path, page_size: 'A4', margin: 40) do |pdf|
         # Header
         pdf.fill_color "4338ca"

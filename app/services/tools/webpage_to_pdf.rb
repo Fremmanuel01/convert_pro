@@ -24,7 +24,7 @@ module Tools
         if ENV['PUPPETEER_EXECUTABLE_PATH'].present?
           grover_opts[:executable_path] = ENV['PUPPETEER_EXECUTABLE_PATH']
         end
-        grover = Grover.new(url, grover_opts)
+        grover = Grover.new(url, **grover_opts)
         pdf_content = grover.to_pdf
         
         File.binwrite(output_path, pdf_content)
