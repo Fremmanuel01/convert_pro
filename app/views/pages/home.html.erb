@@ -31,8 +31,11 @@
 </style>
 
 <!-- ══════════════════ HERO ══════════════════ -->
-<section id="top" class="relative w-full flex items-center" style="scroll-margin-top:5rem;">
-  <div class="max-w-6xl mx-auto w-full px-6 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
+<section id="top" class="relative w-full overflow-hidden" style="scroll-margin-top:5rem;">
+  <!-- faint single-tone wash -->
+  <div class="absolute inset-x-0 top-0 h-[26rem] -z-10 bg-gradient-to-b from-primary/[0.05] via-primary/[0.015] to-transparent"></div>
+
+  <div class="max-w-6xl mx-auto w-full px-6 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-[1fr_1.05fr] gap-12 lg:gap-14 items-center">
 
     <!-- Copy -->
     <div class="flex flex-col gap-6">
@@ -48,33 +51,45 @@
       </p>
 
       <div class="d4 flex flex-col sm:flex-row gap-3 pt-1">
+        <a href="#top-uploader" class="odt-btn odt-btn--primary odt-btn--lg">
+          <span class="material-symbols-outlined text-[20px]">upload_file</span>
+          Convert a file — free
+        </a>
         <a href="#tools" class="odt-btn odt-btn--secondary odt-btn--lg">
-          <span class="material-symbols-outlined text-[20px]">grid_view</span>
           Browse all <%= tool_count %> tools
         </a>
-        <% unless user_signed_in? %>
-          <a href="<%= new_user_registration_path %>" class="odt-btn odt-btn--ghost odt-btn--lg">
-            Create a free account
-          </a>
-        <% end %>
       </div>
 
       <ul class="d4 flex flex-wrap gap-x-6 gap-y-2 pt-3 text-sm text-slate-500 dark:text-slate-400">
-        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">verified_user</span> Files deleted after processing</li>
+        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">check_circle</span> No signup to start</li>
+        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">lock</span> Files deleted after processing</li>
         <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">bolt</span> Done in seconds</li>
-        <li class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-slate-400">devices</span> Works on any device</li>
       </ul>
     </div>
 
-    <!-- Upload-first primary action -->
+    <!-- Live product window: the uploader framed as the real app -->
     <div class="d5">
-      <div class="odt-card p-5 sm:p-6 shadow-md">
-        <p class="text-sm font-semibold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-[20px]">upload_file</span>
-          What do you need to do with your file?
-        </p>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Add a file to see the tools that work with it. No account needed to start.</p>
-        <%= render "shared/uploader", mode: "recommend", tools: @tool_index %>
+      <div class="odt-card shadow-lg overflow-hidden">
+        <!-- window chrome -->
+        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
+          <span class="flex gap-1.5">
+            <span class="size-2.5 rounded-full bg-rose-400"></span>
+            <span class="size-2.5 rounded-full bg-amber-400"></span>
+            <span class="size-2.5 rounded-full bg-emerald-400"></span>
+          </span>
+          <span class="mx-auto inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-1">
+            <span class="material-symbols-outlined text-[14px] text-slate-400">lock</span>officedoctools.com
+          </span>
+        </div>
+        <!-- window body = live uploader -->
+        <div class="p-5 sm:p-6" id="top-uploader">
+          <p class="text-sm font-semibold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[20px]">upload_file</span>
+            What do you need to do with your file?
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Add a file to see the tools that work with it. No account needed to start.</p>
+          <%= render "shared/uploader", mode: "recommend", tools: @tool_index %>
+        </div>
       </div>
     </div>
   </div>
