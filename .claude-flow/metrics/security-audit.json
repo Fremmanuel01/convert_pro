@@ -1,12 +1,76 @@
 {
-  "timestamp": "2026-10-25T05:00:52.568Z",
-  "mode": "local",
-  "checks": {
-    "envFilesProtected": true,
-    "gitIgnoreExists": true,
-    "noHardcodedSecrets": true
+  "timestamp": "2026-10-26T05:17:40.183Z",
+  "mode": "headless",
+  "workerType": "audit",
+  "model": "haiku",
+  "durationMs": 38401,
+  "executionId": "audit_1792991821782_7sqzug",
+  "success": true,
+  "findings": {
+    "vulnerabilities": [
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/poll_controller.js",
+        "line": 28,
+        "description": "DOM-based XSS vulnerability: outerHTML assignment with server-provided HTML. If the server is compromised or returns malicious HTML, arbitrary JavaScript can execute. The element content is replaced without sanitization."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/client_tool_controller.js",
+        "line": null,
+        "description": "Critical missing code: authorizeConversion() method referenced but implementation not shown. Cannot verify server-side quota/authorization enforcement. Client-side quota checks can be bypassed."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/application.js",
+        "line": 7,
+        "description": "Supply chain risk: Firebase config loaded from meta tag without integrity checks. While Firebase public config is intentionally exposed, ensure no private keys are ever placed in meta tags."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/client_tool_controller.js",
+        "line": 17,
+        "description": "External CDN dependency for PDF.js worker: loaded from https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs. Risk of supply chain compromise. Consider self-hosting or using Subresource Integrity (SRI) hashing."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/uploader_controller.js",
+        "line": 113,
+        "description": "Dynamic URL construction with user-controlled data: encodeURIComponent(t.id) used in href. While encodeURIComponent is present, validate that tool.id cannot be crafted as a data: or javascript: URL by backend."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 39,
+        "description": "Sensitive error message exposure: Error messages from Firebase auth displayed directly to users (e.g., 'Authentication failed: ...'). May reveal information about backend state. Consider generic error messages."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/poll_controller.js",
+        "line": 31,
+        "description": "Silent error handling: network errors are silently caught and retried. If the endpoint is unreachable, the user never receives feedback. Add timeout or max-retry limits."
+      },
+      {
+        "severity": "low",
+        "file": "app/javascript/controllers/uploader_controller.js",
+        "line": 101,
+        "description": "CSRF token retrieval relies on meta tag without fallback. If meta tag is missing, CSRF protection is silently skipped in reportFileSelected(). Should fail-safe or warn."
+      }
+    ],
+    "riskScore": 68,
+    "recommendations": [
+      "CRITICAL: Replace outerHTML assignment in poll_controller.js with textContent or a sanitization library (DOMPurify). Use Turbo or similar for safe HTML replacement.",
+      "CRITICAL: Verify authorizeConversion() implementation server-side. Ensure quotas cannot be bypassed with client-side script manipulation.",
+      "HIGH: Self-host PDF.js worker or add Subresource Integrity (SRI) hashing: <script ... integrity='sha384-...'>",
+      "HIGH: Validate tool.id backend cannot contain javascript:, data:, or vbscript: schemes before rendering in href attributes.",
+      "MEDIUM: Implement generic error messages in Firebase auth. Log detailed errors server-side only.",
+      "MEDIUM: Add retry limits and user feedback for failed polls in poll_controller.js.",
+      "MEDIUM: Implement Content Security Policy (CSP) headers to restrict inline scripts and external CDN loads.",
+      "LOW: Add fallback handling for missing CSRF tokens in reportFileSelected().",
+      "LOW: Audit all file size/type handling server-side; client-side mime-type/extension checks are easily spoofed.",
+      "LOW: Review Firebase config for accidentally exposed private keys (API secrets should never be in client-side config)."
+    ]
   },
-  "riskLevel": "low",
-  "recommendations": [],
-  "note": "Install Claude Code CLI for AI-powered security analysis"
+  "rawOutputPreview": "I'll analyze the provided codebase for security vulnerabilities directly. Here's the JSON report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/poll_controller.js\",\n      \"line\": 28,\n      \"description\": \"DOM-based XSS vulnerability: outerHTML assignment with server-provided HTML. If the server is compromised or returns malicious HTML, arbitrary JavaScript can execute. The element content is replaced without sanitization.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/client_tool_controller.js\",\n      \"line\": null,\n      \"description\": \"Critical missing code: authorizeConversion() method referenced but implementation not shown. Cannot verify server-side quota/authorization enforcement. Client-side quota checks can be bypassed.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/application.js\",\n      \"line\": 7,\n      \"description\": \"Supply chain risk: Firebase config loaded from meta tag without integrity checks. While Firebase public config is intentionally exposed, ensure no private keys are ever placed in meta tags.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/client_tool_controller.js\",\n      \"line\": 17,\n      \"description\": \"External CDN dependency for PDF.js worker: loaded from https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs. Risk of supply chain compromise. Consider self-hosting or using Subresource Integrity (SRI) hashing.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/uploader_controller.js\",\n      \"line\": 113,\n      \"description\": \"Dynamic URL construction with user-controlled data: encodeURIComponent(t.id) used in href. While encodeURIComponent is present, validate that tool.id cannot be crafted as a data: or javascript: URL by backend.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 39,\n      \"description\": \"Sensitive error mes",
+  "rawOutputLength": 4635
 }

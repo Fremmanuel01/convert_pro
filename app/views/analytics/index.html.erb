@@ -70,27 +70,23 @@
     <div class="space-y-8">
       <div class="flex flex-col gap-3">
         <div class="flex justify-between items-end">
-          <p class="text-slate-900 dark:text-white font-bold">Conversions Used</p>
+          <p class="text-slate-900 dark:text-white font-bold">Conversions</p>
           <div class="text-right">
             <span class="text-slate-900 dark:text-white font-bold text-xl tracking-tight"><%= @total_conversions %></span>
-            <span class="text-slate-500 text-sm"> / <%= current_user.pro? && current_user.active? ? 'Unlimited' : current_user.conversion_limit_per_day %></span>
+            <span class="text-slate-500 text-sm"> total</span>
           </div>
         </div>
-        
-        <div class="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
-          <% usage_percentage = current_user.pro? && current_user.active? ? 100 : (@total_conversions.to_f / current_user.conversion_limit_per_day * 100).clamp(0, 100) %>
-          <div class="h-full bg-gradient-to-r from-primary to-indigo-400 rounded-full transition-all duration-1000" style="width: <%= usage_percentage %>%;"></div>
-        </div>
-        
+
         <% if current_user.pro? && current_user.active? %>
-          <div class="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest mt-1">
+          <div class="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-widest mt-1">
             <span class="material-symbols-outlined text-sm">verified</span>
-            Pro plan: unlimited usage enabled
+            Pro plan: unlimited usage
           </div>
         <% else %>
-          <div class="flex items-center gap-2 text-amber-500 font-bold text-xs uppercase tracking-widest mt-1">
-            <span class="material-symbols-outlined text-sm">info</span>
-            Free plan: <%= [current_user.conversion_limit_per_day - @total_conversions, 0].max %> conversions remaining
+          <% credit_left = current_user.premium_credits_used.to_i < ConversionLimiter::FREE_PREMIUM_CREDITS %>
+          <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm mt-1">
+            <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+            Basic tools unlimited &middot; AI &amp; OCR: <%= credit_left ? "1 free try available" : "Pro required" %>
           </div>
         <% end %>
       </div>

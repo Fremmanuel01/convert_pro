@@ -48,6 +48,7 @@
 
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload", "data-turbo-eval": "false" %>
     <%= javascript_importmap_tags %>
+    <%= render "shared/analytics" %>
   </head>
 
   <% if user_signed_in? %>

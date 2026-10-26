@@ -8,6 +8,13 @@ class ApplicationController < ActionController::Base
 
   helper_method :analytics_anonymous_id
 
+  # After a successful sign-up, flag a one-shot client-side conversion event
+  # (GA4 sign_up / Meta CompleteRegistration) fired by shared/_analytics.
+  def after_sign_up_path_for(resource)
+    session[:fire_signup] = true
+    super
+  end
+
   private
 
   # Stable, non-PII identifier scoped to the browser session. Used to stitch

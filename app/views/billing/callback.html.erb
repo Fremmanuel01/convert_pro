@@ -1,5 +1,7 @@
 <div class="w-full flex justify-center items-center min-h-[75vh] px-6">
   <% if current_user.pro? %>
+    <% track_conversion(ga: "purchase", fb: "Purchase",
+         params: { value: BillingPlans.amount_minor("monthly") / 100.0, currency: BillingPlans::CURRENCY }) %>
     <div class="w-full max-w-md odt-card p-8 sm:p-10 text-center">
       <div class="mx-auto mb-6 size-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
         <span class="material-symbols-outlined text-[32px]" style="font-variation-settings:'FILL' 1;">check_circle</span>

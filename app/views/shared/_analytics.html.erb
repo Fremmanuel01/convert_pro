@@ -1,0 +1,53 @@
+<%# Marketing analytics: GA4 + Meta Pixel, each active only when its ID is set
+    via ENV, so dev and un-configured deploys stay clean. PageView is automatic;
+    conversion events come from track_conversion(...) + the one-shot signup flag. %>
+<% ga_id = ENV["GA4_MEASUREMENT_ID"].presence
+   fb_id = ENV["META_PIXEL_ID"].presence %>
+
+<% if ga_id %>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=<%= ga_id %>"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '<%= ga_id %>');
+  </script>
+<% end %>
+
+<% if fb_id %>
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '<%= fb_id %>');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none" alt=""
+    src="https://www.facebook.com/tr?id=<%= fb_id %>&ev=PageView&noscript=1"/></noscript>
+<% end %>
+
+<% if ga_id || fb_id %>
+  <% events = tracked_conversions.dup
+     if session[:fire_signup]
+       session.delete(:fire_signup)
+       events << { ga: "sign_up", fb: "CompleteRegistration", params: {} }
+     end %>
+  <% if events.any? %>
+    <script>
+      (function () {
+        var fire = function () {
+          <% events.each do |e| %>
+            <% if e[:ga].present? %>if (window.gtag) gtag('event', <%= e[:ga].to_json.html_safe %>, <%= e[:params].to_json.html_safe %>);<% end %>
+            <% if e[:fb].present? %>if (window.fbq) fbq('track', <%= e[:fb].to_json.html_safe %>, <%= e[:params].to_json.html_safe %>);<% end %>
+          <% end %>
+        };
+        if (document.readyState === 'complete') fire(); else window.addEventListener('load', fire);
+      })();
+    </script>
+  <% end %>
+<% end %>

@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-10-25T04:52:53.050Z",
+  "timestamp": "2026-10-26T05:19:05.891Z",
   "mode": "headless",
   "workerType": "optimize",
   "model": "sonnet",
-  "durationMs": 209614,
-  "executionId": "optimize_1792903763436_jpeb7w",
+  "durationMs": 123709,
+  "executionId": "optimize_1792991822182_mr316a",
   "success": true,
   "findings": {
     "sections": [
@@ -14,160 +14,204 @@
         "level": 2
       },
       {
-        "title": "1. N+1 / Redundant DB Query Patterns",
-        "content": "\n**`ConversionsController` — dual `ToolRegistry` scans per request**\n\n`show` and `status` both do two independent linear scans over the 26-tool registry array:\n\n```ruby\n",
+        "title": "1. N+1 / Repeated Query Patterns",
+        "content": "\n",
         "level": 3
       },
       {
-        "title": "conversions_controller.rb:27,38",
-        "content": "@tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }\n@recommendations = ToolRecommender.for(@conversion)\n",
+        "title": "`ToolRegistry.find` — O(n) linear scan on every call",
+        "content": "\nEvery controller action and view that needs a tool does `tools.find { |t| t[:class_name] == ... }` or `t[:id] == ...` against a 27-element array. With polling every 2.5s, this runs on every status request.\n\n**Fix — add static hash indexes at class load:**\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "app/services/tool_registry.rb — after self.tools = [...]",
+        "content": "TOOLS_BY_ID        = tools.index_by { |t| t[:id] }.freeze\nTOOLS_BY_CLASS     = tools.index_by { |t| t[:class_name] }.freeze\nFILE_TOOL_INDEX    = tools.filter_map { ... }.freeze  # move existing method body here\n\ndef self.find(tool_id) = TOOLS_BY_ID[tool_id.to_s]\ndef self.find_by_class(class_name) = TOOLS_BY_CLASS[class_name.to_s]\n```\n\nThen replace all `ToolRegistry.tools.find { |t| t[:class_name] == ... }` in views/controllers with `ToolRegistry.find_by_class(conversion.tool_name)`.\n\nAffects: `conversions_controller.rb:28`, `conversions_controller.rb:164`, `tool_recommender.rb:36`, `conversion_limiter.rb:19`, `conversions/index.html.erb:36`, `pages/dashboard.html.erb:48`.\n\n---\n\n",
         "level": 1
       },
       {
-        "title": "ToolRecommender#for then calls tool_id_for which does a THIRD scan:",
-        "content": "ToolRegistry.tools.find { |t| t[:class_name] == class_name }\n```\n\nFix: build a reverse lookup hash once at load time:\n\n```ruby\n",
+        "title": "Admin dashboard — 15 separate `COUNT` queries per page load",
+        "content": "\n`admin/dashboard_controller.rb:7–23` fires 15 round-trips:\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "BAD: 15 queries",
+        "content": "@total_users     = User.count\n@pro_users       = User.where(plan: :pro).count\n@free_users      = User.where(plan: :free).count\n",
         "level": 1
       },
       {
-        "title": "tool_registry.rb",
-        "content": "CLASS_INDEX = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find_by_class(class_name)\n  CLASS_INDEX[class_name]\nend\n```\n\nThen `ToolRecommender#tool_id_for` and both controllers use `ToolRegistry.find_by_class(...)` — O(1) instead of O(n) × 3.\n\n---\n\n**`ConversionsController#index` — unbounded load**\n\n```ruby\n",
+        "title": "... 12 more",
+        "content": "```\n\n**Fix — collapse to 2 queries using `group` + conditional counts:**\n\n```ruby\nuser_stats = User.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE plan = 1)\",               # pro\n  \"COUNT(*) FILTER (WHERE confirmed_at IS NOT NULL)\",\n  \"COUNT(*) FILTER (WHERE provider = 'google_oauth2')\",\n  \"COUNT(*) FILTER (WHERE created_at >= ?)\", 7.days.ago\n)\n@total_users, @pro_users, @confirmed_users, @google_users, @users_this_week = user_stats\n\nconv_stats = Conversion.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE status = 2)\",             # completed\n  \"COUNT(*) FILTER (WHERE status = 3)\",             # failed\n  \"COUNT(*) FILTER (WHERE created_at >= ?)\", Time.current.beginning_of_day\n)\n@total_conversions, @completed_conversions, @failed_conversions, @conversions_today = conv_stats\n```\n\n---\n\n",
         "level": 1
       },
       {
-        "title": "conversions_controller.rb:5",
-        "content": "@conversions = current_user.conversions.order(created_at: :desc)\n```\n\nNo limit. A user with hundreds of conversions loads them all. Add a cap:\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc).limit(50)\n```\n\n---\n\n",
+        "title": "`AnalyticsController#index` — 3 queries that could be 1",
+        "content": "\n`analytics_controller.rb:6–11` hits `current_user.conversions` three times:\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "BAD",
+        "content": "@total_conversions  = current_user.conversions.count\n@recent_conversions = current_user.conversions.where('created_at > ?', 30.days.ago).count\n@older_conversions  = current_user.conversions.where('created_at BETWEEN ? AND ?', 60.days.ago, 30.days.ago).count\n```\n\n**Fix:**\n```ruby\nstats = current_user.conversions.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE created_at > ?)\", 30.days.ago,\n  \"COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?)\", 60.days.ago, 30.days.ago\n)\n@total_conversions, @recent_conversions, @older_conversions = stats\n```\n\n---\n\n",
         "level": 1
       },
       {
-        "title": "2. Missing DB Indexes",
-        "content": "\nThe cleanup job and concurrency guard query columns with no index:\n\n```ruby\n",
+        "title": "`CleanupConversionsJob#reclaim_abandoned!` — N+1 on user refund",
+        "content": "\n`cleanup_conversions_job.rb:61–65` loads each abandoned conversion then calls `refund_usage!` which does a second per-record `User` update:\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "BAD: 1 query to find conversions + 2 queries per record (update conversion, update user)",
+        "content": "scope.find_each do |conversion|\n  conversion.update!(status: :failed, ...)\n  conversion.refund_usage!   # another DB hit per record\nend\n```\n\n**Fix — batch the conversion status update, refund separately only for metered users:**\n```ruby\nids = scope.pluck(:id)\n",
+        "level": 1
+      },
+      {
+        "title": "Batch status flip",
+        "content": "Conversion.where(id: ids).update_all(status: :failed, error_message: \"...\")\n",
+        "level": 1
+      },
+      {
+        "title": "Refund only metered conversions (usage_counted = true)",
+        "content": "metered = Conversion.where(id: ids, usage_counted: true).includes(:user)\nmetered.find_each { |c| ConversionLimiter.new(c.user).refund!(ConversionLimiter.tool_id_for(c.tool_name)) }\nConversion.where(id: ids).update_all(usage_counted: false)\n```\n\n---\n\n",
+        "level": 1
+      },
+      {
+        "title": "2. JS \"Re-renders\" (Stimulus, not React)",
+        "content": "\n",
         "level": 3
       },
       {
-        "title": "tool_runner.rb:152 — no index on status",
-        "content": "@user.conversions.where(status: [:pending, :processing]).count\n\n",
-        "level": 1
+        "title": "`poll_controller.js` — no exponential backoff + fetch races disconnect",
+        "content": "\n`poll_controller.js:33–45`: polls a fixed 2500ms forever. If a conversion is stuck at the server, this hammers it at 24 req/min indefinitely. Also, if the controller disconnects while a `fetch` is in-flight, the response tries to set `this.element.outerHTML` on a detached element.\n\n**Fix — add AbortController and simple backoff:**\n```js\nconnect() {\n  this.abortCtrl = new AbortController()\n  this.delay = this.intervalValue\n  // ... existing code\n}\n\ndisconnect() {\n  if (this.timer) clearTimeout(this.timer)\n  this.abortCtrl?.abort()\n}\n\nasync poll() {\n  try {\n    const res = await fetch(this.urlValue, {\n      headers: { Accept: \"text/html\" },\n      signal: this.abortCtrl.signal\n    })\n    if (res.ok) {\n      const html = await res.text()\n      this.element.outerHTML = html\n      return\n    }\n  } catch (e) {\n    if (e.name === \"AbortError\") return\n    // backoff on transient errors\n    this.delay = Math.min(this.delay * 1.5, 30_000)\n  }\n  this.schedule()\n}\n```\n\n---\n\n",
+        "level": 4
       },
       {
-        "title": "cleanup_conversions_job.rb:56-57 — no index on updated_at",
-        "content": "Conversion.where(status: [...]).where(\"updated_at < ?\", cutoff)\n```\n\nGenerate these migrations:\n\n```ruby\n",
-        "level": 1
-      },
-      {
-        "title": "db/migrate/XXXXXX_index_conversions_for_queries.rb",
-        "content": "add_index :conversions, :status\nadd_index :conversions, :updated_at\n",
-        "level": 1
-      },
-      {
-        "title": "Also useful for the analytics dashboard:",
-        "content": "add_index :analytics_events, :tool_id\n```\n\n---\n\n",
-        "level": 1
-      },
-      {
-        "title": "3. Memory Spike on File Hand-off",
-        "content": "\n`attach_files!` downloads the entire blob into a Ruby `String` / `StringIO` before re-attaching it:\n\n```ruby\n",
+        "title": "3. Caching Opportunities",
+        "content": "\n",
         "level": 3
       },
       {
-        "title": "tool_runner.rb:171 — loads entire file into memory",
-        "content": "conversion.input_files.attach(\n  io: StringIO.new(blob.download),   # ← full file in RAM\n  filename: blob.filename.to_s,\n  content_type: blob.content_type\n)\n```\n\nFor a 20 MB PDF this puts 20 MB of heap pressure per request. Fix by streaming:\n\n```ruby\nblob.open do |tempfile|\n  conversion.input_files.attach(\n    io: tempfile,\n    filename: blob.filename.to_s,\n    content_type: blob.content_type\n  )\nend\n```\n\n`ActiveStorage::Blob#open` streams to a tempfile without loading the full content into heap.\n\n---\n\n",
+        "title": "Admin dashboard stats — no caching",
+        "content": "\nThe dashboard fires 8+ aggregate SQL queries on every load. These numbers don't need to be live.\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "admin/dashboard_controller.rb",
+        "content": "def index\n  Rails.cache.fetch(\"admin_dashboard\", expires_in: 5.minutes) do\n    # all the COUNT queries here\n  end.then { |data| data.each { |k, v| instance_variable_set(\"@#{k}\", v) } }\nend\n```\n\nOr at minimum cache individual slow aggregates (GROUP BY queries):\n\n```ruby\n@top_tools = Rails.cache.fetch(\"admin_top_tools\", expires_in: 10.minutes) do\n  Conversion.where(created_at: 30.days.ago..).group(:tool_name).order(\"count_all DESC\").limit(10).count\nend\n```\n\n",
         "level": 1
       },
       {
-        "title": "4. Caching Opportunities",
-        "content": "\n**`ToolRegistry` recomputes derived structures on every call**\n\n`groups`, `file_tool_index`, `categories`, and `group_for` all rebuild data structures from scratch every call. The registry is frozen at boot — memoize once:\n\n```ruby\nclass ToolRegistry\n  # Add after the tools definition:\n  @_groups_cache        = nil\n  @_file_tool_index_cache = nil\n\n  def self.groups\n    @_groups_cache ||= GROUPS.each_with_object({}) do |(name, ids), acc|\n      acc[name] = ids.filter_map { |id| find(id) }\n    end\n  end\n\n  def self.file_tool_index\n    @_file_tool_index_cache ||= tools.filter_map do |t|\n      # ... existing body unchanged\n    end\n  end\nend\n```\n\n**HTTP caching on `tools#index`**\n\nThis page is identical for all users (the upgrade CTA differs, but that's a small fragment). You can use Russian-doll fragment caching on the tool grid:\n\n```erb\n<%# tools/index.html.erb %>\n<% cache \"tools-grid-v1\" do %>\n  <% ToolRegistry.groups.each do |group, tools| %>\n    ...\n  <% end %>\n<% end %>\n```\n\nThe cache key never expires since `ToolRegistry` is static — any registry change needs a version bump (`v2` etc.).\n\n---\n\n",
+        "title": "`ToolRegistry.file_tool_index` — recomputed on every homepage render",
+        "content": "\n`tool_registry.rb:333–345`: called in the homepage uploader view, iterates tools + `Marcel::TYPE_EXTS` lookups every request. Move to a frozen constant at class load (same as the hash index fix above).\n\n```ruby\nFILE_TOOL_INDEX = tools.filter_map { |t|\n  next if t[:input_type] == :prompt || Array(t[:accepted_types]).empty?\n  { id: t[:id], name: t[:name], icon: t[:icon], category: group_for(t[:id]),\n    accepts: t[:accepted_types],\n    exts: t[:accepted_types].flat_map { |m| Array(Marcel::TYPE_EXTS[m]) }.uniq }\n}.freeze\n\ndef self.file_tool_index = FILE_TOOL_INDEX\n```\n\n---\n\n",
+        "level": 4
+      },
+      {
+        "title": "4. Memory Leaks",
+        "content": "\n",
         "level": 3
       },
       {
-        "title": "5. Synchronous Analytics Writes Block Requests",
-        "content": "\nEvery tool view and conversion event writes synchronously to `analytics_events`:\n\n```ruby\n",
+        "title": "`poll_controller.js` — fetch after disconnect (covered above)",
+        "content": "\nWithout an `AbortController`, a pending fetch can resolve after `disconnect()` and attempt DOM manipulation on a detached node. The fix is in section 2 above.\n\n",
+        "level": 4
+      },
+      {
+        "title": "`CleanupConversionsJob#purge` — Active Storage blobs",
+        "content": "\n`find_each { |c| c.destroy }` correctly triggers Active Storage `purge_later` callbacks. This is fine. No leak here — just flagging it's intentional.\n\n---\n\n",
+        "level": 4
+      },
+      {
+        "title": "5. Redundant Computations",
+        "content": "\n",
         "level": 3
       },
       {
-        "title": "application_controller.rb:20 — called inside controller action",
-        "content": "def track_event(name, ...)\n  Analytics.track(...)  # INSERT INTO analytics_events — synchronous\nend\n```\n\nThis adds a DB round-trip to every page that calls `track_event`. Wrap in `deliver_later` via a background job:\n\n```ruby\n",
+        "title": "`tool_id_for` called after `@tool_meta` is already assigned",
+        "content": "\n`conversions_controller.rb:28` assigns `@tool_meta`, but `tool_id_for` at line 164 repeats the same scan:\n\n```ruby\n",
+        "level": 4
+      },
+      {
+        "title": "conversions_controller.rb",
+        "content": "def tool_id_for(conversion)\n  ToolRegistry.tools.find { |t| t[:class_name] == conversion.tool_name }&.dig(:id)\nend\n```\n\nWith the `TOOLS_BY_CLASS` hash fix, this becomes `ToolRegistry.find_by_class(conversion.tool_name)&.dig(:id)` — or simply `@tool_meta&.dig(:id)` when `@tool_meta` is already in scope.\n\n",
         "level": 1
       },
       {
-        "title": "app/jobs/analytics_job.rb",
-        "content": "class AnalyticsJob < ApplicationJob\n  queue_as :default\n  def perform(name, user_id:, anonymous_id:, tool_id:, properties:)\n    Analytics.track(name, user: User.find_by(id: user_id), ...)\n  end\nend\n\n",
-        "level": 1
+        "title": "`ToolRecommender.for` duplicates the class→id lookup already done in the controller",
+        "content": "\n`conversions_controller.rb:29` passes `@conversion` to `ToolRecommender.for`, which internally calls `tool_id_for` (line 36 in tool_recommender.rb) — another scan. Accept an optional `current_tool_id:` param to skip the re-lookup:\n\n```ruby\ndef self.for(conversion, limit: 3, current_id: nil)\n  current_id ||= find_by_class(conversion.tool_name)  # one lookup max\n  # ...\nend\n```\n\n---\n\n",
+        "level": 4
       },
       {
-        "title": "application_controller.rb",
-        "content": "def track_event(name, tool_id: nil, properties: {})\n  AnalyticsJob.perform_later(name.to_s,\n    user_id: current_user&.id, anonymous_id: analytics_anonymous_id,\n    tool_id: tool_id, properties: properties)\nend\n```\n\n---\n\n",
-        "level": 1
-      },
-      {
-        "title": "6. Polling Has No Backoff for Long-running Jobs",
-        "content": "\nThe `poll_controller.js` polls every 2.5 s unconditionally. AI tools (summarize, translate, generate) can take 30–60 s. That's 12–24 pointless requests before the job finishes:\n\n```js\n// poll_controller.js:10\ninterval: { type: Number, default: 2500 }  // fixed forever\n```\n\nAdd exponential backoff capped at ~15 s:\n\n```js\nconnect() {\n  this.currentInterval = this.intervalValue  // start at 2500\n  if (this.activeValue && this.hasUrlValue) this.schedule()\n}\n\nschedule() {\n  this.timer = setTimeout(() => this.poll(), this.currentInterval)\n  this.currentInterval = Math.min(this.currentInterval * 1.4, 15000)\n}\n```\n\n---\n\n",
+        "title": "Missing DB Index",
+        "content": "\n`conversions` table has no index on `(status, updated_at)` or `(status, created_at)`, yet `CleanupConversionsJob` queries:\n\n```sql\nWHERE status IN (0,1) AND updated_at < ?   -- reclaim_abandoned!\nWHERE status = 3 AND created_at < ?        -- stale_failed\n```\n\nMigration to add:\n```ruby\nadd_index :conversions, [:status, :updated_at]\nadd_index :conversions, [:status, :created_at]\n```\n\n---\n\n",
         "level": 3
       },
       {
-        "title": "Priority Order",
-        "content": "| Issue | Impact | Effort |\n|---|---|---|\n| Missing `conversions.status` + `updated_at` indexes | High (table scans every job run) | Low (two migrations) |\n| Unbounded `conversions/index` load | Medium (scales with user history) | Trivial (add `.limit(50)`) |\n| `blob.download` memory spike on hand-off | Medium (spikes per large file) | Low (use `blob.open`) |\n| Async analytics writes | Medium (adds latency to every page) | Low (one job) |\n| `ToolRegistry` memoization | Low-medium (26 tools, fast in-memory) | Low |\n| Poll backoff | Low (wasted requests, not user-visible) | Trivial |",
+        "title": "Priority Summary",
+        "content": "| # | Issue | Impact | Effort |\n|---|-------|--------|--------|\n| 1 | `ToolRegistry` O(n) scan → hash index | Medium — runs on every poll | Low |\n| 2 | Admin dashboard 15 queries → 2 | Medium | Low |\n| 3 | `poll_controller` fetch abort on disconnect | Low-medium (correctness) | Low |\n| 4 | Admin dashboard caching | Medium (admin-only) | Low |\n| 5 | `AnalyticsController` 3→1 query | Low | Low |\n| 6 | `CleanupConversionsJob` N+1 on refund | Low (background job) | Medium |\n| 7 | Missing `(status, updated_at)` index | Low-medium (cleanup job) | Low |\n| 8 | Poll backoff | Low | Low |\n\nItems 1 and 2 are the cleanest wins — both are small diffs with immediate effect on every page that handles conversions.",
         "level": 3
       }
     ],
     "codeBlocks": [
       {
         "language": "ruby",
-        "code": "# conversions_controller.rb:27,38\n@tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }\n@recommendations = ToolRecommender.for(@conversion)\n# ToolRecommender#for then calls tool_id_for which does a THIRD scan:\nToolRegistry.tools.find { |t| t[:class_name] == class_name }"
+        "code": "# app/services/tool_registry.rb — after self.tools = [...]\nTOOLS_BY_ID        = tools.index_by { |t| t[:id] }.freeze\nTOOLS_BY_CLASS     = tools.index_by { |t| t[:class_name] }.freeze\nFILE_TOOL_INDEX    = tools.filter_map { ... }.freeze  # move existing method body here\n\ndef self.find(tool_id) = TOOLS_BY_ID[tool_id.to_s]\ndef self.find_by_class(class_name) = TOOLS_BY_CLASS[class_name.to_s]"
       },
       {
         "language": "ruby",
-        "code": "# tool_registry.rb\nCLASS_INDEX = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find_by_class(class_name)\n  CLASS_INDEX[class_name]\nend"
+        "code": "# BAD: 15 queries\n@total_users     = User.count\n@pro_users       = User.where(plan: :pro).count\n@free_users      = User.where(plan: :free).count\n# ... 12 more"
       },
       {
         "language": "ruby",
-        "code": "# conversions_controller.rb:5\n@conversions = current_user.conversions.order(created_at: :desc)"
+        "code": "user_stats = User.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE plan = 1)\",               # pro\n  \"COUNT(*) FILTER (WHERE confirmed_at IS NOT NULL)\",\n  \"COUNT(*) FILTER (WHERE provider = 'google_oauth2')\",\n  \"COUNT(*) FILTER (WHERE created_at >= ?)\", 7.days.ago\n)\n@total_users, @pro_users, @confirmed_users, @google_users, @users_this_week = user_stats\n\nconv_stats = Conversion.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE status = 2)\",             # completed\n  \"COUNT(*) FILTER (WHERE status = 3)\",             # failed\n  \"COUNT(*) FILTER (WHERE created_at >= ?)\", Time.current.beginning_of_day\n)\n@total_conversions, @completed_conversions, @failed_conversions, @conversions_today = conv_stats"
       },
       {
         "language": "ruby",
-        "code": "@conversions = current_user.conversions.order(created_at: :desc).limit(50)"
+        "code": "# BAD\n@total_conversions  = current_user.conversions.count\n@recent_conversions = current_user.conversions.where('created_at > ?', 30.days.ago).count\n@older_conversions  = current_user.conversions.where('created_at BETWEEN ? AND ?', 60.days.ago, 30.days.ago).count"
       },
       {
         "language": "ruby",
-        "code": "# tool_runner.rb:152 — no index on status\n@user.conversions.where(status: [:pending, :processing]).count\n\n# cleanup_conversions_job.rb:56-57 — no index on updated_at\nConversion.where(status: [...]).where(\"updated_at < ?\", cutoff)"
+        "code": "stats = current_user.conversions.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE created_at > ?)\", 30.days.ago,\n  \"COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?)\", 60.days.ago, 30.days.ago\n)\n@total_conversions, @recent_conversions, @older_conversions = stats"
       },
       {
         "language": "ruby",
-        "code": "# db/migrate/XXXXXX_index_conversions_for_queries.rb\nadd_index :conversions, :status\nadd_index :conversions, :updated_at\n# Also useful for the analytics dashboard:\nadd_index :analytics_events, :tool_id"
+        "code": "# BAD: 1 query to find conversions + 2 queries per record (update conversion, update user)\nscope.find_each do |conversion|\n  conversion.update!(status: :failed, ...)\n  conversion.refund_usage!   # another DB hit per record\nend"
       },
       {
         "language": "ruby",
-        "code": "# tool_runner.rb:171 — loads entire file into memory\nconversion.input_files.attach(\n  io: StringIO.new(blob.download),   # ← full file in RAM\n  filename: blob.filename.to_s,\n  content_type: blob.content_type\n)"
-      },
-      {
-        "language": "ruby",
-        "code": "blob.open do |tempfile|\n  conversion.input_files.attach(\n    io: tempfile,\n    filename: blob.filename.to_s,\n    content_type: blob.content_type\n  )\nend"
-      },
-      {
-        "language": "ruby",
-        "code": "class ToolRegistry\n  # Add after the tools definition:\n  @_groups_cache        = nil\n  @_file_tool_index_cache = nil\n\n  def self.groups\n    @_groups_cache ||= GROUPS.each_with_object({}) do |(name, ids), acc|\n      acc[name] = ids.filter_map { |id| find(id) }\n    end\n  end\n\n  def self.file_tool_index\n    @_file_tool_index_cache ||= tools.filter_map do |t|\n      # ... existing body unchanged\n    end\n  end\nend"
-      },
-      {
-        "language": "erb",
-        "code": "<%# tools/index.html.erb %>\n<% cache \"tools-grid-v1\" do %>\n  <% ToolRegistry.groups.each do |group, tools| %>\n    ...\n  <% end %>\n<% end %>"
-      },
-      {
-        "language": "ruby",
-        "code": "# application_controller.rb:20 — called inside controller action\ndef track_event(name, ...)\n  Analytics.track(...)  # INSERT INTO analytics_events — synchronous\nend"
-      },
-      {
-        "language": "ruby",
-        "code": "# app/jobs/analytics_job.rb\nclass AnalyticsJob < ApplicationJob\n  queue_as :default\n  def perform(name, user_id:, anonymous_id:, tool_id:, properties:)\n    Analytics.track(name, user: User.find_by(id: user_id), ...)\n  end\nend\n\n# application_controller.rb\ndef track_event(name, tool_id: nil, properties: {})\n  AnalyticsJob.perform_later(name.to_s,\n    user_id: current_user&.id, anonymous_id: analytics_anonymous_id,\n    tool_id: tool_id, properties: properties)\nend"
+        "code": "ids = scope.pluck(:id)\n# Batch status flip\nConversion.where(id: ids).update_all(status: :failed, error_message: \"...\")\n# Refund only metered conversions (usage_counted = true)\nmetered = Conversion.where(id: ids, usage_counted: true).includes(:user)\nmetered.find_each { |c| ConversionLimiter.new(c.user).refund!(ConversionLimiter.tool_id_for(c.tool_name)) }\nConversion.where(id: ids).update_all(usage_counted: false)"
       },
       {
         "language": "js",
-        "code": "// poll_controller.js:10\ninterval: { type: Number, default: 2500 }  // fixed forever"
+        "code": "connect() {\n  this.abortCtrl = new AbortController()\n  this.delay = this.intervalValue\n  // ... existing code\n}\n\ndisconnect() {\n  if (this.timer) clearTimeout(this.timer)\n  this.abortCtrl?.abort()\n}\n\nasync poll() {\n  try {\n    const res = await fetch(this.urlValue, {\n      headers: { Accept: \"text/html\" },\n      signal: this.abortCtrl.signal\n    })\n    if (res.ok) {\n      const html = await res.text()\n      this.element.outerHTML = html\n      return\n    }\n  } catch (e) {\n    if (e.name === \"AbortError\") return\n    // backoff on transient errors\n    this.delay = Math.min(this.delay * 1.5, 30_000)\n  }\n  this.schedule()\n}"
       },
       {
-        "language": "js",
-        "code": "connect() {\n  this.currentInterval = this.intervalValue  // start at 2500\n  if (this.activeValue && this.hasUrlValue) this.schedule()\n}\n\nschedule() {\n  this.timer = setTimeout(() => this.poll(), this.currentInterval)\n  this.currentInterval = Math.min(this.currentInterval * 1.4, 15000)\n}"
+        "language": "ruby",
+        "code": "# admin/dashboard_controller.rb\ndef index\n  Rails.cache.fetch(\"admin_dashboard\", expires_in: 5.minutes) do\n    # all the COUNT queries here\n  end.then { |data| data.each { |k, v| instance_variable_set(\"@#{k}\", v) } }\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "@top_tools = Rails.cache.fetch(\"admin_top_tools\", expires_in: 10.minutes) do\n  Conversion.where(created_at: 30.days.ago..).group(:tool_name).order(\"count_all DESC\").limit(10).count\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "FILE_TOOL_INDEX = tools.filter_map { |t|\n  next if t[:input_type] == :prompt || Array(t[:accepted_types]).empty?\n  { id: t[:id], name: t[:name], icon: t[:icon], category: group_for(t[:id]),\n    accepts: t[:accepted_types],\n    exts: t[:accepted_types].flat_map { |m| Array(Marcel::TYPE_EXTS[m]) }.uniq }\n}.freeze\n\ndef self.file_tool_index = FILE_TOOL_INDEX"
+      },
+      {
+        "language": "ruby",
+        "code": "# conversions_controller.rb\ndef tool_id_for(conversion)\n  ToolRegistry.tools.find { |t| t[:class_name] == conversion.tool_name }&.dig(:id)\nend"
+      },
+      {
+        "language": "ruby",
+        "code": "def self.for(conversion, limit: 3, current_id: nil)\n  current_id ||= find_by_class(conversion.tool_name)  # one lookup max\n  # ...\nend"
+      },
+      {
+        "language": "sql",
+        "code": "WHERE status IN (0,1) AND updated_at < ?   -- reclaim_abandoned!\nWHERE status = 3 AND created_at < ?        -- stale_failed"
+      },
+      {
+        "language": "ruby",
+        "code": "add_index :conversions, [:status, :updated_at]\nadd_index :conversions, [:status, :created_at]"
       }
     ]
   },
-  "rawOutputPreview": "I have a complete picture now. Here's the full performance analysis:\n\n---\n\n## Performance Analysis\n\n### 1. N+1 / Redundant DB Query Patterns\n\n**`ConversionsController` — dual `ToolRegistry` scans per request**\n\n`show` and `status` both do two independent linear scans over the 26-tool registry array:\n\n```ruby\n# conversions_controller.rb:27,38\n@tool_meta = ToolRegistry.tools.find { |t| t[:class_name] == @conversion.tool_name }\n@recommendations = ToolRecommender.for(@conversion)\n# ToolRecommender#for then calls tool_id_for which does a THIRD scan:\nToolRegistry.tools.find { |t| t[:class_name] == class_name }\n```\n\nFix: build a reverse lookup hash once at load time:\n\n```ruby\n# tool_registry.rb\nCLASS_INDEX = tools.index_by { |t| t[:class_name] }.freeze\n\ndef self.find_by_class(class_name)\n  CLASS_INDEX[class_name]\nend\n```\n\nThen `ToolRecommender#tool_id_for` and both controllers use `ToolRegistry.find_by_class(...)` — O(1) instead of O(n) × 3.\n\n---\n\n**`ConversionsController#index` — unbounded load**\n\n```ruby\n# conversions_controller.rb:5\n@conversions = current_user.conversions.order(created_at: :desc)\n```\n\nNo limit. A user with hundreds of conversions loads them all. Add a cap:\n\n```ruby\n@conversions = current_user.conversions.order(created_at: :desc).limit(50)\n```\n\n---\n\n### 2. Missing DB Indexes\n\nThe cleanup job and concurrency guard query columns with no index:\n\n```ruby\n# tool_runner.rb:152 — no index on status\n@user.conversions.where(status: [:pending, :processing]).count\n\n# cleanup_conversions_job.rb:56-57 — no index on updated_at\nConversion.where(status: [...]).where(\"updated_at < ?\", cutoff)\n```\n\nGenerate these migrations:\n\n```ruby\n# db/migrate/XXXXXX_index_conversions_for_queries.rb\nadd_index :conversions, :status\nadd_index :conversions, :updated_at\n# Also useful for the analytics dashboard:\nadd_index :analytics_events, :tool_id\n```\n\n---\n\n### 3. Memory Spike on File Hand-off\n\n`attach_files!` downloads the entire blob into a Ruby `String` / `StringIO` before re-attachin",
-  "rawOutputLength": 5908
+  "rawOutputPreview": "I have enough context to give a thorough analysis. Here's the full performance audit:\n\n---\n\n## Performance Analysis\n\n### 1. N+1 / Repeated Query Patterns\n\n#### `ToolRegistry.find` — O(n) linear scan on every call\n\nEvery controller action and view that needs a tool does `tools.find { |t| t[:class_name] == ... }` or `t[:id] == ...` against a 27-element array. With polling every 2.5s, this runs on every status request.\n\n**Fix — add static hash indexes at class load:**\n\n```ruby\n# app/services/tool_registry.rb — after self.tools = [...]\nTOOLS_BY_ID        = tools.index_by { |t| t[:id] }.freeze\nTOOLS_BY_CLASS     = tools.index_by { |t| t[:class_name] }.freeze\nFILE_TOOL_INDEX    = tools.filter_map { ... }.freeze  # move existing method body here\n\ndef self.find(tool_id) = TOOLS_BY_ID[tool_id.to_s]\ndef self.find_by_class(class_name) = TOOLS_BY_CLASS[class_name.to_s]\n```\n\nThen replace all `ToolRegistry.tools.find { |t| t[:class_name] == ... }` in views/controllers with `ToolRegistry.find_by_class(conversion.tool_name)`.\n\nAffects: `conversions_controller.rb:28`, `conversions_controller.rb:164`, `tool_recommender.rb:36`, `conversion_limiter.rb:19`, `conversions/index.html.erb:36`, `pages/dashboard.html.erb:48`.\n\n---\n\n#### Admin dashboard — 15 separate `COUNT` queries per page load\n\n`admin/dashboard_controller.rb:7–23` fires 15 round-trips:\n\n```ruby\n# BAD: 15 queries\n@total_users     = User.count\n@pro_users       = User.where(plan: :pro).count\n@free_users      = User.where(plan: :free).count\n# ... 12 more\n```\n\n**Fix — collapse to 2 queries using `group` + conditional counts:**\n\n```ruby\nuser_stats = User.pick(\n  \"COUNT(*)\",\n  \"COUNT(*) FILTER (WHERE plan = 1)\",               # pro\n  \"COUNT(*) FILTER (WHERE confirmed_at IS NOT NULL)\",\n  \"COUNT(*) FILTER (WHERE provider = 'google_oauth2')\",\n  \"COUNT(*) FILTER (WHERE created_at >= ?)\", 7.days.ago\n)\n@total_users, @pro_users, @confirmed_users, @google_users, @users_this_week = user_stats\n\nconv_stats = Conversion.pick(\n  \"COUNT(*)\",\n  ",
+  "rawOutputLength": 9031
 }
