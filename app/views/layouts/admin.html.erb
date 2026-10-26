@@ -36,7 +36,7 @@
         { path: admin_dashboard_path,  icon: "dashboard",    label: "Dashboard"   },
         { path: admin_users_path,      icon: "group",        label: "Users"       },
       ].each do |item| %>
-        <%= link_to item[:path], class: "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all #{request.path.start_with?(item[:path]) ? 'bg-[#1f3dff] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'}" do %>
+        <%= link_to item[:path], class: "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all #{request.path.start_with?(item[:path]) ? 'bg-[#4F46E5] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'}" do %>
           <span class="material-symbols-outlined text-[18px]"><%= item[:icon] %></span>
           <%= item[:label] %>
         <% end %>

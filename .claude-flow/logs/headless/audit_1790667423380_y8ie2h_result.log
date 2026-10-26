@@ -1,0 +1,79 @@
+[2026-09-29T07:40:34.872Z] RESULT
+============================================================
+{
+  "success": true,
+  "output": "Based on my analysis of the codebase, here's the comprehensive security report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"critical\",\n      \"file\": \".env\",\n      \"line\": 6,\n      \"description\": \"Real API keys exposed in version control: FIREBASE_API_KEY, PAYSTACK_SECRET_KEY, GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY. These should be environment variables, not committed to the repository.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/client_tool_controller.js\",\n      \"line\": 8,\n      \"description\": \"External CDN dependency without Subresource Integrity (SRI). PDF.js worker loaded from 'https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs' is vulnerable to supply chain attacks. Add SRI hash or host locally.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"file\": \"app/javascript/controllers/poll_controller.js\",\n      \"line\": 41,\n      \"description\": \"Potential XSS vulnerability: outerHTML assignment without sanitization. While same-origin, if server response is compromised, malicious HTML/JS could execute. Consider using safe HTML parsing or a library like DOMPurify.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 3,\n      \"description\": \"Firebase configuration containing API keys is embedded in HTML meta tags. API keys are visible in page source and could be harvested by attackers, even if permissions are limited.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/firebase_auth.js\",\n      \"line\": 43,\n      \"description\": \"Error messages leak implementation details. Full error text is displayed to users, which could aid attackers in reconnaissance. Provide generic error messages to users while logging full details server-side.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \"app/javascript/controllers/uploader_controller.js\",\n      \"line\": 52,\n      \"description\": \"File type validation is client-side only. While comment indicates server validates, always enforce server-side validation. Client checks are bypassable and provide false sense of security.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app/controllers/conversions_controller.js\",\n      \"line\": 46,\n      \"description\": \"Non-constant database queries: Conversion.find_by(id: params[:id]) doesn't sanitize input, but ActiveRecord parameterization protects against SQL injection. Still, add type coercion for params[:id].\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"Gemfile\",\n      \"line\": 10,\n      \"description\": \"Loose version constraint on Puma ('>= 5.0'). Pin to a known-good version range to avoid unexpected security updates breaking compatibility. Current: '>= 5.0', consider: '~> 6.4' or '~> 6.4.2'.\"\n    }\n  ],\n  \"riskScore\": 72,\n  \"recommendations\": [\n    \"URGENT: Remove .env file from Git history immediately. Use `git filter-branch` or `bfg-repo-cleaner` to purge it. Rotate all exposed API keys (Firebase, Paystack, Groq, Gemini, Anthropic).\",\n    \"Add .env and .env.local to .gitignore if not already present. Use environment-based secrets management (GitHub Secrets, Heroku Config Vars, AWS Secrets Manager).\",\n    \"Implement Subresource Integrity for external CDN scripts. Host PDF.js worker locally or use npm package with full import map control.\",\n    \"Replace poll_controller.js outerHTML assignment with DOMPurify sanitization or move sensitive state to server-side template rendering.\",\n    \"Move Firebase configuration to environment variables instead of HTML meta tags. Store API keys server-side only.\",\n    \"Standardize error responses: return generic messages to clients ('An error occurred'), log full details server-side with request ID for debugging.\",\n    \"Enforce server-side file type validation for all upload endpoints. Never rely on client-side checks as the sole validation mechanism.\",\n    \"Pin Gemfile dependencies to specific minor versions (e.g., '~> X.Y.Z'). Run `bundle-audit check` and `brakeman scan` in CI/CD on every commit.\",\n    \"Implement Content Security Policy (CSP) headers to mitigate XSS attacks. Restrict script sources, disable inline scripts, use nonce for trusted scripts.\",\n    \"Add security headers: X-Content-Type-Options: nosniff, X-Frame-Options: DENY, X-XSS-Protection: 1; mode=block, Strict-Transport-Security (HSTS).\",\n    \"Review and test OAuth2/OpenID Connect implementation in users/firebase_auth controller for CSRF, token expiration, and state validation.\",\n    \"Consider using a secrets scanning tool in CI (e.g., GitGuardian, TruffleHog) to prevent accidental secret commits in the future.\"\n  ]\n}\n```\n\n## Summary\n\n**Risk Score: 72/100** — This codebase has **critical exposure** due to hardcoded API keys in version control. Immediate action required:\n\n1. **CRITICAL (Action required now)**: Rotate all exposed API keys and purge `.env` from Git history\n2. **HIGH (Address this week)**: Add SRI to external CDN resources, fix XSS in poll_controller, move sensitive config to environment\n3. **MEDIUM (Backlog)**: Improve error handling, enforce server-side validation, implement CSP headers\n4. **LOW (Best practice)**: Tighten dependency pinning, add security scanning to CI/CD\n\nThe authentication/authorization flow looks solid (IDOR prevention is in place), but the secret exposure and external dependency issues are critical security gaps.\n",
+  "parsedOutput": {
+    "vulnerabilities": [
+      {
+        "severity": "critical",
+        "file": ".env",
+        "line": 6,
+        "description": "Real API keys exposed in version control: FIREBASE_API_KEY, PAYSTACK_SECRET_KEY, GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY. These should be environment variables, not committed to the repository."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/client_tool_controller.js",
+        "line": 8,
+        "description": "External CDN dependency without Subresource Integrity (SRI). PDF.js worker loaded from 'https://esm.run/pdfjs-dist@4.0.379/build/pdf.worker.mjs' is vulnerable to supply chain attacks. Add SRI hash or host locally."
+      },
+      {
+        "severity": "high",
+        "file": "app/javascript/controllers/poll_controller.js",
+        "line": 41,
+        "description": "Potential XSS vulnerability: outerHTML assignment without sanitization. While same-origin, if server response is compromised, malicious HTML/JS could execute. Consider using safe HTML parsing or a library like DOMPurify."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 3,
+        "description": "Firebase configuration containing API keys is embedded in HTML meta tags. API keys are visible in page source and could be harvested by attackers, even if permissions are limited."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/firebase_auth.js",
+        "line": 43,
+        "description": "Error messages leak implementation details. Full error text is displayed to users, which could aid attackers in reconnaissance. Provide generic error messages to users while logging full details server-side."
+      },
+      {
+        "severity": "medium",
+        "file": "app/javascript/controllers/uploader_controller.js",
+        "line": 52,
+        "description": "File type validation is client-side only. While comment indicates server validates, always enforce server-side validation. Client checks are bypassable and provide false sense of security."
+      },
+      {
+        "severity": "low",
+        "file": "app/controllers/conversions_controller.js",
+        "line": 46,
+        "description": "Non-constant database queries: Conversion.find_by(id: params[:id]) doesn't sanitize input, but ActiveRecord parameterization protects against SQL injection. Still, add type coercion for params[:id]."
+      },
+      {
+        "severity": "low",
+        "file": "Gemfile",
+        "line": 10,
+        "description": "Loose version constraint on Puma ('>= 5.0'). Pin to a known-good version range to avoid unexpected security updates breaking compatibility. Current: '>= 5.0', consider: '~> 6.4' or '~> 6.4.2'."
+      }
+    ],
+    "riskScore": 72,
+    "recommendations": [
+      "URGENT: Remove .env file from Git history immediately. Use `git filter-branch` or `bfg-repo-cleaner` to purge it. Rotate all exposed API keys (Firebase, Paystack, Groq, Gemini, Anthropic).",
+      "Add .env and .env.local to .gitignore if not already present. Use environment-based secrets management (GitHub Secrets, Heroku Config Vars, AWS Secrets Manager).",
+      "Implement Subresource Integrity for external CDN scripts. Host PDF.js worker locally or use npm package with full import map control.",
+      "Replace poll_controller.js outerHTML assignment with DOMPurify sanitization or move sensitive state to server-side template rendering.",
+      "Move Firebase configuration to environment variables instead of HTML meta tags. Store API keys server-side only.",
+      "Standardize error responses: return generic messages to clients ('An error occurred'), log full details server-side with request ID for debugging.",
+      "Enforce server-side file type validation for all upload endpoints. Never rely on client-side checks as the sole validation mechanism.",
+      "Pin Gemfile dependencies to specific minor versions (e.g., '~> X.Y.Z'). Run `bundle-audit check` and `brakeman scan` in CI/CD on every commit.",
+      "Implement Content Security Policy (CSP) headers to mitigate XSS attacks. Restrict script sources, disable inline scripts, use nonce for trusted scripts.",
+      "Add security headers: X-Content-Type-Options: nosniff, X-Frame-Options: DENY, X-XSS-Protection: 1; mode=block, Strict-Transport-Security (HSTS).",
+      "Review and test OAuth2/OpenID Connect implementation in users/firebase_auth controller for CSRF, token expiration, and state validation.",
+      "Consider using a secrets scanning tool in CI (e.g., GitGuardian, TruffleHog) to prevent accidental secret commits in the future."
+    ]
+  },
+  "durationMs": 211491,
+  "model": "haiku",
+  "sandboxMode": "strict",
+  "workerType": "audit",
+  "timestamp": "2026-09-29T07:40:34.871Z",
+  "executionId": "audit_1790667423380_y8ie2h"
+}

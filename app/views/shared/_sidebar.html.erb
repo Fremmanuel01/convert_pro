@@ -1,88 +1,69 @@
-<!-- Mobile Sidebar Overlay -->
-<div data-sidebar-target="overlay" data-action="click->sidebar#toggle" id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden backdrop-blur-sm"></div>
+<%# Mobile overlay %>
+<div data-sidebar-target="overlay" data-action="click->sidebar#toggle" id="sidebar-overlay" class="fixed inset-0 bg-slate-900/40 z-20 hidden md:hidden"></div>
 
-<aside data-sidebar-target="sidebar" id="app-sidebar" class="w-72 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-6 justify-between shrink-0 overflow-y-auto fixed md:relative z-30 transition-transform -translate-x-full md:translate-x-0 h-full shadow-2xl md:shadow-none">
-<div class="space-y-8">
-<!-- Branding -->
-<a href="<%= root_path %>" class="flex items-center gap-3 text-decoration-none">
-<img src="/logo.png" alt="OfficedocTools" class="size-10 rounded-xl object-cover">
-<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">OfficedocTools</h2>
-</a>
-<!-- User Profile -->
-<div class="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-800/50 rounded-xl">
-<div class="size-10 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400 font-bold uppercase">
-  <%= current_user.email[0] %>
-</div>
-<div class="flex flex-col">
-<h1 class="text-sm font-semibold text-slate-900 dark:text-white truncate w-32"><%= current_user.email.split('@').first %></h1>
-<% if current_user.pro? && current_user.active? %>
-<span class="text-[10px] uppercase tracking-wider font-bold text-primary bg-primary/20 px-1.5 py-0.5 rounded w-fit">Pro Member</span>
-<% else %>
-<span class="text-[10px] uppercase tracking-wider font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded w-fit">Free Plan</span>
-<% end %>
-</div>
-</div>
-<!-- Navigation -->
-<nav class="space-y-2">
-<%= link_to dashboard_path, class: "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors #{current_page?(dashboard_path) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}" do %>
-<span class="material-symbols-outlined text-xl">dashboard</span>
-<span class="text-sm font-medium">Dashboard</span>
-<% end %>
-<%= link_to analytics_path, class: "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors #{current_page?(analytics_path) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}" do %>
-<span class="material-symbols-outlined text-xl">analytics</span>
-<span class="text-sm font-medium">Analytics</span>
-<% end %>
-<%= link_to tools_path, class: "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors #{current_page?(tools_path) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}" do %>
-<span class="material-symbols-outlined text-xl">build</span>
-<span class="text-sm font-medium">Tools</span>
-<% end %>
-<%= link_to conversions_path, class: "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors #{current_page?(conversions_path) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}" do %>
-<span class="material-symbols-outlined text-xl">sync</span>
-<span class="text-sm font-medium">Conversions</span>
-<% end %>
-<%= link_to billing_path, class: "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors #{current_page?(billing_path) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}" do %>
-<span class="material-symbols-outlined text-xl">settings</span>
-<span class="text-sm font-medium">Billing</span>
-<% end %>
-</nav>
+<aside data-sidebar-target="sidebar" id="app-sidebar"
+       class="w-64 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark px-4 py-6 justify-between shrink-0 overflow-y-auto fixed md:relative z-30 transition-transform -translate-x-full md:translate-x-0 h-full">
+  <div class="space-y-7">
+    <%# Branding %>
+    <a href="<%= root_path %>" class="flex items-center px-2">
+      <%= render "shared/logo", size: 34 %>
+    </a>
 
-<!-- Usage Progress -->
-<% pro = current_user.pro? && current_user.active?
-   used = current_user.conversions_count
-   free_limit = ConversionLimiter::FREE_LIMIT
-   remaining = [free_limit - used, 0].max
-   pct = pro ? 100 : [(used.to_f / free_limit) * 100, 100].min %>
-<div class="p-4 glass-card rounded-xl space-y-2">
-<div class="flex justify-between items-center">
-<span class="text-xs font-medium text-slate-500"><%= pro ? 'Pro plan' : 'Free conversions' %></span>
-<span class="text-xs font-bold text-slate-900 dark:text-white"><%= pro ? 'Unlimited' : "#{used} of #{free_limit} used" %></span>
-</div>
-<% unless pro %>
-<div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-<div class="h-full <%= remaining.zero? ? 'bg-rose-500' : 'bg-primary' %>" style="width: <%= pct %>%;"></div>
-</div>
-<p class="text-[11px] text-slate-500 text-center">
-<% if remaining.zero? %>
-No free conversions left — <span class="text-primary font-semibold">upgrade for unlimited</span>
-<% else %>
-<span class="font-semibold text-slate-700 dark:text-slate-300"><%= remaining %> left</span> · Pro removes the limit
-<% end %>
-</p>
-<% end %>
-</div>
-</div>
-<div class="space-y-4">
-<% unless current_user.pro? && current_user.active? %>
-<%= link_to pricing_path, class: "w-full flex items-center justify-center gap-2 bg-primary py-3 rounded-xl text-white font-bold text-sm shadow-xl shadow-primary/30" do %>
-<span class="material-symbols-outlined text-lg">bolt</span>
-Upgrade Plan
-<% end %>
-<% end %>
-<%= button_to destroy_user_session_path, method: :delete, class: "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors bg-transparent border-0 text-left" do %>
-<span class="material-symbols-outlined text-xl">logout</span>
-<span class="text-sm font-medium">Log out</span>
-<% end %>
-</div>
+    <%# User %>
+    <div class="flex items-center gap-3 px-2">
+      <div class="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold uppercase text-sm">
+        <%= current_user.email[0] %>
+      </div>
+      <div class="flex flex-col min-w-0">
+        <span class="text-sm font-medium text-slate-900 dark:text-white truncate"><%= current_user.email.split('@').first %></span>
+        <% if current_user.pro? && current_user.active? %>
+          <span class="text-[11px] font-medium text-primary">Pro plan</span>
+        <% else %>
+          <span class="text-[11px] font-medium text-slate-500">Free plan</span>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Navigation %>
+    <nav class="space-y-1">
+      <% nav = [[dashboard_path, "dashboard", "Dashboard"],
+                [analytics_path, "monitoring", "Analytics"],
+                [tools_path, "grid_view", "Tools"],
+                [conversions_path, "history", "Conversions"],
+                [billing_path, "settings", "Billing"]] %>
+      <% nav.each do |path, icon, label| %>
+        <% active = current_page?(path) %>
+        <%= link_to path, class: "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors #{active ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'}" do %>
+          <span class="material-symbols-outlined text-[20px]"><%= icon %></span>
+          <%= label %>
+        <% end %>
+      <% end %>
+    </nav>
+  </div>
+
+  <%# Footer: usage + account %>
+  <div class="space-y-4">
+    <% pro = current_user.pro? && current_user.active?
+       credit_left = current_user.premium_credits_used.to_i < ConversionLimiter::FREE_PREMIUM_CREDITS %>
+
+    <% unless pro %>
+      <div class="odt-card p-4 space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+          <span class="text-xs font-semibold text-slate-900 dark:text-white">
+            <%= credit_left ? "Free AI & OCR try available" : "Free AI & OCR try used" %>
+          </span>
+        </div>
+        <p class="text-[11px] leading-snug text-slate-500">Basic tools are always free. Pro adds unlimited AI &amp; OCR and larger files.</p>
+        <%= link_to pricing_path, class: "odt-btn odt-btn--primary odt-btn--block odt-btn--sm" do %>
+          <span class="material-symbols-outlined text-[18px]">bolt</span>Upgrade to Pro
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= button_to destroy_user_session_path, method: :delete,
+          class: "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 text-left" do %>
+      <span class="material-symbols-outlined text-[20px]">logout</span>Log out
+    <% end %>
+  </div>
 </aside>
-
-

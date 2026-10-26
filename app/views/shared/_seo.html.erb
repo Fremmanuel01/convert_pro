@@ -1,0 +1,28 @@
+<%# Centralised SEO/social meta. Pages drive it via content_for:
+     :title, :meta_description, :canonical, :robots, :og_type, :jsonld %>
+<% _title = content_for(:title).presence || "OfficedocTools — Free Online PDF & Document Tools"
+   _desc  = content_for(:meta_description).presence ||
+            "Convert, compress, merge, protect and OCR documents — #{tool_count} free PDF, Word, Excel, PowerPoint and image tools. Fast, private, no signup needed."
+   _canon = content_for(:canonical).presence || canonical_url
+   _robots = content_for(:robots).presence || "index, follow"
+   _ogtype = content_for(:og_type).presence || "website" %>
+
+<meta name="description" content="<%= _desc %>">
+<meta name="robots" content="<%= _robots %>">
+<link rel="canonical" href="<%= _canon %>">
+
+<meta property="og:site_name" content="OfficedocTools">
+<meta property="og:title" content="<%= _title %>">
+<meta property="og:description" content="<%= _desc %>">
+<meta property="og:type" content="<%= _ogtype %>">
+<meta property="og:url" content="<%= _canon %>">
+<meta property="og:image" content="<%= og_image_url %>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= _title %>">
+<meta name="twitter:description" content="<%= _desc %>">
+<meta name="twitter:image" content="<%= og_image_url %>">
+
+<%= content_for(:jsonld) %>

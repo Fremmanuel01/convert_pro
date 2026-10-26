@@ -1,45 +1,37 @@
-<header data-controller="mobile-menu" class="relative z-10 px-6 lg:px-20 py-4 md:py-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0">
-  <div class="max-w-7xl mx-auto flex items-center justify-between">
-    <a href="<%= root_path %>" class="flex items-center gap-2 group cursor-pointer text-decoration-none z-20">
-      <img src="/logo.png" alt="OfficedocTools" class="h-9 w-9 rounded-xl object-cover">
-      <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">OfficedocTools</span>
+<header data-controller="mobile-menu" class="relative z-10 px-6 lg:px-12 py-4 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md sticky top-0">
+  <div class="max-w-6xl mx-auto flex items-center justify-between">
+    <a href="<%= root_path %>" class="flex items-center z-20">
+      <%= render "shared/logo", size: 32 %>
     </a>
 
-    <!-- Desktop Navigation -->
     <nav class="hidden md:flex items-center gap-8">
-      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="<%= tools_path %>">Features</a>
-      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="<%= pricing_path %>">Pricing</a>
-      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="<%= solutions_path %>">What you can do</a>
-      <a class="text-sm font-medium hover:text-primary transition-colors text-slate-700 dark:text-slate-300" href="<%= enterprise_path %>">For business</a>
+      <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="<%= solutions_path %>">What you can do</a>
+      <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="<%= tools_path %>">Tools</a>
+      <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="<%= pricing_path %>">Pricing</a>
+      <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="<%= enterprise_path %>">For business</a>
     </nav>
-    <div class="hidden md:flex items-center gap-3">
-      <a href="<%= new_user_session_path %>" class="px-5 py-2 text-sm font-semibold hover:text-primary transition-colors text-slate-700 dark:text-slate-300 text-decoration-none">Login</a>
-      <a href="<%= new_user_registration_path %>" class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all text-decoration-none">
-          Get Started
-      </a>
+
+    <div class="hidden md:flex items-center gap-2">
+      <a href="<%= new_user_session_path %>" class="odt-btn odt-btn--ghost">Log in</a>
+      <a href="<%= new_user_registration_path %>" class="odt-btn odt-btn--primary">Get started</a>
     </div>
 
-    <!-- Mobile Menu Button -->
     <button data-action="click->mobile-menu#toggle" id="mobile-menu-button" class="md:hidden flex items-center justify-center p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors z-20">
       <span data-mobile-menu-target="icon" class="material-symbols-outlined">menu</span>
     </button>
   </div>
 
-  <!-- Mobile Navigation Overlay -->
-  <div data-mobile-menu-target="menu" id="mobile-menu" class="fixed inset-0 bg-white dark:bg-slate-900 z-10 hidden flex-col pt-24 px-6 pb-6 h-screen overflow-y-auto">
-    <nav class="flex flex-col gap-6 mb-8 mt-4">
-      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="<%= tools_path %>">Features</a>
-      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="<%= pricing_path %>">Pricing</a>
-      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="<%= solutions_path %>">What you can do</a>
-      <a class="text-2xl font-black text-slate-900 dark:text-white text-decoration-none" href="<%= enterprise_path %>">For business</a>
+  <%# Mobile overlay %>
+  <div data-mobile-menu-target="menu" id="mobile-menu" class="fixed inset-0 bg-white dark:bg-background-dark z-10 hidden flex-col pt-24 px-6 pb-6 h-screen overflow-y-auto">
+    <nav class="flex flex-col gap-2 mb-8">
+      <a class="text-xl font-semibold text-slate-900 dark:text-white py-2" href="<%= solutions_path %>">What you can do</a>
+      <a class="text-xl font-semibold text-slate-900 dark:text-white py-2" href="<%= tools_path %>">Tools</a>
+      <a class="text-xl font-semibold text-slate-900 dark:text-white py-2" href="<%= pricing_path %>">Pricing</a>
+      <a class="text-xl font-semibold text-slate-900 dark:text-white py-2" href="<%= enterprise_path %>">For business</a>
     </nav>
-    <div class="flex flex-col gap-4 mt-auto">
-      <a href="<%= new_user_session_path %>" class="w-full text-center px-6 py-4 text-lg font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-decoration-none">Login</a>
-      <a href="<%= new_user_registration_path %>" class="w-full text-center bg-primary hover:bg-primary/90 text-white px-6 py-4 rounded-xl text-lg font-bold shadow-xl shadow-primary/25 transition-all text-decoration-none">
-          Get Started
-      </a>
+    <div class="flex flex-col gap-3 mt-auto">
+      <a href="<%= new_user_session_path %>" class="odt-btn odt-btn--secondary odt-btn--lg odt-btn--block">Log in</a>
+      <a href="<%= new_user_registration_path %>" class="odt-btn odt-btn--primary odt-btn--lg odt-btn--block">Get started</a>
     </div>
   </div>
 </header>
-
-

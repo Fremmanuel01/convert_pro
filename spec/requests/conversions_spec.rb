@@ -51,13 +51,12 @@ RSpec.describe "Conversions", type: :request do
       expect(user.reload.conversions_count).to eq(1)
     end
 
-    it "refuses (402) when the free quota is exhausted" do
-      user = create(:user, plan: :free, conversions_count: ConversionLimiter::FREE_LIMIT, confirmed_at: Time.current)
+    it "allows client-side basic conversions without a quota wall" do
+      user = create(:user, plan: :free, premium_credits_used: 5, confirmed_at: Time.current)
       sign_in user
 
       post log_conversions_path, params: { tool_id: "merge_pdf", operation_id: SecureRandom.uuid }
-      expect(response).to have_http_status(:payment_required)
-      expect(user.reload.conversions_count).to eq(ConversionLimiter::FREE_LIMIT)
+      expect(response).to have_http_status(:success)
     end
 
     it "rejects an unknown tool" do

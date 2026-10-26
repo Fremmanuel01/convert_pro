@@ -6,7 +6,7 @@ RSpec.describe "Conversion experience surfaces", type: :request do
       get pricing_path
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Unlimited conversions")
-      expect(response.body).to include("No credit card required")
+      expect(response.body).to include("No card for Free")
       # No fake urgency / deceptive labels / unverifiable cancellation claim
       expect(response.body).not_to match(/Most Popular/i)
       expect(response.body).not_to match(/per day/i)
@@ -32,7 +32,7 @@ RSpec.describe "Conversion experience surfaces", type: :request do
     it "shows a quota-specific reason" do
       sign_in user
       get upgrade_billing_path(reason: "quota")
-      expect(response.body).to include("used your free conversions")
+      expect(response.body).to include(BillingPlans.upgrade_reason("quota")[:title])
     end
 
     it "renders a plain confirmation with no reason param" do
@@ -52,7 +52,7 @@ RSpec.describe "Conversion experience surfaces", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Quick access")
       expect(response.body).to include("Recent conversions")
-      expect(response.body).to include("of #{ConversionLimiter::FREE_LIMIT} used")
+      expect(response.body).to include("free and unlimited")
     end
   end
 end
@@ -71,7 +71,7 @@ end
 
 RSpec.describe BillingPlans, "plan value config" do
   it "derives free/pro features and price from one source" do
-    expect(BillingPlans.free_features.map { |f| f[:text] }.join).to include(ConversionLimiter::FREE_LIMIT.to_s)
+    expect(BillingPlans.free_features.map { |f| f[:text] }.join).to include(ConversionLimiter::FREE_PREMIUM_CREDITS.to_s)
     expect(BillingPlans.pro_features.map { |f| f[:text] }.join).to match(/Unlimited/)
     expect(BillingPlans.upgrade_reason("size")[:body]).to include(AppLimits::PRO_MAX_UPLOAD_MB.to_s)
   end

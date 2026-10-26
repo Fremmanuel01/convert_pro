@@ -30,7 +30,7 @@ RSpec.describe "All 28 tools after migration", type: :request do
 
   it "renders the true tool count in marketing copy (no hardcoded number)" do
     get root_path
-    expect(response.body).to include("#{ToolRegistry.tools.size} Professional Document Tools")
-    expect(response.body).not_to include("28 Professional Document Tools") # real count is 27
+    expect(response.body).to include("#{ToolRegistry.tools.size} document tools")
+    expect(response.body).not_to include("28 document tools") # real count is 27
   end
 end

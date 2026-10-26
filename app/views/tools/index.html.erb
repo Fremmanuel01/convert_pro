@@ -1,9 +1,19 @@
+<% content_for :title, "All #{tool_count} Document Tools — Free Online | OfficedocTools" %>
+<% content_for :meta_description, "Browse all #{tool_count} free online document tools — convert, compress, merge, split, protect, OCR and more for PDF, Word, Excel, PowerPoint and images. No signup needed." %>
+<% content_for :jsonld do %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "CollectionPage",
+    "name" => "All document tools", "url" => canonical_url(tools_path),
+    "description" => "Every free document tool offered by OfficedocTools."
+  }) %>
+<% end %>
+
 <div class="max-w-7xl mx-auto w-full mt-8 px-4 sm:px-6 mb-20" id="tools-container"
      data-controller="tool-filter">
 
   <!-- Header -->
   <div class="mb-8">
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">All tools</h1>
+    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">All tools</h1>
     <p class="text-slate-500 dark:text-slate-400 text-base max-w-2xl">Everything you need to get a document ready for work — organised by what you want to do.</p>
   </div>
 

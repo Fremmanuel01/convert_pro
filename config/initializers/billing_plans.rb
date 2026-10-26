@@ -53,7 +53,8 @@ module BillingPlans
   # "most popular", no invented scarcity.
   def self.free_features
     [
-      { icon: "check_circle", text: "#{ConversionLimiter::FREE_LIMIT} conversions to get started" },
+      { icon: "all_inclusive", text: "Unlimited conversions on all basic tools" },
+      { icon: "auto_awesome",  text: "#{ConversionLimiter::FREE_PREMIUM_CREDITS} free AI or OCR conversion to try" },
       { icon: "check_circle", text: "All #{ToolRegistry.tools.size} document & image tools" },
       { icon: "check_circle", text: "Files up to #{AppLimits::FREE_MAX_UPLOAD_MB} MB" },
       { icon: "check_circle", text: "Secure processing, auto-deleted after" }
@@ -62,27 +63,27 @@ module BillingPlans
 
   def self.pro_features
     [
-      { icon: "all_inclusive", text: "Unlimited conversions" },
+      { icon: "auto_awesome",  text: "Unlimited AI & OCR tools" },
       { icon: "cloud_upload",  text: "Large files up to #{AppLimits::PRO_MAX_UPLOAD_MB} MB" },
       { icon: "bolt",          text: "Priority processing queue" },
       { icon: "history",       text: "30-day conversion history" },
-      { icon: "auto_awesome",  text: "Full AI & OCR allowance" }
+      { icon: "all_inclusive", text: "Unlimited conversions, no limits" }
     ]
   end
 
   # Short "why upgrade" lines keyed by the friction the user just hit.
   def self.upgrade_reason(key)
     {
-      "quota"  => { title: "You've used your free conversions",
-                    body:  "Upgrade to Pro for unlimited conversions — keep working without interruptions." },
+      "quota"  => { title: "Do more with Pro",
+                    body:  "Pro adds unlimited AI & OCR, larger files and a priority queue." },
       "size"   => { title: "This file is over the #{AppLimits::FREE_MAX_UPLOAD_MB} MB free limit",
                     body:  "Pro handles files up to #{AppLimits::PRO_MAX_UPLOAD_MB} MB." },
       "batch"  => { title: "Converting a lot of files?",
-                    body:  "Pro gives you unlimited conversions and a priority queue." },
-      "ai"     => { title: "Get the full AI & OCR allowance",
-                    body:  "Pro unlocks unlimited AI summaries, translation and OCR." }
+                    body:  "Pro gives you a priority queue and larger uploads." },
+      "ai"     => { title: "You've used your free AI & OCR try",
+                    body:  "Upgrade to Pro for unlimited AI summaries, translation, document generation and OCR." }
     }.fetch(key.to_s, {
       title: "Do more with Pro",
-      body:  "Unlimited conversions, larger files and priority processing." })
+      body:  "Unlimited AI & OCR, larger files and priority processing." })
   end
 end

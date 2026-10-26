@@ -12,15 +12,16 @@ class ConversionsController < ApplicationController
     # Claim flow: a signed-in user adopting the guest conversion they just made.
     if params[:claim] == "true" && user_signed_in? && @conversion.user_id.nil?
       limiter = ConversionLimiter.new(current_user)
-      if limiter.claim!
+      tid = tool_id_for(@conversion)
+      if limiter.claim!(tid)
         @conversion.update(user: current_user, usage_counted: current_user.free?)
         clear_guest_conversion(@conversion.id)
         ConversionMailer.with(user: current_user, conversion: @conversion).result_email.deliver_later
         @auto_download = true
         flash.now[:notice] = "Welcome! Your conversion was successful and is downloading now."
       else
-        track_event(:quota_reached, tool_id: tool_id_for(@conversion), properties: { source: "claim" })
-        return redirect_to upgrade_billing_path, alert: limiter.status_message
+        track_event(:quota_reached, tool_id: tid, properties: { source: "claim" })
+        return redirect_to upgrade_billing_path(reason: limiter.block_reason(tid)), alert: limiter.status_message(tid)
       end
     end
 
@@ -101,9 +102,9 @@ class ConversionsController < ApplicationController
     end
 
     limiter = ConversionLimiter.new(current_user)
-    unless limiter.claim!
+    unless limiter.claim!(tool[:id])
       track_event(:quota_reached, tool_id: tool[:id], properties: { source: "client" })
-      return render(json: { ok: false, error: "quota_reached", upgrade_url: upgrade_billing_path },
+      return render(json: { ok: false, error: "quota_reached", upgrade_url: upgrade_billing_path(reason: limiter.block_reason(tool[:id])) },
                     status: :payment_required)
     end
 
@@ -154,10 +155,6 @@ class ConversionsController < ApplicationController
         disposition:  "attachment; filename=\"#{safe_filename}\"",
         content_type: blob.content_type.presence || "application/octet-stream"
       ), allow_other_host: true
-    when "cloudinary"
-      cloudinary_url = build_cloudinary_download_url(blob.key, safe_filename)
-      raise "Cloudinary resource not found for key: #{blob.key}" unless cloudinary_url
-      redirect_to cloudinary_url, allow_other_host: true
     else
       redirect_to rails_blob_path(blob, disposition: "attachment", filename: safe_filename)
     end
@@ -186,27 +183,5 @@ class ConversionsController < ApplicationController
               .delete_prefix("_")
               .truncate(60, omission: "")
     "#{base}#{ext}"
-  end
-
-  def build_cloudinary_download_url(key, filename)
-    ["raw", "image"].each do |resource_type|
-      begin
-        Cloudinary::Api.resource(key, resource_type: resource_type)
-        return Cloudinary::Utils.cloudinary_url(
-          key,
-          resource_type: resource_type,
-          type:          "upload",
-          secure:        true,
-          sign_url:      true,
-          flags:         "attachment:#{filename.gsub(' ', '_')}"
-        )
-      rescue Cloudinary::Api::NotFound
-        next
-      rescue => e
-        Rails.logger.warn "Cloudinary lookup (#{resource_type}) failed for #{key}: #{e.message}"
-        next
-      end
-    end
-    nil
   end
 end

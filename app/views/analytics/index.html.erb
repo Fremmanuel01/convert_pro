@@ -1,6 +1,6 @@
 <header class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-10 gap-4">
   <div class="flex flex-col gap-1">
-    <h1 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Pro Analytics Dashboard</h1>
+    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Pro Analytics Dashboard</h1>
     <p class="text-slate-500 dark:text-slate-400 font-medium">Welcome back, <%= current_user.email.split('@').first.capitalize %>! Here is your conversion engine performance.</p>
   </div>
   <div class="flex flex-wrap gap-3 w-full sm:w-auto mt-2 sm:mt-0">
@@ -13,7 +13,7 @@
 
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-  <div class="glass-card p-6 rounded-2xl hover-glow group transition-all">
+  <div class="odt-card p-6 rounded-2xl group transition-all">
     <div class="flex justify-between items-start mb-4">
       <div class="p-3 bg-primary/10 rounded-xl text-primary group-hover:scale-110 transition-transform">
         <span class="material-symbols-outlined">swap_calls</span>
@@ -23,10 +23,10 @@
       </span>
     </div>
     <p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">Total Conversions</p>
-    <p class="text-3xl font-black text-slate-900 dark:text-white mt-1"><%= @total_conversions %></p>
+    <p class="text-3xl font-bold text-slate-900 dark:text-white mt-1"><%= @total_conversions %></p>
   </div>
 
-  <div class="glass-card p-6 rounded-2xl hover-glow group transition-all">
+  <div class="odt-card p-6 rounded-2xl group transition-all">
     <div class="flex justify-between items-start mb-4">
       <div class="p-3 bg-indigo-500/10 rounded-xl text-indigo-500 group-hover:scale-110 transition-transform">
         <span class="material-symbols-outlined">cloud_done</span>
@@ -36,10 +36,10 @@
       </span>
     </div>
     <p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">Storage Used</p>
-    <p class="text-3xl font-black text-slate-900 dark:text-white mt-1">1.2 GB</p>
+    <p class="text-3xl font-bold text-slate-900 dark:text-white mt-1">1.2 GB</p>
   </div>
 
-  <div class="glass-card p-6 rounded-2xl hover-glow group transition-all">
+  <div class="odt-card p-6 rounded-2xl group transition-all">
     <div class="flex justify-between items-start mb-4">
       <div class="p-3 bg-purple-500/10 rounded-xl text-purple-500 group-hover:scale-110 transition-transform">
         <span class="material-symbols-outlined">bolt</span>
@@ -49,13 +49,13 @@
       </span>
     </div>
     <p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">Server Uptime</p>
-    <p class="text-3xl font-black text-slate-900 dark:text-white mt-1">Stellar</p>
+    <p class="text-3xl font-bold text-slate-900 dark:text-white mt-1">Stellar</p>
   </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
   <!-- Usage Analytics Section -->
-  <div class="lg:col-span-2 glass-card rounded-2xl p-8 hover-glow transition-all">
+  <div class="lg:col-span-2 odt-card rounded-2xl p-8 transition-all">
     <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row mb-8 gap-4">
       <div>
         <h3 class="text-xl font-bold text-slate-900 dark:text-white">Usage Analytics</h3>
@@ -70,27 +70,23 @@
     <div class="space-y-8">
       <div class="flex flex-col gap-3">
         <div class="flex justify-between items-end">
-          <p class="text-slate-900 dark:text-white font-bold">Conversions Used</p>
+          <p class="text-slate-900 dark:text-white font-bold">Conversions</p>
           <div class="text-right">
-            <span class="text-slate-900 dark:text-white font-black text-xl tracking-tight"><%= @total_conversions %></span>
-            <span class="text-slate-500 text-sm"> / <%= current_user.pro? && current_user.active? ? 'Unlimited' : current_user.conversion_limit_per_day %></span>
+            <span class="text-slate-900 dark:text-white font-bold text-xl tracking-tight"><%= @total_conversions %></span>
+            <span class="text-slate-500 text-sm"> total</span>
           </div>
         </div>
-        
-        <div class="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
-          <% usage_percentage = current_user.pro? && current_user.active? ? 100 : (@total_conversions.to_f / current_user.conversion_limit_per_day * 100).clamp(0, 100) %>
-          <div class="h-full bg-gradient-to-r from-primary to-indigo-400 rounded-full transition-all duration-1000" style="width: <%= usage_percentage %>%;"></div>
-        </div>
-        
+
         <% if current_user.pro? && current_user.active? %>
-          <div class="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest mt-1">
+          <div class="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-widest mt-1">
             <span class="material-symbols-outlined text-sm">verified</span>
-            Pro plan: unlimited usage enabled
+            Pro plan: unlimited usage
           </div>
         <% else %>
-          <div class="flex items-center gap-2 text-amber-500 font-bold text-xs uppercase tracking-widest mt-1">
-            <span class="material-symbols-outlined text-sm">info</span>
-            Free plan: <%= [current_user.conversion_limit_per_day - @total_conversions, 0].max %> conversions remaining
+          <% credit_left = current_user.premium_credits_used.to_i < ConversionLimiter::FREE_PREMIUM_CREDITS %>
+          <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm mt-1">
+            <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+            Basic tools unlimited &middot; AI &amp; OCR: <%= credit_left ? "1 free try available" : "Pro required" %>
           </div>
         <% end %>
       </div>
@@ -99,14 +95,14 @@
         <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
           <p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">API Calls</p>
           <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-black text-slate-900 dark:text-white">124</span>
+            <span class="text-2xl font-bold text-slate-900 dark:text-white">124</span>
             <span class="text-emerald-500 text-[10px] font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">+14%</span>
           </div>
         </div>
         <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
           <p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Server Latency</p>
           <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-black text-slate-900 dark:text-white">24ms</span>
+            <span class="text-2xl font-bold text-slate-900 dark:text-white">24ms</span>
             <span class="text-emerald-500 text-[10px] font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">STABLE</span>
           </div>
         </div>
@@ -115,7 +111,7 @@
   </div>
 
   <!-- Recent Activity Section -->
-  <div class="lg:col-span-1 glass-card rounded-2xl p-6 hover-glow transition-all flex flex-col">
+  <div class="lg:col-span-1 odt-card rounded-2xl p-6 transition-all flex flex-col">
     <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-6">Recent Activity</h3>
     <div class="flex flex-col gap-2 flex-grow">
       <% if @recent_activity.any? %>

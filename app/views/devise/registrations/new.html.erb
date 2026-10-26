@@ -1,6 +1,6 @@
 <% content_for :title, "Create your account — OfficeDocTools" %>
 
-<%= render "devise/shared/auth_shell", title: "Create your free account", subtitle: "#{ConversionLimiter::FREE_LIMIT} free conversions to get started." do %>
+<%= render "devise/shared/auth_shell", title: "Create your free account", subtitle: "Convert unlimited files free. No credit card needed." do %>
   <%= render "devise/shared/google" %>
 
   <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-4" }) do |f| %>

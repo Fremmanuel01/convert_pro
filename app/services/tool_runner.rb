@@ -50,9 +50,9 @@ class ToolRunner
     # Atomically consume one quota unit BEFORE doing expensive work. On failure
     # the record is removed so no orphan/quota leak remains.
     limiter = ConversionLimiter.new(@user)
-    unless limiter.claim!
+    unless limiter.claim!(@tool_id)
       conversion.destroy
-      raise LimitExceededError, limiter.status_message
+      raise LimitExceededError.new(limiter.status_message(@tool_id), reason: limiter.block_reason(@tool_id))
     end
     conversion.update!(usage_counted: metered_user?)
 

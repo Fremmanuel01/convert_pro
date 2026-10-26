@@ -62,6 +62,24 @@ module Tools
       File.join(@tmp_dir, filename)
     end
 
+    # Prawn's built-in AFM fonts only support Windows-1252. AI output routinely
+    # contains Unicode (smart quotes, en/em dashes, …) that otherwise raises
+    # "incompatible character encoding". Normalise common typography to ASCII,
+    # then drop anything Win-1252 can't represent.
+    # ponytail: Win-1252 ceiling — non-Latin scripts (CJK/Arabic/Cyrillic) drop
+    # to empty. If those targets matter, register a Unicode TTF (Noto/DejaVu)
+    # via pdf.font_families + pdf.font instead of sanitising.
+    def pdf_safe_text(str)
+      str.to_s
+         .gsub(/[‘’‛]/, "'")
+         .gsub(/[“”]/, '"')
+         .gsub(/[–—]/, "-")
+         .gsub("…", "...")
+         .gsub(" ", " ")
+         .encode("Windows-1252", invalid: :replace, undef: :replace, replace: "")
+         .encode("UTF-8")
+    end
+
     private
 
     # Mark the conversion permanently failed and refund its quota unit (idempotent).

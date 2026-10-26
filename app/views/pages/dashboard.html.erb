@@ -1,8 +1,6 @@
 <% greeting = case Time.current.hour; when 0..11 then 'Good morning'; when 12..17 then 'Good afternoon'; else 'Good evening'; end
    pro = current_user.pro? && current_user.active?
-   used = current_user.conversions_count
-   free_limit = ConversionLimiter::FREE_LIMIT
-   remaining = [free_limit - used, 0].max %>
+   premium_left = current_user.premium_credits_used.to_i < ConversionLimiter::FREE_PREMIUM_CREDITS %>
 
 <div class="max-w-6xl mx-auto w-full mt-6 px-4 sm:px-6">
 
@@ -97,22 +95,19 @@
           <p class="text-sm text-slate-500 dark:text-slate-400">Unlimited conversions and priority processing are active.</p>
           <%= link_to "Manage billing", billing_path, class: "odt-btn odt-btn--secondary odt-btn--block mt-4" %>
         <% else %>
-          <div class="flex items-center justify-between text-sm mb-2">
-            <span class="text-slate-500 dark:text-slate-400">Free conversions</span>
-            <span class="font-semibold text-slate-900 dark:text-white"><%= used %> of <%= free_limit %> used</span>
-          </div>
-          <div class="odt-meter mb-2">
-            <div class="odt-meter__fill <%= 'odt-meter__fill--full' if remaining.zero? %>"
-                 style="width: <%= [(used.to_f / free_limit) * 100, 100].min %>%"></div>
-          </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400">
-            <%= remaining.zero? ? "You've used all your free conversions." : "#{remaining} conversion#{'s' unless remaining == 1} left." %>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+            Basic tools are free and unlimited.
+            <%= premium_left ? "You still have a free AI & OCR conversion to try." : "You've used your free AI & OCR try." %>
           </p>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+            <span class="text-slate-600 dark:text-slate-300">AI &amp; OCR: <%= premium_left ? "1 free try available" : "Pro required" %></span>
+          </div>
         <% end %>
       </div>
 
       <% unless pro %>
-        <%= render "shared/upgrade_prompt", reason: (remaining.zero? ? "quota" : "batch"), cycle: "monthly", compact: true %>
+        <%= render "shared/upgrade_prompt", reason: "ai", cycle: "monthly", compact: true %>
       <% end %>
     </div>
   </div>

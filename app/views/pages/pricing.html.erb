@@ -1,7 +1,32 @@
+<% content_for :title, "Pricing — Free & Pro | OfficedocTools" %>
+<% content_for :meta_description, "OfficedocTools is free to use. Upgrade to Pro for unlimited conversions, larger files, OCR and AI document tools. Simple monthly or yearly pricing, no card to start." %>
+<% pricing_faq = [
+     ["Is OfficedocTools really free?",
+      "Yes. Basic tools (convert, compress, merge, images and more) are free and unlimited. AI and OCR tools include one free try, then Pro unlocks unlimited use."],
+     ["What do I get with Pro?",
+      "Unlimited AI and OCR tools, larger file uploads, priority processing, and your conversion history. Basic conversions are already unlimited on Free."],
+     ["Do I need Pro for the basic tools?",
+      "No. Converting, compressing, merging and image tools are free and unlimited. Pro is only for unlimited AI and OCR, larger files and priority processing."],
+     ["How do payments work?",
+      "Payments are handled securely through Paystack. No card is needed for the free plan, and the yearly plan includes two months free."],
+     ["Are my documents safe?",
+      "Files are sent over an encrypted connection and deleted automatically after processing. Several image and PDF tools run entirely in your browser and never leave your device."]
+   ] %>
+<% content_for :jsonld do %>
+  <%= json_ld({
+    "@context" => "https://schema.org", "@type" => "Product",
+    "name" => "OfficedocTools", "url" => canonical_url(pricing_path),
+    "description" => "Free online document tools, with an optional Pro plan for unlimited conversions, larger files, OCR and AI tools.",
+    "offers" => { "@type" => "Offer", "price" => "0", "priceCurrency" => "USD",
+                  "description" => "Free plan with unlimited basic conversions" }
+  }) %>
+  <%= json_ld(faq_schema(pricing_faq)) %>
+<% end %>
+
 <div class="max-w-4xl mx-auto w-full px-6 py-14">
   <div class="text-center mb-10">
     <span class="odt-eyebrow mb-3">Pricing</span>
-    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
+    <h1 class="text-3xl md:text-5xl font-serif font-medium tracking-tight text-slate-900 dark:text-white mb-3">
       Start free. Upgrade when you need more.
     </h1>
     <p class="text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
@@ -30,7 +55,7 @@
         <span class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white"><%= BillingPlans::CURRENCY_SYMBOL %>0</span>
         <span class="text-slate-500">/month</span>
       </div>
-      <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Great for the occasional document task.</p>
+      <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Unlimited everyday document tasks.</p>
       <ul class="mt-6 space-y-3 flex-1">
         <% BillingPlans.free_features.each do |f| %>
           <li class="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
@@ -80,8 +105,34 @@
     </div>
   </div>
 
-  <p class="text-center text-sm text-slate-400 mt-6 inline-flex items-center justify-center gap-1.5 w-full">
-    <span class="material-symbols-outlined text-[16px]">credit_card_off</span>
-    No credit card required for Free. Pro is billed through Paystack.
-  </p>
+  <!-- Reassurance row -->
+  <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+    <% [["credit_card_off", "No card for Free", "Start without entering payment details."],
+        ["all_inclusive", "Basic tools stay free", "Unlimited everyday conversions, always."],
+        ["verified_user", "Secure payments", "Billed securely through Paystack."]].each do |icon, title, body| %>
+      <div class="flex flex-col items-center gap-1">
+        <span class="material-symbols-outlined text-[22px] text-primary"><%= icon %></span>
+        <span class="text-sm font-semibold text-slate-900 dark:text-white"><%= title %></span>
+        <span class="text-xs text-slate-500 dark:text-slate-400 max-w-[14rem]"><%= body %></span>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- FAQ -->
+  <section class="mt-16 max-w-2xl mx-auto">
+    <h2 class="text-2xl font-serif font-medium tracking-tight text-slate-900 dark:text-white text-center mb-6">
+      Pricing questions
+    </h2>
+    <div class="space-y-2">
+      <% pricing_faq.each do |q, a| %>
+        <details class="odt-card p-4 group">
+          <summary class="flex items-center justify-between cursor-pointer list-none text-sm font-medium text-slate-900 dark:text-white">
+            <%= q %>
+            <span class="material-symbols-outlined text-[20px] text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
+          </summary>
+          <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-2.5"><%= a %></p>
+        </details>
+      <% end %>
+    </div>
+  </section>
 </div>

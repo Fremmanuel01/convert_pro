@@ -35,14 +35,18 @@ class User < ApplicationRecord
   has_many :analytics_events, dependent: :nullify
 
   after_create_commit :track_signup
-
-  def conversion_limit_per_day
-    pro? && active? ? Float::INFINITY : 5
-  end
+  after_create_commit :send_welcome_email
 
   private
 
   def track_signup
     Analytics.track(:signup_completed, user: self, properties: { source: provider.presence || "email" })
+  end
+
+  def send_welcome_email
+    UserMailer.with(user: self).welcome.deliver_later
+  rescue => e
+    # A welcome email must never block or roll back account creation.
+    Rails.logger.warn("Welcome email enqueue failed for user #{id}: #{e.message}")
   end
 end
