@@ -20,7 +20,7 @@ module SeoHelper
   # by special-casing here.
   def tool_seo(tool)
     name = tool[:name]
-    free = ConversionLimiter::FREE_LIMIT
+    premium = ConversionLimiter.premium?(tool[:id])
     client = ToolsController::CLIENT_SIDE_IDS.include?(tool[:id])
     privacy = client ?
       "This tool runs entirely in your browser — your file never leaves your device." :
@@ -33,7 +33,7 @@ module SeoHelper
       intro:        "#{tool[:description]} #{name} is free to use with no software to install — it works right in your browser. #{privacy} Most files are ready in seconds.",
       faq: [
         ["Is #{name} free?",
-         "Yes. #{name} is free to use — every account gets #{free} free conversions to start, and Pro unlocks unlimited conversions and larger files."],
+         premium ? "Yes, your first #{name} conversion is free to try. It uses AI or OCR (a Pro feature), so after that you will need Pro for unlimited use." : "Yes. #{name} is completely free with unlimited use, and you can start without an account."],
         ["Do I need to create an account or install software?",
          "No. #{name} runs in your browser with nothing to download. You can start converting without an account."],
         ["Are my files safe?",

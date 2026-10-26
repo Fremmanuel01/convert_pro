@@ -1,79 +1,105 @@
 class ConversionLimiter
-  FREE_LIMIT = 5
+  # ── Capability-gated free tier ─────────────────────────────────────────────
+  # Basic tools (convert / compress / merge / images / etc.) are free and
+  # UNLIMITED — they build the habit and keep users (and repeat SEO traffic)
+  # coming back. The premium capabilities below are Pro, with the FIRST one free
+  # as a taste so users feel the value before the paywall.
+  PREMIUM_TOOL_IDS = %w[
+    ocr_pdf summarize_pdf ai_translate_pdf ai_generate_docx ai_generate_pptx
+  ].freeze
+
+  FREE_PREMIUM_CREDITS = Integer(ENV.fetch("FREE_PREMIUM_CREDITS", 1))
+
+  def self.premium?(tool_id)
+    PREMIUM_TOOL_IDS.include?(tool_id.to_s)
+  end
+
+  # Map a stored Conversion#tool_name (class name) back to its tool_id.
+  def self.tool_id_for(tool_name)
+    ToolRegistry.tools.find { |t| t[:class_name] == tool_name }&.dig(:id)
+  end
 
   def initialize(user)
     @user = user
-  end
-
-  def can_convert?
-    return true if @user.nil?
-    return true if unlimited?
-    @user.free? && !limit_reached?
   end
 
   def unlimited?
     !!(@user&.pro? && @user&.active?)
   end
 
-  def limit_reached?
+  # Can this user run `tool_id`? Basic tools: always. Premium: Pro, or a free
+  # user who still has a premium credit left.
+  def can_convert?(tool_id = nil)
+    return true if @user.nil? || unlimited?
+    return false unless @user.free? # lapsed Pro must renew
+    return true unless self.class.premium?(tool_id)
+    premium_credits_remaining?
+  end
+
+  def premium_credits_remaining?
     return false if @user.nil?
-    @user.conversions_count >= FREE_LIMIT
+    @user.premium_credits_used.to_i < FREE_PREMIUM_CREDITS
   end
 
-  def remaining
-    return :unlimited if @user.nil?
-    return :unlimited if unlimited?
+  # Atomically consume quota for `tool_id`. Basic tools never block (they only
+  # bump the lifetime stat counter). Premium tools consume a free credit; once
+  # spent, a free user is blocked. Race-safe via the conditional UPDATE.
+  def claim!(tool_id = nil)
+    return true if @user.nil? || unlimited?
+    return false unless @user.free? # lapsed Pro blocked until renewal
 
-    left = FREE_LIMIT - @user.conversions_count
-    left > 0 ? left : 0
-  end
+    if self.class.premium?(tool_id)
+      rows = User.where(id: @user.id)
+                 .where("premium_credits_used < ?", FREE_PREMIUM_CREDITS)
+                 .update_all("premium_credits_used = premium_credits_used + 1, conversions_count = conversions_count + 1")
+      claimed = rows == 1
+    else
+      User.where(id: @user.id).update_all("conversions_count = conversions_count + 1")
+      claimed = true
+    end
 
-  # Atomically consume ONE unit of quota. Returns true if a unit was claimed
-  # (or the user is anonymous / unlimited), false if the free limit is already
-  # reached. The single conditional UPDATE is race-safe: under concurrent
-  # requests only one caller can move the counter across the limit boundary.
-  def claim!
-    return true if @user.nil?
-    return true if unlimited?
-    return false unless @user.free? # e.g. lapsed Pro: blocked, must renew
-
-    rows = User.where(id: @user.id)
-               .where("conversions_count < ?", FREE_LIMIT)
-               .update_all("conversions_count = conversions_count + 1")
-
-    claimed = rows == 1
     @user.reload if claimed
     claimed
   end
 
-  # Give one unit back (e.g. the conversion ultimately failed). Never drops the
-  # counter below zero, and is safe to call at most once per claimed unit.
-  def refund!
+  # Give back a claimed unit when a conversion ultimately fails. Tool-aware so a
+  # premium credit is restored for premium tools, never below zero.
+  def refund!(tool_id = nil)
     return false if @user.nil? || unlimited?
 
-    rows = User.where(id: @user.id)
-               .where("conversions_count > 0")
-               .update_all("conversions_count = conversions_count - 1")
+    rows =
+      if self.class.premium?(tool_id)
+        User.where(id: @user.id).where("premium_credits_used > 0")
+            .update_all("premium_credits_used = premium_credits_used - 1, conversions_count = GREATEST(conversions_count - 1, 0)")
+      else
+        User.where(id: @user.id).where("conversions_count > 0")
+            .update_all("conversions_count = conversions_count - 1")
+      end
 
     refunded = rows == 1
     @user.reload if refunded
     refunded
   end
 
-  # Backwards-compatible alias for the old non-atomic API.
   alias_method :increment!, :claim!
 
-  def status_message
+  # Message for the upgrade prompt when a conversion is blocked.
+  def status_message(tool_id = nil)
     if @user.nil?
       "Please sign up to download your files."
     elsif unlimited?
-      "Unlimited conversions on Pro plan."
+      "Unlimited on Pro."
     elsif @user.pro? && !@user.active?
       "Your Pro subscription is inactive. Please update your billing."
-    elsif limit_reached?
-      "You have reached your free limit. Upgrade to Pro."
+    elsif self.class.premium?(tool_id)
+      "You've used your free AI & OCR try. Upgrade to Pro for unlimited AI and OCR."
     else
-      "#{remaining} free conversions remaining."
+      "Unlimited free conversions on basic tools."
     end
+  end
+
+  # Reason key for BillingPlans.upgrade_reason, used by the contextual prompt.
+  def block_reason(tool_id = nil)
+    self.class.premium?(tool_id) ? "ai" : "quota"
   end
 end

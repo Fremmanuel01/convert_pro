@@ -22,7 +22,7 @@ class Conversion < ApplicationRecord
     return false unless flipped
 
     self.usage_counted = false
-    ConversionLimiter.new(user).refund! if user_id.present?
+    ConversionLimiter.new(user).refund!(ConversionLimiter.tool_id_for(tool_name)) if user_id.present?
     true
   end
 end

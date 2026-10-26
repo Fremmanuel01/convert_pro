@@ -51,11 +51,18 @@ RSpec.describe ToolRunner do
   end
 
   describe "Limiter Integration" do
-    it "blocks users who have hit their limit" do
-      free_user.update!(conversions_count: 5)
+    it "never blocks a basic tool, even at high usage" do
+      free_user.update!(premium_credits_used: 9)
       runner = ToolRunner.new(free_user, 'merge_pdf', [pdf_file, pdf_file])
-      
-      expect { runner.run! }.to raise_error(ToolRunner::LimitExceededError, /reached your free limit/)
+
+      expect { runner.run! }.not_to raise_error
+    end
+
+    it "blocks a premium (AI/OCR) tool once the free credit is spent" do
+      free_user.update!(premium_credits_used: ConversionLimiter::FREE_PREMIUM_CREDITS)
+      runner = ToolRunner.new(free_user, 'ocr_pdf', [pdf_file])
+
+      expect { runner.run! }.to raise_error(ToolRunner::LimitExceededError, /AI & OCR/)
     end
   end
 
